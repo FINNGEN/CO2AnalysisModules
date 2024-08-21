@@ -26,7 +26,7 @@ usethis::use_news_md( open = FALSE )
 
 ## Use git ----
 usethis::use_git()
-usethis::use_github(private = TRUE)
+usethis::use_github(private = F)
 
 ## Use local renv
 renv::init()
