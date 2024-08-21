@@ -1,0 +1,42 @@
+
+# build parameters --------------------------------------------------------------
+devtools::load_all(".")
+source(testthat::test_path("setup.R"))
+source(testthat::test_path("helper.R"))
+
+# set up
+cohortTableHandler <- helper_createNewCohortTableHandler(addCohorts = "EunomiaDefaultCohorts")
+on.exit({rm(cohortTableHandler);gc()})
+
+exportFolder <- file.path(tempdir(), "testCohortOverlaps")
+dir.create(exportFolder, showWarnings = FALSE)
+on.exit({unlink(exportFolder, recursive = TRUE)})
+
+analysisSettings <- list(
+  cohortIds = c(1, 2),
+  minCellCount = 1
+)
+
+# function
+pathToResultsDatabase <- execute_CohortOverlaps(
+  exportFolder = exportFolder,
+  cohortTableHandler = cohortTableHandler,
+  analysisSettings = analysisSettings
+)
+
+analysisResults <- pool::dbPool(drv = duckdb::duckdb(), dbdir=pathToResultsDatabase)
+
+# run module --------------------------------------------------------------
+devtools::load_all(".")
+
+app <- shiny::shinyApp(
+  shiny::fluidPage(
+    mod_resultsVisualisation_CohortsOverlaps_ui("test")
+  ),
+  function(input,output,session){
+    mod_resultsVisualisation_CohortsOverlaps_server("test",analysisResults)
+  },
+  options = list(launch.browser=TRUE)
+)
+
+app

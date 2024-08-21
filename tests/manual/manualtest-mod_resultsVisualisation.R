@@ -1,0 +1,49 @@
+
+# build parameters --------------------------------------------------------------
+devtools::load_all(".")
+source(testthat::test_path("setup.R"))
+source(testthat::test_path("helper.R"))
+
+# set up
+cohortTableHandler <- helper_createNewCohortTableHandler(addCohorts = "HadesExtrasFractureCohorts")
+on.exit({rm(cohortTableHandler);gc()})
+
+exportFolder <- file.path(tempdir(), "testCohortOverlaps")
+dir.create(exportFolder, showWarnings = FALSE)
+on.exit({unlink(exportFolder, recursive = TRUE)})
+
+analysisSettings <- list(
+  cohortIds = c(1, 2),
+  minCellCount = 1
+)
+
+# function
+pathToResultsDatabase <- execute_CohortOverlaps(
+  exportFolder = exportFolder,
+  cohortTableHandler = cohortTableHandler,
+  analysisSettings = analysisSettings
+)
+
+analysisResults <- pool::dbPool(drv = duckdb::duckdb(), dbdir=pathToResultsDatabase)
+
+# run module --------------------------------------------------------------
+devtools::load_all(".")
+
+pathAboutModule <- system.file('modulesDocumentation/about_cohortOverlaps.md', package = "CO2AnalysisModules")
+
+mod_resultsVisualisation_dummy_ui <- function(id){}
+mod_resultsVisualisation_dummy_server <- function(id,analysisResults){
+  shiny::moduleServer(id, function(input, output, session){})
+}
+
+app <- shiny::shinyApp(
+  shiny::fluidPage(
+    mod_resultsVisualisation_ui("test", mod_resultsVisualisation_dummy_ui, pathAboutModule, "Title")
+  ),
+  function(input,output,session){
+     mod_resultsVisualisation_server("test", mod_resultsVisualisation_dummy_server, analysisResults)
+  },
+  options = list(launch.browser=TRUE)
+)
+
+app

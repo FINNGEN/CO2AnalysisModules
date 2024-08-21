@@ -1,0 +1,16 @@
+# EUNOMIA
+cohortTableHandler:
+  database:
+    databaseId: E1
+    databaseName: eunomia1
+    databaseDescription: Eunomia database 1
+  connection:
+    connectionDetailsSettings:
+        dbms: sqlite
+        server: eunomia_default
+  cdm:
+      cdmDatabaseSchema: main
+      vocabularyDatabaseSchema: main
+  cohortTable:
+      cohortDatabaseSchema: main
+      cohortTableName: test_cohort_table
