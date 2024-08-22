@@ -24,7 +24,7 @@ pathToResultsDatabase <- execute_CohortOverlaps(
   analysisSettings = analysisSettings
 )
 
-analysisResults <- pool::dbPool(drv = duckdb::duckdb(), dbdir=pathToResultsDatabase)
+analysisResults <- duckdb::dbConnect(duckdb::duckdb(), pathToResultsDatabase)
 
 # run module --------------------------------------------------------------
 devtools::load_all(".")
