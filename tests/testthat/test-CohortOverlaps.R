@@ -3,11 +3,9 @@ test_that("execute_CohortOverlaps works", {
 
   # set up
   cohortTableHandler <- helper_createNewCohortTableHandler(addCohorts = "HadesExtrasFractureCohorts")
-  on.exit({rm(cohortTableHandler);gc()})
+  withr::defer({rm(cohortTableHandler);gc()})
 
-  exportFolder <- file.path(tempdir(), "testCohortOverlaps")
-  dir.create(exportFolder, showWarnings = FALSE)
-  on.exit({unlink(exportFolder, recursive = TRUE)})
+  exportFolder <- withr::local_tempdir('testCohortOverlaps')
 
   analysisSettings <- list(
     cohortIds = c(1, 2),

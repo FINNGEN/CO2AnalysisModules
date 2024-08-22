@@ -7,6 +7,13 @@ helper_createNewCohortTableHandler <- function(addCohorts = NULL){
   cohortTableHandlerConfig <- cohortTableHandlerConfig # set by setup.R
   loadConnectionChecksLevel = "basicChecks"
 
+  # TEMP
+  # name with current time with milisecond to avoid conflicts
+  cohortTableHandlerConfig$cohortTable$cohortTableName <- paste0(
+    cohortTableHandlerConfig$cohortTable$cohortTableName, "_",
+    gsub('\\.','',format(Sys.time(), "d%H%M%S%OS3"))
+  )
+  # END TEMP
   cohortTableHandler <- HadesExtras::createCohortTableHandlerFromList(cohortTableHandlerConfig, loadConnectionChecksLevel)
 
   if(!is.null(addCohorts) ){

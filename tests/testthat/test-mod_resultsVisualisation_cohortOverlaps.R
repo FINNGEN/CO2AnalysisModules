@@ -20,8 +20,8 @@
 #     analysisSettings = analysisSettings
 #   )
 #
-#   analysisResults <- pool::dbPool(drv = duckdb::duckdb(), dbdir=pathToResultsDatabase)
-#   on.exit({pool::poolClose(analysisResults)})
+#   analysisResults <- duckdb::dbConnect(duckdb::duckdb(), pathToResultsDatabase)
+#   on.exit({duckdb::dbDisconnect(analysisResults)})
 #
 #   # run module
 #   shiny::testServer(
@@ -31,9 +31,12 @@
 #       analysisResults = analysisResults
 #     ),
 #     {
-#       session$flushReact()
 #       output$upset_plot |> class() |> expect_equal("reactive")
 #     }
 #   )
 #
 # })
+
+
+
+
