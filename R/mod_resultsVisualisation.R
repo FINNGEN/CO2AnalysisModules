@@ -50,7 +50,7 @@ mod_resultsVisualisation_ui <- function(id, resultsVisualisationModuleUi, pathTo
     ),
     shinydashboard::tabItem(
       tabName = "cohortDefinition",
-      shiny::textOutput(ns("cohortDefinitions"))
+      reactable::reactableOutput(ns("cohortDefinitions"))
     ),
     shinydashboard::tabItem(
       tabName = "module",
