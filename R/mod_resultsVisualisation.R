@@ -50,7 +50,7 @@ mod_resultsVisualisation_ui <- function(id, resultsVisualisationModuleUi, pathTo
     ),
     shinydashboard::tabItem(
       tabName = "cohortDefinition",
-      reactable::reactableOutput(ns("cohortDefinitions"))
+      shiny::textOutput(ns("cohortDefinitions"))
     ),
     shinydashboard::tabItem(
       tabName = "module",
@@ -99,13 +99,13 @@ mod_resultsVisualisation_ui <- function(id, resultsVisualisationModuleUi, pathTo
 #'
 #' @export
 #'
-mod_resultsVisualisation_server <- function(id, resultsVisualisationModuleServer, analysisResults) {
+mod_resultsVisualisation_server <-function(id, resultsVisualisationModuleServer, analysisResults) {
 
 
   shiny::moduleServer(id, function(input, output, session) {
 
     output$cohortDefinitions <- reactable::renderReactable({
-      analysisResults$analysisResults |> dplyr::tbl('CohortDefinitionSet') |>
+      analysisResults |> dplyr::tbl('CohortDefinitionSet') |>
         dplyr::select(-sql, -json) |>
         dplyr::collect() |>
         reactable::reactable()
@@ -118,15 +118,6 @@ mod_resultsVisualisation_server <- function(id, resultsVisualisationModuleServer
 
 
 }
-
-
-
-
-
-
-
-
-
 
 
 

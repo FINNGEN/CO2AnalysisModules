@@ -3,7 +3,7 @@ test_that("mod_analysisSettings_CohortOverlaps works", {
 
   # set up
   cohortTableHandler <- helper_createNewCohortTableHandler(addCohorts = "HadesExtrasFractureCohorts")
-  on.exit({rm(cohortTableHandler);gc()})
+  withr::defer({rm(cohortTableHandler);gc()})
 
   r_connectionHandler <- shiny::reactiveValues(
     cohortTableHandler = cohortTableHandler,
