@@ -1,5 +1,5 @@
 
-#' @title execute_CohortOverlaps
+#' @title execute_CohortDemographics
 #' @description This function calculates cohort overlaps based on the provided cohort table and analysis settings, and exports the results to a DuckDB database.
 #'
 #' @param exportFolder A string representing the path to the folder where the results will be exported.
@@ -11,7 +11,7 @@
 #' @importFrom checkmate assertDirectoryExists assertR6 assertList assertSubset assertNumeric checkFileExists
 #' @importFrom ParallelLogger logInfo
 #' @importFrom dplyr filter mutate select as_tibble
-#' @importFrom HadesExtras removeCohortIdsFromCohortOverlapsTable
+#' @importFrom HadesExtras removeCohortIdsFromCohortDemographicsTable
 #' @importFrom duckdb dbConnect dbDisconnect dbWriteTable dbListTables
 #' @importFrom DBI dbGetQuery
 #' @importFrom tibble tibble
@@ -19,7 +19,7 @@
 #'
 #' @export
 #'
-execute_CohortOverlaps <- function(
+execute_CohortDemographics <- function(
     exportFolder,
     cohortTableHandler,
     analysisSettings
@@ -27,10 +27,12 @@ execute_CohortOverlaps <- function(
   #
   # Check parameters
   #
+  groups <- c("calendarYear", "ageGroup", "gender")
+  validReferenceYears <- c("cohort_start_date", "cohort_end_date", "birth_datetime")
 
   exportFolder |> checkmate::assertDirectoryExists()
   cohortTableHandler |> checkmate::assertR6(class = "CohortTableHandler")
-  analysisSettings |> assertAnalysisSettings_CohortOverlaps()
+  analysisSettings |> assertAnalysisSettings_CohortDemographics()
 
 
   # get parameters from cohortTableHandler
@@ -48,21 +50,47 @@ execute_CohortOverlaps <- function(
 
   # get parameters from analysisSettings
   cohortIds <- analysisSettings$cohortIds
+  referenceYears <- analysisSettings$referenceYears
+  groupBy <- analysisSettings$groupBy
   minCellCount <- analysisSettings$minCellCount
 
 
   #
   # function
   #
-  ParallelLogger::logInfo("Calculating cohort overlaps")
+  ParallelLogger::logInfo("Calculating cohort demographics")
   startAnalysisTime <- Sys.time()
 
-  cohortIdsToRemove <- cohortTableHandler$getCohortCounts()$cohortId |>
-    setdiff(cohortIds)
+  demographicsCounts  <- HadesExtras::getCohortDemographicsCounts(
+    connection = connection,
+    cdmDatabaseSchema = cdmDatabaseSchema,
+    cohortDatabaseSchema = cohortDatabaseSchema,
+    cohortTable = cohortTable,
+    cohortIds = cohortIds,
+    referenceYears = referenceYears
+  )
 
-  cohortOverlaps <- cohortTableHandler$getCohortsOverlap() |>
-    HadesExtras::removeCohortIdsFromCohortOverlapsTable(cohortIdsToRemove)  |>
-    dplyr::filter(numberOfSubjects >= minCellCount)
+  if (length(groupBy) < length(groups)) {
+    demographicsCounts <- demographicsCounts |>
+      dplyr::group_by(dplyr::across(dplyr::all_of(c("cohortId", groupBy)))) |>
+      dplyr::summarize(count = sum(count)) |>
+      dplyr::ungroup()
+
+    demographicsCounts <- demographicsCounts |>
+      dplyr::bind_cols(
+        tibble::tibble(
+          calendarYear = NA_real_,
+          ageGroup = NA_character_,
+          gender = NA_character_
+        ) |>
+          dplyr::select(dplyr::all_of(setdiff(groups, groupBy)))
+      )
+  }
+
+  if (minCellCount > 0) {
+    demographicsCounts <- demographicsCounts |>
+      dplyr::filter(count >= minCellCount)
+  }
 
   analysisDuration <- Sys.time() - startAnalysisTime
 
@@ -88,14 +116,14 @@ execute_CohortOverlaps <- function(
   # Cohort data ------------------------------------------------
   cohortsInfo  <- cohortDefinitionSet |>
     dplyr::mutate(
-      cohortId = as.integer(cohortId),
-      cohortName = as.character(cohortName),
-      shortName = as.character(shortName),
-      sql = as.character(sql),
-      json = as.character(json),
-      subsetParent = as.integer(subsetParent),
-      isSubset = as.logical(isSubset),
-      subsetDefinitionId = as.integer(subsetDefinitionId)
+     cohortId = as.integer(cohortId),
+     cohortName = as.character(cohortName),
+     shortName = as.character(shortName),
+     sql = as.character(sql),
+     json = as.character(json),
+     subsetParent = as.integer(subsetParent),
+     isSubset = as.logical(isSubset),
+     subsetDefinitionId = as.integer(subsetDefinitionId)
     ) |>
     dplyr::left_join(
       cohortTableHandler$getCohortCounts() |>
@@ -110,13 +138,18 @@ execute_CohortOverlaps <- function(
 
   duckdb::dbWriteTable(connection, "cohortsInfo",cohortsInfo, overwrite = TRUE)
 
-  # CohortOverlapsCounts ------------------------------------------------
-  cohortOverlaps  <- cohortOverlaps |>
-    dplyr::mutate(
-      cohortIdCombinations = as.character(cohortIdCombinations),
-      numberOfSubjects = as.integer(numberOfSubjects)
+  # CohortDemographicsCounts ------------------------------------------------
+  demographicsCounts  <- demographicsCounts |>
+    dplyr::transmute(
+      databaseId = as.character(databaseId),
+      cohortId = as.integer(cohortId),
+      referenceYear = as.character(referenceYear),
+      calendarYear = as.integer(calendarYear),
+      ageGroup = as.character(ageGroup),
+      gender = as.character(gender),
+      count = as.integer(count)
     )
-  duckdb::dbWriteTable(connection, "cohortOverlaps", cohortOverlaps, overwrite = TRUE)
+  duckdb::dbWriteTable(connection, "demographicsCounts", demographicsCounts, overwrite = TRUE)
 
   # analysisInfo ------------------------------------------------
   exportDuration <- Sys.time() - startExportTime
@@ -139,24 +172,33 @@ execute_CohortOverlaps <- function(
 
 }
 
-#' @title Assert Analysis Settings for Cohort Overlaps
-#' @description This function checks that the `analysisSettings` list contains the required elements and that they are of the correct types.
+#' @title Assert Analysis Settings for Cohort Demographics Overlaps
+#' @description Validates the `analysisSettings` list to ensure it contains the required elements (`cohortIds`, `referenceYears`, `groupBy`, `minCellCount`) with correct types and values. This function is specifically designed for checking settings related to cohort demographics analysis.
 #'
 #' @param analysisSettings A list containing analysis settings. It must include the following elements:
 #' \describe{
 #'   \item{cohortIds}{A numeric vector of cohort IDs.}
+#'   \item{referenceYears}{A character vector specifying the reference years, must be one of `cohort_start_date`, `cohort_end_date`, or `birth_datetime`.}
+#'   \item{groupBy}{A character vector indicating the demographic groups for analysis, must be one of `calendarYear`, `ageGroup`, or `gender`.}
 #'   \item{minCellCount}{A numeric value representing the minimum cell count, must be 0 or higher.}
 #' }
 #'
-#' @return TRUE if the settings are valid; otherwise, an error is thrown.
+#' @return Returns `TRUE` if all settings are valid; otherwise, throws an error.
 #'
-#' @importFrom checkmate assertList assertSubset assertNumeric
+#' @importFrom checkmate assertList assertSubset assertNumeric assertCharacter
 #'
 #' @export
-assertAnalysisSettings_CohortOverlaps <- function(analysisSettings) {
+assertAnalysisSettings_CohortDemographics <- function(analysisSettings) {
+  groups <- c("calendarYear", "ageGroup", "gender")
+  validReferenceYears <- c("cohort_start_date", "cohort_end_date", "birth_datetime")
+
   analysisSettings |> checkmate::assertList()
-  analysisSettings |> names()  |> checkmate::assertSubset(c('minCellCount', 'cohortIds'))
+  analysisSettings |> names()  |> checkmate::assertSubset(c('cohortIds', 'referenceYears', 'groupBy', 'minCellCount'))
   analysisSettings$cohortIds |> checkmate::assertNumeric()
+  analysisSettings$referenceYears |> checkmate::assertCharacter(min.len = 1)
+  analysisSettings$referenceYears |> checkmate::assertSubset(validReferenceYears)
+  analysisSettings$groupBy |> checkmate::assertCharacter(min.len = 1)
+  analysisSettings$groupBy |> checkmate::assertSubset(groups)
   analysisSettings$minCellCount |> checkmate::assertNumeric(lower = 0)
 }
 
@@ -174,13 +216,7 @@ assertAnalysisSettings_CohortOverlaps <- function(analysisSettings) {
 #' @importFrom dplyr select as_tibble
 #'
 #' @export
-checkResults_CohortOverlaps <- function(pathToResultsDatabase) {
-
-  #
-  # Check parameters
-  #
-  check <- checkmate::checkFileExists(pathToResultsDatabase, extension = 'duckdb')
-  if (!check) { errors <- c(errors, check) ; return(errors) }
+checkResults_CohortDemographics <- function(pathToResultsDatabase) {
 
   #
   # Checking rules
@@ -194,9 +230,9 @@ checkResults_CohortOverlaps <- function(pathToResultsDatabase) {
       name = c("cohortId", "cohortName", "shortName", "sql", "json", "subsetParent", "isSubset", "subsetDefinitionId", "cohortEntries", "cohortSubjects", "use"),
       type = c("INTEGER", "VARCHAR", "VARCHAR", "VARCHAR", "VARCHAR", "INTEGER", "BOOLEAN", "INTEGER", "INTEGER", "INTEGER", "VARCHAR")
     ),
-    cohortOverlaps = tibble::tibble(
-      name = c("cohortIdCombinations", "numberOfSubjects"),
-      type = c("VARCHAR", "INTEGER")
+    demographicsCounts = tibble::tibble(
+      name = c("databaseId", "cohortId", "referenceYear", "calendarYear", "ageGroup", "gender", "count"),
+      type = c("VARCHAR", "INTEGER", "VARCHAR", "INTEGER", "VARCHAR", "VARCHAR", "INTEGER")
     ),
     analysisInfo = tibble::tibble(
       name = c("analysisType", "version", "analysisSettings", "analysisDuration", "exportDuration"),
@@ -210,20 +246,6 @@ checkResults_CohortOverlaps <- function(pathToResultsDatabase) {
   errors  <- .checkDatabase(pathToResultsDatabase, expectedSchemas)
   return(errors)
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
