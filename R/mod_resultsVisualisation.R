@@ -105,15 +105,16 @@ mod_resultsVisualisation_server <- function(id, resultsVisualisationModuleServer
   shiny::moduleServer(id, function(input, output, session) {
 
     output$cohortDefinitions <- reactable::renderReactable({
-      analysisResults$analysisResults |> dplyr::tbl('CohortDefinitionSet') |>
-        dplyr::select(-sql, -json) |>
-        dplyr::collect() |>
-        reactable::reactable()
+      countsTable <- analysisResults |> dplyr::tbl('cohortCounts') |> dplyr::collect()
+      definitionTable <- analysisResults |> dplyr::tbl('CohortDefinitionSet') |> dplyr::select(-sql, -json) |> dplyr::collect()
+
+      reactable::reactable(
+        dplyr::full_join(countsTable, definitionTable, by = c('cohortId', 'cohortName')) |>
+          dplyr::select(cohortId, cohortName, shortName, cohortSubjects, subsetParent, isSubset, subsetDefinitionId)
+      )
     })
 
     resultsVisualisationModuleServer(id, analysisResults)
-
-
   })
 
 
