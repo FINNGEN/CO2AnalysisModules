@@ -83,8 +83,7 @@ mod_resultsVisualisation_CohortsOverlaps_ui <- function(id) {
                )
         )
       ),
-    ),
-  )
+    ))
 }
 
 
