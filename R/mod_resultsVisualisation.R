@@ -32,6 +32,8 @@ mod_resultsVisualisation_ui <- function(id, resultsVisualisationModuleUi, pathTo
       shinydashboard::menuItem(text = title, tabName = "module", icon = shiny::icon("table")),
       shinydashboard::menuItem(text = "About", tabName = "about", icon = shiny::icon("code")),
       shinydashboard::menuItem(text = "Cohort Definition", tabName = "cohortDefinition", icon = shiny::icon("code")),
+      shinydashboard::menuItem(text = "Analysis Information", tabName = "analysisinfo", icon = shiny::icon("code")),
+      shinydashboard::menuItem(text = "Database Information", tabName = "database", icon = shiny::icon("code")),
       selected = "module"
       #shinydashboard::menuItem(text = "Meta data", tabName = "databaseInformation", icon = shiny::icon("gear", verify_fa = FALSE))
     )
@@ -51,6 +53,14 @@ mod_resultsVisualisation_ui <- function(id, resultsVisualisationModuleUi, pathTo
     shinydashboard::tabItem(
       tabName = "cohortDefinition",
       reactable::reactableOutput(ns("cohortDefinitions"))
+    ),
+    shinydashboard::tabItem(
+      tabName = "analysisinfo",
+      reactable::reactableOutput(ns("analysisInfo"))
+    ),
+    shinydashboard::tabItem(
+      tabName = "database",
+      reactable::reactableOutput(ns("databaseInfo"))
     ),
     shinydashboard::tabItem(
       tabName = "module",
@@ -103,6 +113,16 @@ mod_resultsVisualisation_server <- function(id, resultsVisualisationModuleServer
 
 
   shiny::moduleServer(id, function(input, output, session) {
+
+    output$analysisInfo <- reactable::renderReactable({
+      analysisInfoTable <- analysisResults |> dplyr::tbl('analysisInfo') |> dplyr::collect()
+      reactable::reactable(analysisInfoTable)
+    })
+
+    output$databaseInfo <- reactable::renderReactable({
+      databaseInfoTable <- analysisResults |> dplyr::tbl('database') |> dplyr::collect()
+      reactable::reactable(databaseInfoTable)
+    })
 
     output$cohortDefinitions <- reactable::renderReactable({
       countsTable <- analysisResults |> dplyr::tbl('cohortCounts') |> dplyr::collect()
