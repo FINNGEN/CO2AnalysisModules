@@ -24,7 +24,7 @@ pathToResultsDatabase <- execute_CohortOverlaps(
   analysisSettings = analysisSettings
 )
 
-analysisResults <- pool::dbPool(drv = duckdb::duckdb(), dbdir=pathToResultsDatabase)
+analysisResults <- duckdb::dbConnect(duckdb::duckdb(), pathToResultsDatabase)
 
 # run module --------------------------------------------------------------
 devtools::load_all(".")
@@ -38,10 +38,10 @@ mod_resultsVisualisation_dummy_server <- function(id,analysisResults){
 
 app <- shiny::shinyApp(
   shiny::fluidPage(
-    mod_resultsVisualisation_ui("test", mod_resultsVisualisation_CohortsOverlaps_ui, pathAboutModule, "CohortOverlaps")
+    mod_resultsVisualisation_ui("test", mod_resultsVisualisation_CohortsOverlaps_ui, pathAboutModule, "Overlaps")
   ),
   function(input,output,session){
-     mod_resultsVisualisation_server("test", mod_resultsVisualisation_CohortsOverlaps_server, analysisResults)
+    mod_resultsVisualisation_server("test", mod_resultsVisualisation_CohortsOverlaps_server, analysisResults)
   },
   options = list(launch.browser=TRUE)
 )

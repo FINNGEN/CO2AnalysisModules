@@ -31,7 +31,7 @@ mod_resultsVisualisation_ui <- function(id, resultsVisualisationModuleUi, pathTo
       id = ns("tabs"),
       shinydashboard::menuItem(text = title, tabName = "module", icon = shiny::icon("table")),
       shinydashboard::menuItem(text = "About", tabName = "about", icon = shiny::icon("code")),
-      shinydashboard::menuItem(text = "Cohort Definition", tabName = "cohortDefinition", icon = shiny::icon("code")),
+      # shinydashboard::menuItem(text = "Cohort Definition", tabName = "cohortDefinition", icon = shiny::icon("code")),
       shinydashboard::menuItem(text = "Analysis Information", tabName = "analysisinfo", icon = shiny::icon("code")),
       shinydashboard::menuItem(text = "Database Information", tabName = "database", icon = shiny::icon("code")),
       selected = "module"
@@ -50,10 +50,10 @@ mod_resultsVisualisation_ui <- function(id, resultsVisualisationModuleUi, pathTo
       tabName = "about",
       htmltools::includeMarkdown(pathToAboutMd)
     ),
-    shinydashboard::tabItem(
-      tabName = "cohortDefinition",
-      reactable::reactableOutput(ns("cohortDefinitions"))
-    ),
+    # shinydashboard::tabItem(
+    #   tabName = "cohortDefinition",
+    #   reactable::reactableOutput(ns("cohortDefinitions"))
+    # ),
     shinydashboard::tabItem(
       tabName = "analysisinfo",
       reactable::reactableOutput(ns("analysisInfo"))
@@ -64,7 +64,11 @@ mod_resultsVisualisation_ui <- function(id, resultsVisualisationModuleUi, pathTo
     ),
     shinydashboard::tabItem(
       tabName = "module",
-      resultsVisualisationModuleUi(ns(id))
+      resultsVisualisationModuleUi(ns(id)),
+      shiny::div(
+        style = "margin-left: 20px; margin-top: 50px; margin-right:20px;",
+        reactable::reactableOutput(ns("cohortDefinitions"))
+      ),
     )
   )
 
