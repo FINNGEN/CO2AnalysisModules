@@ -5,10 +5,10 @@ devtools::load_all(".")
 
 shiny::shinyApp(
   shiny::fluidPage(
-    mod_formTimeWindows_ui("test")
+    mod_fct_formTimeWindows_ui("test")
   ),
   function(input,output,session){
-    output <- mod_formTimeWindows_server("test", session)
+    output <- mod_fct_formTimeWindows_server("test", session)
 
     observe({
         print(output())

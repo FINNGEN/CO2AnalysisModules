@@ -71,6 +71,8 @@ test_that("executeCodeWAS warnings with cohort overlap", {
   expect_true(file.exists(pathToResultsDatabase))
   checkResults_CodeWAS(pathToResultsDatabase) |> expect_true()
 
+  analysisResults <- duckdb::dbConnect(duckdb::duckdb(), pathToResultsDatabase)
+
   codeWASResults <- analysisResults  |> dplyr::tbl("codewasResults")  |> dplyr::collect()
   codeWASResults |> dplyr::filter(covariateId == 1002)  |> nrow() |> expect_equal(1)
   codeWASResults |> dplyr::filter(covariateId == 1041)  |> nrow() |> expect_equal(0)
@@ -109,6 +111,8 @@ test_that("executeCodeWAS works spliting in chuncs", {
   # test
   expect_true(file.exists(pathToResultsDatabase))
   checkResults_CodeWAS(pathToResultsDatabase) |> expect_true()
+
+  analysisResults <- duckdb::dbConnect(duckdb::duckdb(), pathToResultsDatabase)
 
   codeWASResults <- analysisResults  |> dplyr::tbl("codewasResults")  |> dplyr::collect()
   codeWASResults |> dplyr::filter(covariateId == 1002)  |> nrow() |> expect_equal(1)
