@@ -155,7 +155,7 @@ execute_CohortDemographics <- function(
   exportDuration <- Sys.time() - startExportTime
 
   analysisInfo <- tibble::tibble(
-    analysisType = "cohortOverlaps",
+    analysisType = "cohortDemographics",
     version = "1.0.0",
     analysisSettings = yaml::as.yaml(analysisSettings),
     analysisDuration = analysisDuration,

@@ -2,7 +2,7 @@
 helper_createNewCohortTableHandler <- function(addCohorts = NULL){
 
   addCohorts |> checkmate::assertCharacter(len = 1, null.ok = TRUE)
-  addCohorts |> checkmate::assertSubset(c("EunomiaDefaultCohorts", "HadesExtrasFractureCohorts"), empty.ok = TRUE)
+  addCohorts |> checkmate::assertSubset(c("EunomiaDefaultCohorts", "HadesExtrasFractureCohorts","HadesExtrasAsthmaCohorts"), empty.ok = TRUE)
 
   cohortTableHandlerConfig <- cohortTableHandlerConfig # set by setup.R
   loadConnectionChecksLevel = "basicChecks"
@@ -38,6 +38,18 @@ helper_createNewCohortTableHandler <- function(addCohorts = NULL){
         subsetJsonFolder = "testdata/fracture/cohort_subset_definitions/",
         packageName = "HadesExtras",
         verbose = T
+      )
+    }
+    if(addCohorts == "HadesExtrasAsthmaCohorts"){
+      cohortDefinitionSet <- CohortGenerator::getCohortDefinitionSet(
+        settingsFileName = "testdata/asthma/Cohorts.csv",
+        jsonFolder = "testdata/asthma/cohorts",
+        sqlFolder = "testdata/asthma/sql/sql_server",
+        cohortFileNameFormat = "%s",
+        cohortFileNameValue = c("cohortId"),
+        subsetJsonFolder = "testdata/asthma/cohort_subset_definitions/",
+        packageName = "HadesExtras",
+        verbose = FALSE
       )
     }
     cohortTableHandler$insertOrUpdateCohorts(cohortDefinitionSet)
