@@ -13,7 +13,7 @@
 #'
 #' @export
 #'
-mod_resultsVisualisation_timeCodeWAS_ui <- function(id) {
+mod_resultsVisualisation_TimeCodeWAS_ui <- function(id) {
   ns <- shiny::NS(id)
 
   htmltools::tagList(
@@ -128,7 +128,7 @@ mod_resultsVisualisation_timeCodeWAS_ui <- function(id) {
 #'
 #' @export
 #'
-mod_resultsVisualisation_timeCodeWAS_server <- function(id, analysisResults) {
+mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
   shiny::moduleServer(id, function(input, output, session) {
     ns <- session$ns
 

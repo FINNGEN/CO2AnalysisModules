@@ -40,3 +40,14 @@ app <- shiny::shinyApp(
 )
 
 app
+
+# run full app --------------------------------------------------------------
+devtools::load_all(".")
+
+pathToCO2AnalysisModulesConfigYalm  <-  testthat::test_path("config/atlasDemo_CO2AnalysisModulesConfig.yml")
+options = list(launch.browser=FALSE, port = 5907)
+
+browseURL(paste0("http://localhost:5907/?pathToResultsDatabase=", pathToResultsDatabase))
+run_app(pathToCO2AnalysisModulesConfigYalm, options = options)
+
+

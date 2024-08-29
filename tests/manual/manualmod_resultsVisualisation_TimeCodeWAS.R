@@ -35,12 +35,23 @@ devtools::load_all(".")
 
 app <- shiny::shinyApp(
   shiny::fluidPage(
-      mod_resultsVisualisation_timeCodeWAS_ui("test")
+      mod_resultsVisualisation_TimeCodeWAS_ui("test")
   ),
   function(input,output,session){
-    mod_resultsVisualisation_timeCodeWAS_server("test",analysisResults)
+    mod_resultsVisualisation_TimeCodeWAS_server("test",analysisResults)
   },
   options = list(launch.browser=TRUE)
 )
 
 app
+
+# run full app --------------------------------------------------------------
+devtools::load_all(".")
+
+pathToCO2AnalysisModulesConfigYalm  <-  testthat::test_path("config/atlasDemo_CO2AnalysisModulesConfig.yml")
+options = list(launch.browser=FALSE, port = 5907)
+
+browseURL(paste0("http://localhost:5907/?pathToResultsDatabase=", pathToResultsDatabase))
+run_app(pathToCO2AnalysisModulesConfigYalm, options = options)
+
+
