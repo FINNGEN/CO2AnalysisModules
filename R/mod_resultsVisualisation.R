@@ -31,7 +31,9 @@ mod_resultsVisualisation_ui <- function(id, resultsVisualisationModuleUi, pathTo
       id = ns("tabs"),
       shinydashboard::menuItem(text = title, tabName = "module", icon = shiny::icon("table")),
       shinydashboard::menuItem(text = "About", tabName = "about", icon = shiny::icon("code")),
-      shinydashboard::menuItem(text = "Cohort Definition", tabName = "cohortDefinition", icon = shiny::icon("code")),
+      shinydashboard::menuItem(text = "Cohort Information", tabName = "cohortsInfo", icon = shiny::icon("code")),
+      shinydashboard::menuItem(text = "Analysis Information", tabName = "analysisInfo", icon = shiny::icon("code")),
+      shinydashboard::menuItem(text = "Database Information", tabName = "databaseInfo", icon = shiny::icon("code")),
       selected = "module"
       #shinydashboard::menuItem(text = "Meta data", tabName = "databaseInformation", icon = shiny::icon("gear", verify_fa = FALSE))
     )
@@ -49,12 +51,24 @@ mod_resultsVisualisation_ui <- function(id, resultsVisualisationModuleUi, pathTo
       htmltools::includeMarkdown(pathToAboutMd)
     ),
     shinydashboard::tabItem(
-      tabName = "cohortDefinition",
-      reactable::reactableOutput(ns("cohortDefinitions"))
+      tabName = "cohortsInfo",
+      reactable::reactableOutput(ns("cohortsInfo"))
+    ),
+    shinydashboard::tabItem(
+      tabName = "analysisInfo",
+      reactable::reactableOutput(ns("analysisInfo"))
+    ),
+    shinydashboard::tabItem(
+      tabName = "databaseInfo",
+      reactable::reactableOutput(ns("databaseInfo"))
     ),
     shinydashboard::tabItem(
       tabName = "module",
-      resultsVisualisationModuleUi(ns(id))
+      resultsVisualisationModuleUi(ns(id)),
+      shiny::div(
+        style = "margin-left: 20px; margin-top: 50px; margin-right:20px;",
+        reactable::reactableOutput(ns("usedCohortsInfo"))
+      ),
     )
   )
 
@@ -99,47 +113,38 @@ mod_resultsVisualisation_ui <- function(id, resultsVisualisationModuleUi, pathTo
 #'
 #' @export
 #'
-mod_resultsVisualisation_server <-function(id, resultsVisualisationModuleServer, analysisResults) {
+mod_resultsVisualisation_server <- function(id, resultsVisualisationModuleServer, analysisResults) {
 
 
   shiny::moduleServer(id, function(input, output, session) {
 
-    output$cohortDefinitions <- reactable::renderReactable({
-      analysisResults |> dplyr::tbl('CohortDefinitionSet') |>
+    output$analysisInfo <- reactable::renderReactable({
+      analysisInfoTable <- analysisResults |> dplyr::tbl('analysisInfo') |> dplyr::collect()
+      reactable::reactable(analysisInfoTable)
+    })
+
+    output$databaseInfo <- reactable::renderReactable({
+      databaseInfoTable <- analysisResults |> dplyr::tbl('databaseInfo') |> dplyr::collect()
+      reactable::reactable(databaseInfoTable)
+    })
+
+    output$cohortsInfo <- reactable::renderReactable({
+      cohortsInfo <- analysisResults |> dplyr::tbl('cohortsInfo') |>
         dplyr::select(-sql, -json) |>
-        dplyr::collect() |>
-        reactable::reactable()
+        dplyr::collect()
+      reactable::reactable(cohortsInfo)
+    })
+
+    output$usedCohortsInfo <- reactable::renderReactable({
+      countsTable <- analysisResults |> dplyr::tbl('cohortsInfo') |>
+        dplyr::select(use, shortName, cohortName, cohortSubjects, cohortEntries) |>
+        dplyr::collect()
+
+      reactable::reactable(countsTable)
     })
 
     resultsVisualisationModuleServer(id, analysisResults)
-
-
   })
 
 
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

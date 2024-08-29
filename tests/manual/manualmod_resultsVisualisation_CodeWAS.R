@@ -5,20 +5,24 @@ source(testthat::test_path("setup.R"))
 source(testthat::test_path("helper.R"))
 
 # set up
-cohortTableHandler <- helper_createNewCohortTableHandler(addCohorts = "EunomiaDefaultCohorts")
+cohortTableHandler <- helper_createNewCohortTableHandler(addCohorts = "HadesExtrasAsthmaCohorts")
 on.exit({rm(cohortTableHandler);gc()})
 
-exportFolder <- file.path(tempdir(), "testCohortOverlaps")
+exportFolder <- file.path(tempdir(), "testCodeWAS")
 dir.create(exportFolder, showWarnings = FALSE)
 on.exit({unlink(exportFolder, recursive = TRUE)})
 
 analysisSettings <- list(
-  cohortIds = c(1, 2),
+  cohortIdCases = 1,
+  cohortIdControls = 2,
+  analysisIds = c(101, 141, 1, 2, 402, 701, 702, 41),
+  covariatesIds = NULL,
   minCellCount = 1
 )
 
+
 # function
-pathToResultsDatabase <- execute_CohortOverlaps(
+pathToResultsDatabase <- execute_CodeWAS(
   exportFolder = exportFolder,
   cohortTableHandler = cohortTableHandler,
   analysisSettings = analysisSettings
@@ -31,10 +35,10 @@ devtools::load_all(".")
 
 app <- shiny::shinyApp(
   shiny::fluidPage(
-    mod_resultsVisualisation_CohortsOverlaps_ui("test")
+      mod_resultsVisualisation_CodeWAS_ui("test")
   ),
   function(input,output,session){
-    mod_resultsVisualisation_CohortsOverlaps_server("test",analysisResults)
+    mod_resultsVisualisation_CodeWAS_server("test",analysisResults)
   },
   options = list(launch.browser=TRUE)
 )

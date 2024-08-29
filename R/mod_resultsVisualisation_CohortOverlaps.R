@@ -115,8 +115,8 @@ mod_resultsVisualisation_CohortsOverlaps_server <- function(id, analysisResults)
       cohortOverlapsData <- analysisResults |> dplyr::tbl("cohortOverlaps") |> dplyr::collect()
     })
 
-    cohortDefinitionSet <- shiny::reactive({
-      cohortDefinitionSetData <- analysisResults |> dplyr::tbl("cohortDefinitionSet") |> dplyr::collect()
+    cohortsInfo <- shiny::reactive({
+      cohortsInfoData <- analysisResults |> dplyr::tbl("cohortsInfo") |> dplyr::collect()
     })
 
     #
@@ -140,7 +140,7 @@ mod_resultsVisualisation_CohortsOverlaps_server <- function(id, analysisResults)
     build_upset_plot <- shiny::reactive({
       req(cohortOverlaps())
 
-      cohortDefinitionData <- cohortDefinitionSet()
+      cohortDefinitionData <- cohortsInfo()
       cohortOverlapsData <- cohortOverlaps()
 
       for(i in 1:nrow(cohortDefinitionData)){

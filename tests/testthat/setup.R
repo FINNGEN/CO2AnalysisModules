@@ -5,10 +5,12 @@ if( Sys.getenv("EUNOMIA_DATA_FOLDER") == "" ){
 }
 
 testConfigFile <- "eunomia_cohortTableHandlerConfig.yml"
+#testConfigFile <- "atlasDevelopment_cohortTableHandlerConfig.yml"
 cohortTableHandlerConfig <- yaml::read_yaml(testthat::test_path("config", testConfigFile))$cohortTableHandler
 
 # if using eunomia database create the file
-if(cohortTableHandlerConfig$connection$connectionDetailsSettings$server == "Eunomia"){
+if(!is.null(cohortTableHandlerConfig$connection$connectionDetailsSettings$server) &&
+  cohortTableHandlerConfig$connection$connectionDetailsSettings$server == "Eunomia"){
   databaseName <- cohortTableHandlerConfig$connection$connectionDetailsSettings$databaseName
   eunomiaDatabaseFile  <- Eunomia::getDatabaseFile(databaseName, overwrite = FALSE)
   cohortTableHandlerConfig$connection$connectionDetailsSettings$server <- eunomiaDatabaseFile

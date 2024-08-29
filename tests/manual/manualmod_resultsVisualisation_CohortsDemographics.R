@@ -8,17 +8,19 @@ source(testthat::test_path("helper.R"))
 cohortTableHandler <- helper_createNewCohortTableHandler(addCohorts = "EunomiaDefaultCohorts")
 on.exit({rm(cohortTableHandler);gc()})
 
-exportFolder <- file.path(tempdir(), "testCohortOverlaps")
+exportFolder <- file.path(tempdir(), "testCohortDemographics")
 dir.create(exportFolder, showWarnings = FALSE)
 on.exit({unlink(exportFolder, recursive = TRUE)})
 
 analysisSettings <- list(
   cohortIds = c(1, 2),
+  referenceYears = c("cohort_start_date", "cohort_end_date", "birth_datetime"),
+  groupBy = c("calendarYear", "ageGroup", "gender"),
   minCellCount = 1
 )
 
 # function
-pathToResultsDatabase <- execute_CohortOverlaps(
+pathToResultsDatabase <- execute_CohortDemographics(
   exportFolder = exportFolder,
   cohortTableHandler = cohortTableHandler,
   analysisSettings = analysisSettings
@@ -31,10 +33,10 @@ devtools::load_all(".")
 
 app <- shiny::shinyApp(
   shiny::fluidPage(
-    mod_resultsVisualisation_CohortsOverlaps_ui("test")
+      mod_resultsVisualisation_CohortsDemographics_ui("test")
   ),
   function(input,output,session){
-    mod_resultsVisualisation_CohortsOverlaps_server("test",analysisResults)
+    mod_resultsVisualisation_CohortsDemographics_server("test",analysisResults)
   },
   options = list(launch.browser=TRUE)
 )
@@ -49,5 +51,3 @@ options = list(launch.browser=FALSE, port = 5907)
 
 browseURL(paste0("http://localhost:5907/?pathToResultsDatabase=", pathToResultsDatabase))
 run_app(pathToCO2AnalysisModulesConfigYalm, options = options)
-
-
