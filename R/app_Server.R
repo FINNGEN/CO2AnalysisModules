@@ -29,19 +29,19 @@ app_server <- function(input, output, session) {
 
     # select module ui based on analysisType
     if (analysisType == "cohortOverlaps") {
-      system.file('modulesDocumentation/about_cohortOverlaps.md', package = "CO2AnalysisModules")
+      pathAboutModule <- system.file('modulesDocumentation/about_cohortOverlaps.md', package = "CO2AnalysisModules")
       ui <- mod_resultsVisualisation_ui("cohortOverlaps", mod_resultsVisualisation_CohortsOverlaps_ui, pathAboutModule, "Cohort Overlaps")
     }
     if (analysisType == "cohortDemographics") {
-      system.file('modulesDocumentation/about_cohortDemographics.md', package = "CO2AnalysisModules")
+      pathAboutModule <- system.file('modulesDocumentation/about_cohortDemographics.md', package = "CO2AnalysisModules")
       ui <- mod_resultsVisualisation_ui("cohortDemographics", mod_resultsVisualisation_CohortsDemographics_ui, pathAboutModule, "Cohort Demographics")
     }
     if (analysisType == "codeWAS") {
-      system.file('modulesDocumentation/about_codeWAS.md', package = "CO2AnalysisModules")
+      pathAboutModule <- system.file('modulesDocumentation/about_codeWAS.md', package = "CO2AnalysisModules")
       ui <- mod_resultsVisualisation_ui("codeWAS", mod_resultsVisualisation_CodeWAS_ui, pathAboutModule, "Code WAS")
     }
     if (analysisType == "timeCodeWAS") {
-      system.file('modulesDocumentation/about_timeCodeWAS.md', package = "CO2AnalysisModules")
+      pathAboutModule <- system.file('modulesDocumentation/about_timeCodeWAS.md', package = "CO2AnalysisModules")
       ui <- mod_resultsVisualisation_ui("timeCodeWAS", mod_resultsVisualisation_TimeCodeWAS_ui, pathAboutModule, "Time Code WAS")
     }
 
