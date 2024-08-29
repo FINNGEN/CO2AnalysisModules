@@ -10,3 +10,4 @@ renv.lock
 .Rprofile
 
 errorReportSql.txt
+*.data

@@ -493,8 +493,8 @@ execute_CodeWAS <- function(
   # CodeWASCounts ------------------------------------------------
   codewasResults  <-  codewasResults |>
     dplyr::transmute(
-      databaseId = as.character(databaseId),
-      covariateId = as.integer(covariateId),
+      databaseId = as.character({{databaseId}}),
+      covariateId = as.double(covariateId),
       covariateType = as.character(covariateType),
       nCasesYes = as.integer(nCasesYes),
       meanCases = as.double(meanCases),
@@ -631,7 +631,7 @@ checkResults_CodeWAS <- function(pathToResultsDatabase) {
     ),
     codewasResults = tibble::tibble(
       name = c("databaseId", "covariateId", "covariateType", "nCasesYes", "meanCases", "sdCases", "nControlsYes", "meanControls", "sdControls", "pValue", "oddsRatio", "beta", "standardError", "modelType", "runNotes"),
-      type = c("VARCHAR", "INTEGER", "VARCHAR", "INTEGER", "DOUBLE", "DOUBLE", "INTEGER", "DOUBLE", "DOUBLE", "DOUBLE", "DOUBLE", "DOUBLE", "DOUBLE", "VARCHAR", "VARCHAR")
+      type = c("VARCHAR", "DOUBLE", "VARCHAR", "INTEGER", "DOUBLE", "DOUBLE", "INTEGER", "DOUBLE", "DOUBLE", "DOUBLE", "DOUBLE", "DOUBLE", "DOUBLE", "VARCHAR", "VARCHAR")
     ),
     analysisRef = tibble::tibble(
       name = c("analysisId", "analysisName", "domainId", "isBinary", "missingMeansZero"),
