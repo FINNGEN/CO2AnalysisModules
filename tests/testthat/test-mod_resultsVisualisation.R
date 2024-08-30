@@ -35,7 +35,7 @@ test_that("mod_resultsVisualisation works", {
     ),    # No additional arguments needed
     {
       # Check that the rendered text output is as expected
-      output$cohortDefinitions  |> class() |> expect_equal("json")
+      output$cohortsInfo  |> class() |> expect_equal("json")
     }
   )
 

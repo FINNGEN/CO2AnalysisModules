@@ -225,8 +225,8 @@ execute_timeCodeWAS <- function(
   timeCodeWASResults  <-  timeCodeWASResults |>
     dplyr::transmute(
       databaseId = as.character({{databaseId}}),
-      covariateId = as.integer(covariateId),
-      timeId = as.character(timeId),
+      covariateId = as.double(covariateId),
+      timeId = as.double(timeId),
       nCasesYes = as.integer(nCasesYes),
       nControlsYes = as.integer(nControlsYes),
       nCasesNo = as.integer(nCasesNo),
@@ -239,7 +239,7 @@ execute_timeCodeWAS <- function(
 
   analysisRef <- analysisRef |>
     dplyr::transmute(
-      analysisId = as.integer(analysisId),
+      analysisId = as.double(analysisId),
       analysisName = as.character(analysisName),
       domainId = as.character(domainId),
       isBinary = as.character(isBinary),
@@ -249,18 +249,18 @@ execute_timeCodeWAS <- function(
 
   covariateRef <- covariateRef |>
     dplyr::transmute(
-      covariateId = as.integer(covariateId),
+      covariateId = as.double(covariateId),
       covariateName = as.character(covariateName),
-      analysisId = as.integer(analysisId),
-      conceptId = as.integer(conceptId),
-      valueAsConceptId = as.integer(valueAsConceptId),
+      analysisId = as.double(analysisId),
+      conceptId = as.double(conceptId),
+      valueAsConceptId = as.double(valueAsConceptId),
       collisions = as.character(collisions)
     )
   duckdb::dbWriteTable(connection, "covariateRef", covariateRef, overwrite = TRUE)
 
   timeRef <- timeWindows |>
     dplyr::transmute(
-      timeId = as.integer(id_window),
+      timeId = as.double(id_window),
       startDay = as.integer(start_day),
       endDay = as.integer(end_day)
     )
@@ -353,15 +353,15 @@ checkResults_timeCodeWAS <- function(pathToResultsDatabase) {
     ),
     timeCodeWASResults = tibble::tibble(
       name = c("databaseId", "covariateId", "timeId", "nCasesYes", "nControlsYes", "nCasesNo", "nControlsNo", "pValue", "oddsRatio", "modelType"),
-      type = c("VARCHAR", "INTEGER", "VARCHAR", "INTEGER", "INTEGER", "INTEGER", "INTEGER", "DOUBLE", "DOUBLE", "VARCHAR")
+      type = c("VARCHAR", "DOUBLE", "DOUBLE", "INTEGER", "INTEGER", "INTEGER", "INTEGER", "DOUBLE", "DOUBLE", "VARCHAR")
     ),
     analysisRef = tibble::tibble(
       name = c("analysisId", "analysisName", "domainId", "isBinary", "missingMeansZero"),
-      type = c("INTEGER", "VARCHAR", "VARCHAR", "VARCHAR", "VARCHAR")
+      type = c("DOUBLE", "VARCHAR", "VARCHAR", "VARCHAR", "VARCHAR")
     ),
     covariateRef = tibble::tibble(
       name = c("covariateId", "covariateName", "analysisId", "conceptId", "valueAsConceptId", "collisions"),
-      type = c("INTEGER", "VARCHAR", "INTEGER", "INTEGER", "INTEGER", "VARCHAR")
+      type = c("DOUBLE", "VARCHAR", "DOUBLE", "DOUBLE", "DOUBLE", "VARCHAR")
     ),
     analysisInfo = tibble::tibble(
       name = c("analysisType", "version", "analysisSettings", "analysisDuration", "exportDuration"),
@@ -369,7 +369,7 @@ checkResults_timeCodeWAS <- function(pathToResultsDatabase) {
     ),
     timeRef = tibble::tibble(
       name = c("timeId", "startDay", "endDay"),
-      type = c("INTEGER", "INTEGER", "INTEGER")
+      type = c("DOUBLE", "INTEGER", "INTEGER")
     )
   )
 
