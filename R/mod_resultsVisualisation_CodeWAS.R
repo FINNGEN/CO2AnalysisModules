@@ -187,8 +187,7 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
           dplyr::select(
             databaseId, domainId, analysisName, covariateName, conceptId,
             nCasesYes, nControlsYes, meanCases, sdCases, meanControls, sdControls,
-            pValue, oddsRatio, beta, standardError, modelType, runNotes,
-            covariateNameFull
+            pValue, oddsRatio, beta, standardError, modelType, runNotes
           ),
         escape = FALSE,
         class = 'display nowrap compact',
@@ -214,12 +213,13 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
           'SE' = 'standardError',
           'Model' = 'modelType',
           # 'ID' = 'analysisId',
-          'Notes' = 'runNotes',
+          'Notes' = 'runNotes'
           # 'Binary' = 'isBinary',
           # 'Missing mean zero' = 'missingMeansZero'
-          'covariateNameFull' = 'covariateNameFull'
+          # 'covariateNameFull' = 'covariateNameFull'
         ),
         options = list(
+            order = list(list(11, 'asc')),
           # rowCallback to show the full covariate name as a tooltip
           rowCallback = htmlwidgets::JS(
             "function(row, data) {",
