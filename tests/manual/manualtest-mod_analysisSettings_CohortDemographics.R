@@ -22,7 +22,11 @@ app <- shiny::shinyApp(
     rf_analysisSettings <- mod_analysisSettings_cohortDemographics_server("test", r_connectionHandler)
 
     shiny::observe({
-      print(rf_analysisSettings())
+      analysisSettings <- rf_analysisSettings()
+      print(analysisSettings)
+      if(!is.null(analysisSettings)){
+        analysisSettings |> assertAnalysisSettings_CohortDemographics() |> expect_no_error()
+      }
     })
   },
   options = list(launch.browser=TRUE)
