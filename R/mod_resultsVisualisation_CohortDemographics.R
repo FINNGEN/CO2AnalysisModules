@@ -38,7 +38,7 @@ mod_resultsVisualisation_CohortsDemographics_ui <- function(id) {
           shiny::downloadButton(ns("downloadDataActionButton"), "Download")
         )
       )
-    ),
+    ), # tabsetPanel
   )
 
 }
@@ -268,11 +268,11 @@ mod_resultsVisualisation_CohortsDemographics_server <- function(id, analysisResu
     })
 
     #
-    # download demographics table
+    # download demographics table ####
     #
     output$downloadDataActionButton <- shiny::downloadHandler(
       filename = function(){
-        paste(format(lubridate::now(), "%Y_%m_%d_%H%M"), '_demographics_data.csv', sep='')
+        paste('demographics_', format(lubridate::now(), "%Y_%m_%d_%H%M"), '.csv', sep='')
       },
       content = function(fname){
         readr::write_csv(ggplotData(), fname)
@@ -281,11 +281,11 @@ mod_resultsVisualisation_CohortsDemographics_server <- function(id, analysisResu
     )
 
     #
-    # download demographics table
+    # download demographics plot ####
     #
     output$downloadPlotButton <- shiny::downloadHandler(
       filename = function(){
-        paste(format(lubridate::now(), "%Y_%m_%d_%H%M"), '_demographics_plot.pdf', sep='')
+        paste('demographics_', format(lubridate::now(), "%Y_%m_%d_%H%M"), '.pdf', sep='')
       },
       content = function(fname){
 

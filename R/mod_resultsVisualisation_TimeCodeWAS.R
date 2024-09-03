@@ -1,4 +1,4 @@
-#' @title Cohort Demographics Visualization UI
+#' @title Cohort TimeCodeWAS Visualization UI
 #' @description UI module for visualizing cohort overlaps using an UpSet plot. This module provides controls to customize the appearance of the plot and options to download the plot and data.
 #'
 #' @param id A string representing the module's namespace.
@@ -16,91 +16,33 @@
 mod_resultsVisualisation_TimeCodeWAS_ui <- function(id) {
   ns <- shiny::NS(id)
 
-  htmltools::tagList(
-    shinyjs::useShinyjs(),
-    shiny::fluidRow(
-      # these must be in sync with server initialization
-      shiny::column(3,
-                    htmltools::strong("Observation type"),
-                    shiny::div(style = "height: 10px;"),
-                    shiny::div(
-                      shinyWidgets::awesomeCheckbox(ns("condition_occurrence"), label = "Condition occurrence", value = TRUE),
-                      style = "margin-bottom: -10px;"
-                    ),
-                    shiny::div(
-                      shinyWidgets::awesomeCheckbox(ns("drug_exposure"), label = "Drug exposure", value = TRUE),
-                      style = "margin-bottom: -10px;"
-                    ),
-                    shiny::div(
-                      shinyWidgets::awesomeCheckbox(ns("measurement"), label = "Measurement", value = TRUE),
-                      style = "margin-bottom: -10px;"
-                    ),
-                    shiny::div(
-                      shinyWidgets::awesomeCheckbox(ns("procedure_occurrence"), label = "Procedure occurrence", value = TRUE),
-                      style = "margin-bottom: -10px;"
-                    ),
-                    shiny::div(
-                      shinyWidgets::awesomeCheckbox(ns("observation"), label = "Observation", value = TRUE),
-                      style = "margin-bottom: -10px;"
-                    ),
+  shiny::tagList(
+    shiny::tags$h4("Filters"),
+    shiny::uiOutput(ns("outputUI")),
+    shiny::tags$h4("Data"),
+    shiny::tabsetPanel(
+      id = ns("tabset"),
+      shiny::tabPanel(
+        "Plot",
+        shiny::div(style = "height: 12px;"),
+        ggiraph::girafeOutput(ns("codeWASplot"), width = "100%", height = "100%"),
+        shiny::div(
+          style = "margin-top: 10px; margin-bottom: 10px;",
+          shiny::downloadButton(ns("downloadPlot"), "Download")
+        )
       ),
-      shiny::column(3, # c("-log10(p) [0,50]", "-log10(p) (50,100]", "-log10(p) (100,200]", "-log10(p) (200,Inf]")
-                    htmltools::strong("p-value groups"),
-                    shiny::div(style = "height: 10px;"),
-                    shiny::div(
-                      shinyWidgets::awesomeCheckbox(ns("group_1"), label = "-log10(p) [0,50]", value = TRUE),
-                      style = "margin-bottom: -10px;"
-                    ),
-                    shiny::div(
-                      shinyWidgets::awesomeCheckbox(ns("group_5"), label = "-log10(p) (50,100]", value = TRUE),
-                      style = "margin-bottom: -10px;"
-                    ),
-                    shiny::div(
-                      shinyWidgets::awesomeCheckbox(ns("group_10"), label = "-log10(p) (100,200]", value = TRUE),
-                      style = "margin-bottom: -10px;"
-                    ),
-                    shiny::div(
-                      shinyWidgets::awesomeCheckbox(ns("group_20"), label = "-log10(p) (200,Inf]", value = TRUE),
-                      style = "margin-bottom: -10px;"
-                    ),
-      ),
-      shiny::column(3,
-                    shinyWidgets::awesomeCheckbox(ns("show_labels"), label = "Show labels"),
-                    shiny::hr(style = "margin-bottom: -12px;"),
-                    shiny::sliderInput(ns("cases_per"), label="Label if case% >",
-                                       min = 0, max = 100, post  = " %", width = "200px",
-                                       value = 50
-                    ),
-                    shiny::hr(style = "margin-bottom: -10px;"),
-                    shiny::fluidRow(
-                      shiny::column(9,
-                             shiny::textInput(ns("search_string"), label = "Search labels (regex)", value = "", width = "100%"),
-                      ),
-                      shiny::column(3,
-                             shiny::div(
-                               shiny::actionButton(ns("search_points"), label = "Search"),
-                               style = "margin-top: 25px; margin-bottom: -25px; margin-left: -25px;"
-                             )
-                      )
-                    ),
-      ),
-      shiny::column(3,
-                    shiny::actionButton(ns("redraw"), label = shiny::tags$p("Update CodeWAS", style = "color:white; margin-bottom:0px"), class = "btn-primary"),
-                    shiny::div(style = "height: 12px;"),
-                    shiny::actionButton(ns("table_all"), label = "Show all points as a table"),
-                    shiny::div(style = "height: 5px;"),
-                    shiny::downloadButton(ns("download_actionButton"), "Download data"),
-                    shiny::div(style = "height: 12px;"),
-                    shiny::actionButton(ns("unselect"), label = "Unselect all"),
+      shiny::tabPanel(
+        "Table",
+        shiny::div(
+          style = "margin-top: 10px; margin-bottom: 10px;",
+          DT::DTOutput(ns("demographicsData")),
+        ),
+        shiny::div(
+          style = "margin-top: 10px; margin-bottom: 10px;",
+          shiny::downloadButton(ns("downloadData"), "Download")
+        )
       )
-    ),
-    shiny::div(style = "height: 12px;"),
-    # shinycustomloader::withLoader(
-      ggiraph::girafeOutput(ns("codeWASplot"), width = "100%", height = "100%"),
-    #   type = "html",
-    #   loader = "dnaspin",
-    # ),
-    shiny::hr(style = "margin-bottom: 20px;"),
+    ), # tabsetPanel
   )
 
 
@@ -131,70 +73,87 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
 
     studyResults  <- .analysisResultsHandler_to_studyResults(analysisResults)
 
+    last_plot <- NULL
+
     # fixed values
     time_periods = .get_time_periods(studyResults)
     gg_data_saved = .studyResults_to_gg_data(studyResults)
 
     # reactive values
     r <- shiny::reactiveValues(
-      domains = c("condition_occurrence", "drug_exposure", "measurement", "procedure_occurrence", "observation"),
-      p_groups = c(1, 5, 10, 20),
-      show_labels = FALSE,
-      show_labels_cases_per = 50,
-      #
       gg_data = NULL,
+      gg_plot = NULL,
       #
       line_to_plot = NULL,
       force_update = FALSE,
     )
 
     #
-    # copies input values to reactive values when redraw button is pressed
+    # render the UI
     #
-    # redraw ####
-    #
-    shiny::observeEvent(input$redraw, {
-      shiny::req(input$redraw)
-      shiny::req(r$gg_data)
-
-      domains <- c()
-      if(input$condition_occurrence == TRUE) domains <- c("condition_occurrence")
-      if(input$drug_exposure == TRUE) domains <- c(domains, "drug_exposure")
-      if(input$measurement == TRUE) domains <- c(domains, "measurement")
-      if(input$procedure_occurrence == TRUE) domains <- c(domains, "procedure_occurrence")
-      if(input$observation == TRUE) domains <- c(domains, "observation")
-
-      p_groups <- c()
-      if(input$group_1 == TRUE) p_groups <- c(1)
-      if(input$group_5 == TRUE) p_groups <- c(p_groups, 5)
-      if(input$group_10 == TRUE) p_groups <- c(p_groups, 10)
-      if(input$group_20 == TRUE) p_groups <- c(p_groups, 20)
-
-      # update values
-      r$domains <- domains
-      r$p_groups <- p_groups
-      r$show_labels <- input$show_labels
-      r$show_labels_cases_per <- input$cases_per
-
+    output$outputUI <- shiny::renderUI({
+      shiny::tagList(
+        shiny::fluidRow(
+          shiny::column(
+            3,
+            shinyWidgets::pickerInput(
+              ns("selected_domains"),
+              "Observation type",
+              choices = c(
+                "Condition occurrence" = "condition_occurrence",
+                "Drug exposure" = "drug_exposure",
+                "Measurement" = "measurement",
+                "Procedure occurrence" = "procedure_occurrence",
+                "Observation" = "observation"
+              ),
+              selected = c("condition_occurrence", "drug_exposure", "measurement", "procedure_occurrence", "observation"),
+              options = shinyWidgets::pickerOptions(
+                actionsBox = TRUE,
+                selectedTextFormat = 'count',
+                countSelectedText = '{0} observation types selected'
+              ),
+              multiple = TRUE
+            )
+          ),
+          shiny::column(
+            3,
+            shinyWidgets::pickerInput(
+              ns("selected_p_groups"),
+              "p-value groups",
+              choices = c(
+                "-log10(p) [0,50]" = 1,
+                "-log10(p) (50,100]" = 5,
+                "-log10(p) (100,200]" = 10,
+                "-log10(p) (200,Inf]" = 20
+                ),
+              selected = c(1, 5, 10, 20),
+              options = shinyWidgets::pickerOptions(
+                actionsBox = TRUE,
+                selectedTextFormat = 'count',
+                countSelectedText = '{0} p-value groups selected'
+              ),
+              multiple = TRUE
+            ),
+          )
+        )
+      )
     })
 
-
     #
-    # updates r$gg_data with when r$domains or r$p_groups changes
+    # observe the selected domains and p_groups
     #
-    shiny::observe( {
-      shiny::req(r$domains)
-      shiny::req(r$p_groups)
+    shiny::observe({
+      shiny::req(input$selected_domains)
+      shiny::req(input$selected_p_groups)
 
       # filter data
       gg_data <- gg_data_saved |>
-        dplyr::filter(domain %in% r$domains) |>
-        dplyr::filter(p_group_size %in% r$p_groups)
+        dplyr::filter(domain %in% input$selected_domains) |>
+        dplyr::filter(p_group_size %in% input$selected_p_groups)
 
       # update gg_data
       r$gg_data <- gg_data
     })
-
 
     #
     # updates ggirafe plot when r$gg_data or r$show_labels or r$show_labels_cases_per changes
@@ -203,15 +162,13 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
     #
     output$codeWASplot <- ggiraph::renderGirafe({
       shiny::req(r$gg_data)
-      shiny::req(r$show_labels_cases_per)
-      r$show_labels
       r$force_update
 
       gg_girafe <- .gg_data_to_gg_girafe(
         gg_data = r$gg_data,
-        show_labels =  r$show_labels,
-        show_labels_cases_per =  r$show_labels_cases_per,
-        selection = r$line_to_plot)
+        selection = r$line_to_plot,
+        r = r
+      )
 
       return(gg_girafe)
       # replotting this triggers codeWASplot_selected
@@ -227,6 +184,7 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
     shiny::observeEvent(input$codeWASplot_selected, {
       shiny::req(input$codeWASplot_selected)
       shiny::req(input$codeWASplot_selected != "NA")
+
 
       # clean selection value take only last selected
       selected_rows <- input$codeWASplot_selected
@@ -300,9 +258,10 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
     }, ignoreInit = TRUE)
 
     #
-    # show all points as a table
+    # show the data as a table ####
     #
-    shiny::observeEvent(input$table_all, {
+    output$demographicsData <- DT::renderDataTable({
+      shiny::req(r$gg_data)
 
       df_all <- r$gg_data |>
         dplyr::mutate(cases_per = scales::percent(cases_per, accuracy = 0.01)) |>
@@ -314,85 +273,68 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
         dplyr::select(name, upIn, OR, nCasesYes, nControlsYes, cases_per, controls_per, GROUP, p)
 
       # show table
-      shiny::showModal(
-        shiny::modalDialog(
-          shiny::div(
-            tags$style(HTML(".modal-dialog {width: 90%; max-width: 90%;}")),
-            DT::renderDataTable({
-            df_all |>
-              DT::datatable(
-                colnames = c(
-                  'Covariate name' = 'name',
-                  'Type' = 'upIn',
-                  'OR' = 'OR',
-                  'Cases n' = 'nCasesYes',
-                  'Ctrls n' = 'nControlsYes',
-                  'Cases %' = 'cases_per',
-                  'Ctrls %' = 'controls_per',
-                  'Group' = 'GROUP',
-                  'p' = 'p'
-                ),
-                escape = FALSE
-              ) |>
-              DT::formatSignif(columns = c('p', 'OR'), digits = 3) |>
-              DT::formatStyle('Covariate name', cursor = 'pointer' )
-          }),
-          size = "l",
-          easyClose = FALSE,
-          title = paste0("Entries (", nrow(df_all), ")"),
-          footer = shiny::modalButton("Close"),
+      df_all |>
+        DT::datatable(
+          colnames = c(
+            'Covariate name' = 'name',
+            'Type' = 'upIn',
+            'OR' = 'OR',
+            'Cases n' = 'nCasesYes',
+            'Ctrls n' = 'nControlsYes',
+            'Cases %' = 'cases_per',
+            'Ctrls %' = 'controls_per',
+            'Group' = 'GROUP',
+            'p' = 'p'
+          ),
           options = list(
-            autowidth = TRUE
-          )
-        )
-      ))
-    })
-
-    #
-    # unselect ####
-    #
-    shiny::observeEvent(input$unselect, {
-      # remove the previous selection
-      r$line_to_plot <- NULL
-      r$gg_data <- gg_data_saved
-      updateTextInput(session, "search_string", value = "")
-    }, ignoreInit = TRUE)
-
-    #
-    # search ####
-    #
-
-    shiny::observeEvent(input$search_points, {
-      # search for the string in the labels
-      search_string <- input$search_string
-      if(search_string == ""){
-        return()
-      }
-      session$sendCustomMessage(type = ns('codeWASplot_set'), message = character(0))
-      # filter data
-      gg_data <- gg_data_saved |>
-        dplyr::filter(stringr::str_detect(stringr::str_to_lower(label), stringr::str_to_lower(search_string))) |>
-        dplyr::filter(domain %in% r$domains) |>
-        dplyr::filter(p_group_size %in% r$p_groups)
-
-      # update gg_data
-      r$gg_data <- gg_data
+            order = list(list(9, 'asc'))
+          ),
+          escape = FALSE,
+        ) |>
+        DT::formatSignif(columns = c('p', 'OR'), digits = 3) |>
+        DT::formatStyle('Covariate name', cursor = 'pointer' )
     })
 
     #
     # download data as a table
     #
-    output$download_actionButton <- shiny::downloadHandler(
-      filename = function(){"timecodeWAS.csv"},
+    output$downloadData <- shiny::downloadHandler(
+      filename = function(){
+        paste('timecodewas_', format(lubridate::now(), "%Y_%m_%d_%H%M"), '.csv', sep='')
+      },
       content = function(fname){
-        readr::write_csv(r$gg_data, fname)
+        readr::write_csv(r$gg_data |> dplyr::select(-label), fname)
         return(fname)
       }
     )
 
+    #
+    # download data as a plot
+    #
+    output$downloadPlot <- shiny::downloadHandler(
+      filename = function(){
+        paste('timecodewas_', format(lubridate::now(), "%Y_%m_%d_%H%M"), '.pdf', sep='')
+      },
+      content = function(fname){
 
+        grDevices::cairo_pdf(filename = fname,
+                             width = 15,
+                             height = 5,
+                             pointsize = 1.0,
+                             family = "sans",
+                             bg = "transparent",
+                             antialias = "default",
+                             fallback_resolution = 300,
+        )
+        print(r$gg_plot)
+        grDevices::dev.off()
+      },
+      contentType = "application/pdf"
+    )
   })
 } # mod_timeCodeWASPlot_server
+
+# utility functions
 
 .label_editor <- function(s){
   for(i in 1:length(s)){
@@ -491,9 +433,10 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
 
 .gg_data_to_gg_girafe <- function(
     gg_data,
-    show_labels,
-    show_labels_cases_per,
-    selection
+    # show_labels,
+    # show_labels_cases_per,
+    selection,
+    r
 ){
   # adjust the label area according to facet width
   facet_max_x <- max( gg_data$controls_per, 0.03, na.rm = TRUE)
@@ -586,6 +529,8 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
     ggplot2::guides(color = "none", fill = ggplot2::guide_legend(override.aes = list(size = 5))) +
     ggplot2::labs(size = "p value group", fill = "Domain", x = "\nControls %", y = "Cases %")
 
+  r$gg_plot <- gg_fig
+
   selected_items <- ""
 
   if(!is.null(selection) && length(unique(selection$code)) == 1){
@@ -626,7 +571,7 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
       g$layout$clip <- "off"
     }
 
-    if(!is.null(selection)){
+    if(!is.null(selection) & length(selection) == 1){
       selected_items <- as.character(unique(selection$code))
       # extend selection to same code in all facets
       selected_items <- gg_data |>
@@ -696,10 +641,10 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
       nCases = nCasesYes + nCasesNo,
       nControls = nControlsYes + nControlsNo
     ) |>
-    dplyr::select(
-      covariateId, timeId, nCasesYes, nControlsYes, nCases, nControls, nCasesNo, nControlsNo, startDay,endDay,
-      covariateName, pValue, oddsRatio, upIn
-    ) |>
+    # dplyr::select(
+    #   covariateId, timeId, nCasesYes, nControlsYes, nCases, nControls, nCasesNo, nControlsNo, startDay,endDay,
+    #   covariateName, pValue, oddsRatio, upIn
+    # ) |>
     dplyr::collect()
 
   studyResults <- studyResults|>

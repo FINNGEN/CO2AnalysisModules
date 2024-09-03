@@ -16,19 +16,18 @@
 mod_resultsVisualisation_CodeWAS_ui <- function(id) {
   ns <- shiny::NS(id)
 
-  htmltools::tagList(
-    htmltools::h4("CodeWAS Results"),
+  shiny::tagList(
+    shiny::h4("Filters"),
     shiny::div(
-      style = "margin-top: 10px; margin-bottom: 20px;",
-      shiny::textOutput(ns("total_n")),
+      style = "margin-top: 10px; margin-bottom: 20px;"
     ),
     shiny::uiOutput(ns("codeWASFilter")),
     htmltools::hr(style = "margin-top: 10px; margin-bottom: 10px;"),
+    shiny::tags$h4("Data"),
     DT::dataTableOutput(ns("codeWAStable")),
     htmltools::hr(style = "margin-top: 10px; margin-bottom: 10px;"),
-    shiny::downloadButton(ns("downloadCodeWAS"), "Download CodeWAS results", icon = shiny::icon("download"))
+    shiny::downloadButton(ns("downloadCodeWAS"), "Download", icon = shiny::icon("download"))
   )
-
 }
 
 
@@ -74,15 +73,6 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
                                   breaks = c(0, 5, 100, Inf),
                                   labels = c('-log10(p) (0,5]', '-log10(p) (5,100]', '-log10(p) (100,Inf]'))
         )
-    })
-
-
-    #
-    # show total number individuals
-    #
-    output$total_n <- shiny::renderText({
-      shiny::req(r$codeWASData)
-      paste("Total N: ")
     })
 
     #
@@ -270,7 +260,7 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
     #
     output$downloadCodeWAS <- downloadHandler(
       filename = function() {
-        paste(Sys.time(), '_result.csv', sep='')
+        paste('codewas_', format(lubridate::now(), "%Y_%m_%d_%H%M"), '.csv', sep='')
       },
       content = function(file) {
         write.csv(r$codeWASData, file, row.names = FALSE)

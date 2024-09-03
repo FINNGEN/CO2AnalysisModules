@@ -38,11 +38,11 @@ app_server <- function(input, output, session) {
     }
     if (analysisType == "codeWAS") {
       pathAboutModule <- system.file('modulesDocumentation/about_codeWAS.md', package = "CO2AnalysisModules")
-      ui <- mod_resultsVisualisation_ui("codeWAS", mod_resultsVisualisation_CodeWAS_ui, pathAboutModule, "Code WAS")
+      ui <- mod_resultsVisualisation_ui("codeWAS", mod_resultsVisualisation_CodeWAS_ui, pathAboutModule, "CodeWAS")
     }
     if (analysisType == "timeCodeWAS") {
       pathAboutModule <- system.file('modulesDocumentation/about_timeCodeWAS.md', package = "CO2AnalysisModules")
-      ui <- mod_resultsVisualisation_ui("timeCodeWAS", mod_resultsVisualisation_TimeCodeWAS_ui, pathAboutModule, "Time Code WAS")
+      ui <- mod_resultsVisualisation_ui("timeCodeWAS", mod_resultsVisualisation_TimeCodeWAS_ui, pathAboutModule, "TimeCodeWAS")
     }
 
     # load module ui

@@ -86,7 +86,7 @@ mod_resultsVisualisation_ui <- function(id, resultsVisualisationModuleUi, pathTo
           padding-right: 10px;
         }
 
-      "
+       "
     ))),
     header = header,
     sidebar = sidebar,

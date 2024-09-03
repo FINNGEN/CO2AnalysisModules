@@ -16,72 +16,93 @@
 mod_resultsVisualisation_CohortsOverlaps_ui <- function(id) {
   ns <- shiny::NS(id)
 
-  htmltools::tagList(
+  shiny::tagList(
     shinybrowser::detect(),
-    shiny::fluidPage(
-      title = "UpSet plot",
+    shiny::fluidPage(style = "padding: 0px;",
       shinyjs::useShinyjs(),
 
-      shiny::div(
-        style = "margin: 10px; width: 100%;",
-        shiny::actionButton(ns("upset_controls_button"), "Show/Hide Settings")
-      ),
+      shiny::tagList(
+        # shiny::tags$h4("Filters"),
 
-      shinyjs::hidden(
-        shiny::div(
-          id = ns("upset_controls"),
-          shiny::fluidRow(
-            shinyWidgets::chooseSliderSkin("Flat"),
-            shiny::column(width = 4, align = "left",
-                          shiny::div(style = "height: 85px; width: 100%;",
-                                     shiny::sliderInput(ns("nsets"), "Number of sets", min = 1, max = 20, value = 8, step = 1),
-                          ),
-                          shiny::div(style = "height: 85px; width: 100%;",
-                              shiny::sliderInput(ns("nintersects"), "Number of intersections", min = 1, max = 60, value = 40, step = 1),
-                          ),
-                          shiny::div(style = "height: 85px; width: 100%;",
-                              shiny::sliderInput(ns("set_size.scale_max"), "Set size scale max", min = 0.5, max = 2.5, value = 1.3, step = 0.1),
-                          ),
+        shiny::tags$h4("Data"),
+        shiny::tabsetPanel(
+          id = ns("tabset"),
+          shiny::tabPanel(
+            "Plot",
+            shiny::div(
+              style = "margin-top: 10px; width: 100%; margin-bottom: 10px;",
+              shiny::actionButton(ns("upset_controls_button"), "Show/Hide Settings")
             ),
-            shiny::column(4, align = "left",
-                   shiny::div(style = "height: 85px; width: 100%;",
-                       shiny::sliderInput(ns("text_scale"), "Text scale", min = 0.5, max = 3, value = 2.0, step = 0.1),
-                   ),
-                   shiny::div(style = "height: 85px; width: 100%;",
-                       shiny::sliderInput(ns("point_size"), "Point size", min = 1, max = 10, value = 4, step = 1),
-                   ),
-                   shiny::div(style = "height: 85px; width: 100%;",
-                       shiny::sliderInput(ns("number_angles"), "Number angles", min = 0, max = 45, value = 0, step = 1),
-                   ),
-            ),
-            shiny::column(4, align = "left",
-                  shiny::div(style = "height: 85px; width: 100%;",
-                             shiny::sliderInput(ns("set_size.numbers_size"), "Set size number size", min = 0.5, max = 30, value = 7, step = 0.1),
-                   ),
-                   shiny::div(style = "height: 85px; width: 100%;",
-                       shiny::sliderInput(ns("plot_width"), "Plot width (in)", min = 2, max = 30, value = 18, step = 0.5),
-                   ),
-                   shiny::div(style = "height: 85px; width: 100%;",
-                       shiny::sliderInput(ns("plot_height"), "Plot height (in)", min = 2, max = 30, value = 10, step = 0.5),
-                   ),
-            ),
+            shinyjs::hidden(
+              shiny::div(
+                id = ns("upset_controls"),
+                shiny::fluidRow(
+                  shinyWidgets::chooseSliderSkin("Flat"),
+                  shiny::column(width = 4, align = "left",
+                                shiny::div(style = "height: 85px; width: 100%;",
+                                           shiny::sliderInput(ns("nsets"), "Number of sets", min = 1, max = 20, value = 8, step = 1),
+                                ),
+                                shiny::div(style = "height: 85px; width: 100%;",
+                                           shiny::sliderInput(ns("nintersects"), "Number of intersections", min = 1, max = 60, value = 40, step = 1),
+                                ),
+                                shiny::div(style = "height: 85px; width: 100%;",
+                                           shiny::sliderInput(ns("set_size.scale_max"), "Set size scale max", min = 0.5, max = 2.5, value = 1.3, step = 0.1),
+                                ),
+                  ),
+                  shiny::column(4, align = "left",
+                                shiny::div(style = "height: 85px; width: 100%;",
+                                           shiny::sliderInput(ns("text_scale"), "Text scale", min = 0.5, max = 3, value = 2.0, step = 0.1),
+                                ),
+                                shiny::div(style = "height: 85px; width: 100%;",
+                                           shiny::sliderInput(ns("point_size"), "Point size", min = 1, max = 10, value = 4, step = 1),
+                                ),
+                                shiny::div(style = "height: 85px; width: 100%;",
+                                           shiny::sliderInput(ns("number_angles"), "Number angles", min = 0, max = 45, value = 0, step = 1),
+                                ),
+                  ),
+                  shiny::column(4, align = "left",
+                                shiny::div(style = "height: 85px; width: 100%;",
+                                           shiny::sliderInput(ns("set_size.numbers_size"), "Set size number size", min = 0.5, max = 30, value = 7, step = 0.1),
+                                ),
+                                shiny::div(style = "height: 85px; width: 100%;",
+                                           shiny::sliderInput(ns("plot_width"), "Plot width (in)", min = 2, max = 30, value = 12, step = 0.5),
+                                ),
+                                shiny::div(style = "height: 85px; width: 100%;",
+                                           shiny::sliderInput(ns("plot_height"), "Plot height (in)", min = 2, max = 30, value = 7, step = 0.5),
+                                ),
+                  ),
+                ),
+                shiny::fluidRow(
+                  shiny::column(12, align = "left",
+                                shiny::checkboxInput(ns("show_numbers"), "Show intersection sizes", value = TRUE),
+                                shiny::checkboxInput(ns("set_size_show"), "Show set sizes", value = TRUE),
+                  )
+                )
+              )
+            ), # hidden
+            shiny::div(
+              style = "margin-left: -20px; margin-right: -20px;",
+              shiny::column(12, align = "center",
+                            shiny::div(style = "margin-bottom: 20px; margin-left: 10px; margin-right: 10px;",
+                                       shiny::plotOutput(ns("upset_plot"), height = "400px", width = "auto"),
+                            ),
+              ),
+              shiny::div(
+                style = "margin-left:20px; margin-top: 10px; margin-bottom: 10px;",
+                shiny::downloadButton(ns("downloadPDF"), "Download")
+              )
+            )
           ),
-          shiny::fluidRow(
-            shiny::column(12, align = "left",
-                   shiny::checkboxInput(ns("show_numbers"), "Show intersection sizes", value = TRUE),
-                   shiny::checkboxInput(ns("set_size_show"), "Show set sizes", value = TRUE),
+          shiny::tabPanel(
+            "Table",
+            reactable::reactableOutput(ns("overlapData")),
+            shiny::div(
+              style = "margin-top: 10px;",
+              shiny::downloadButton(ns("downloadCSV"), "Download")
             )
           )
-        )
-      ), # hidden
-      shiny::fluidRow(
-        shiny::column(12, align = "center",
-               shiny::plotOutput(ns("upset_plot")),
-               shiny::div(style = "margin-top: 20px;",
-                   shiny::downloadButton(ns("download_pdf"), "Download plot as PDF", icon = shiny::icon("download")),
-                   shiny::downloadButton(ns("download_csv"), "Download data as CSV", icon = shiny::icon("download")),
-               )
-        )
+        ), # tabsetPanel
+
       ),
     ))
 }
@@ -116,6 +137,20 @@ mod_resultsVisualisation_CohortsOverlaps_server <- function(id, analysisResults)
 
     cohortsInfo <- shiny::reactive({
       cohortsInfoData <- analysisResults |> dplyr::tbl("cohortsInfo") |> dplyr::collect()
+    })
+
+    output$overlapData <- reactable::renderReactable({
+      cohortDefinitionData <- cohortsInfo()
+      cohortOverlapsData <- cohortOverlaps()
+
+      for(i in 1:nrow(cohortDefinitionData)){
+        cohortOverlapsData$cohortIdCombinations <-
+          gsub(paste0("-", cohortDefinitionData$cohortId[i], "-"), paste0("-", cohortDefinitionData$shortName[i], "-"), cohortOverlapsData$cohortIdCombinations)
+      }
+      cohortOverlapsData$cohortIdCombinations <-gsub("-", " & ", cohortOverlapsData$cohortIdCombinations)
+      cohortOverlapsData$cohortIdCombinations <- gsub("^ &|& $", "", cohortOverlapsData$cohortIdCombinations)
+
+      reactable::reactable(cohortOverlapsData)
     })
 
     #
@@ -171,9 +206,9 @@ mod_resultsVisualisation_CohortsOverlaps_server <- function(id, analysisResults)
     #
     # download the plot as a PDF file
     #
-    output$download_pdf <- downloadHandler(
+    output$downloadPDF <- downloadHandler(
       filename = function(){
-        paste("upset_plot_", Sys.Date(), ".pdf", sep = "")
+        paste('upset_plot_', format(lubridate::now(), "%Y_%m_%d_%H%M"), '.pdf', sep='')
       },
 
       content = function(file){
@@ -196,18 +231,27 @@ mod_resultsVisualisation_CohortsOverlaps_server <- function(id, analysisResults)
     #
     # download the data as a CSV file
     #
-    output$download_csv <- downloadHandler(
+    output$downloadCSV <- downloadHandler(
       filename = function(){
-        paste0("upset_plot_data_", Sys.Date(), ".csv")
+        paste('overlap_data_', format(lubridate::now(), "%Y_%m_%d_%H%M"), '.csv', sep='')
       },
 
       content = function(file){
-        write.csv(cohortOverlaps(), file)
+        cohortDefinitionData <- cohortsInfo()
+        cohortOverlapsData <- cohortOverlaps()
+
+        for(i in 1:nrow(cohortDefinitionData)){
+          cohortOverlapsData$cohortIdCombinations <-
+            gsub(paste0("-", cohortDefinitionData$cohortId[i], "-"), paste0("-", cohortDefinitionData$shortName[i], "-"), cohortOverlapsData$cohortIdCombinations)
+        }
+        cohortOverlapsData$cohortIdCombinations <-gsub("-", " & ", cohortOverlapsData$cohortIdCombinations)
+        cohortOverlapsData$cohortIdCombinations <- gsub("^ &|& $", "", cohortOverlapsData$cohortIdCombinations)
+
+        write.csv(cohortOverlapsData, file)
       },
 
       contentType = "application/csv"
     )
-
 
   })
 }
