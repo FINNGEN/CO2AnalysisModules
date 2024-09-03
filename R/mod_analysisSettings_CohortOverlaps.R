@@ -61,6 +61,7 @@ mod_analysisSettings_cohortOverlaps_server <- function(id, r_connectionHandler) 
     # update selectCohorts_pickerInput with cohort names in r_connectionHandler
     #
     shiny::observe({
+      shiny::req(r_connectionHandler$cohortTableHandler)
       shiny::req(r_connectionHandler$hasChangeCounter)
 
       cohortIdAndNames <- r_connectionHandler$cohortTableHandler$getCohortIdAndNames()
