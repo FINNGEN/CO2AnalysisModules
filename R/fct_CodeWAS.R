@@ -513,7 +513,7 @@ execute_CodeWAS <- function(
 
   analysisRef <- analysisRef |>
     dplyr::transmute(
-      analysisId = as.integer(analysisId),
+      analysisId = as.double(analysisId),
       analysisName = as.character(analysisName),
       domainId = as.character(domainId),
       isBinary = as.character(isBinary),
@@ -523,11 +523,11 @@ execute_CodeWAS <- function(
 
   covariateRef <- covariateRef |>
     dplyr::transmute(
-      covariateId = as.integer(covariateId),
+      covariateId = as.double(covariateId),
       covariateName = as.character(covariateName),
-      analysisId = as.integer(analysisId),
-      conceptId = as.integer(conceptId),
-      valueAsConceptId = as.integer(valueAsConceptId),
+      analysisId = as.double(analysisId),
+      conceptId = as.double(conceptId),
+      valueAsConceptId = as.double(valueAsConceptId),
       collisions = as.character(collisions)
     )
   duckdb::dbWriteTable(connection, "covariateRef", covariateRef, overwrite = TRUE)
@@ -635,11 +635,11 @@ checkResults_CodeWAS <- function(pathToResultsDatabase) {
     ),
     analysisRef = tibble::tibble(
       name = c("analysisId", "analysisName", "domainId", "isBinary", "missingMeansZero"),
-      type = c("INTEGER", "VARCHAR", "VARCHAR", "VARCHAR", "VARCHAR")
+      type = c("DOUBLE", "VARCHAR", "VARCHAR", "VARCHAR", "VARCHAR")
     ),
     covariateRef = tibble::tibble(
       name = c("covariateId", "covariateName", "analysisId", "conceptId", "valueAsConceptId", "collisions"),
-      type = c("INTEGER", "VARCHAR", "INTEGER", "INTEGER", "INTEGER", "VARCHAR")
+      type = c("DOUBLE", "VARCHAR", "DOUBLE", "DOUBLE", "DOUBLE", "VARCHAR")
     ),
     analysisInfo = tibble::tibble(
       name = c("analysisType", "version", "analysisSettings", "analysisDuration", "exportDuration"),
