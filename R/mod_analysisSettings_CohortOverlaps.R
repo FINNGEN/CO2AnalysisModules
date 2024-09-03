@@ -77,7 +77,7 @@ mod_analysisSettings_cohortOverlaps_server <- function(id, r_connectionHandler) 
     # activate settings if cohorts have been selected
     #
     shiny::observe({
-      condition <- !is.null(input$selectCohorts_pickerInput) & input$selectCohorts_pickerInput!="NA"
+      condition <- !is.null(input$selectCohorts_pickerInput)
       shinyjs::toggleState("minCellCount_numericInput", condition = condition )
     })
 
@@ -89,9 +89,8 @@ mod_analysisSettings_cohortOverlaps_server <- function(id, r_connectionHandler) 
       if(is.null(input$selectCohorts_pickerInput)){
         return(NULL)
       }
-
       analysisSettings <- list(
-        cohortIds = input$selectCohorts_pickerInput,
+        cohortIds = input$selectCohorts_pickerInput |> as.integer(),
         minCellCount = input$minCellCount_numericInput
       )
 

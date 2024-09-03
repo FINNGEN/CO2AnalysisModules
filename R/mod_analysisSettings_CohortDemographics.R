@@ -115,7 +115,7 @@ mod_analysisSettings_cohortDemographics_server <- function(id, r_connectionHandl
       }
 
       analysisSettings <- list(
-        cohortIds = input$selectCohorts_pickerInput,
+        cohortIds = input$selectCohorts_pickerInput |> as.integer(),
         referenceYears = input$referenceYears_pickerInput,
         groupBy = input$groupBy_pickerInput,
         minCellCount = input$minCellCount_numericInput

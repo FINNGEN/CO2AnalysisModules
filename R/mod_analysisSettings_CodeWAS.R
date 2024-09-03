@@ -281,8 +281,8 @@ mod_analysisSettings_codeWAS_server <- function(id, r_connectionHandler) {
       }
 
       analysisSettings <- list(
-        cohortIdCases = input$selectCaseCohort_pickerInput,
-        cohortIdControls = input$selectControlCohort_pickerInput,
+        cohortIdCases = input$selectCaseCohort_pickerInput |> as.integer(),
+        cohortIdControls = input$selectControlCohort_pickerInput |> as.integer(),
         analysisIds = analysisIds,
         covariatesIds = covariatesIds,
         minCellCount = input$minCellCount_numericInput,

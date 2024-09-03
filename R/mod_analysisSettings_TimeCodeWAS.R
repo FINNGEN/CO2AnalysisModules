@@ -237,9 +237,9 @@ mod_analysisSettings_timeCodeWAS_server <- function(id, r_connectionHandler) {
       }
 
       analysisSettings <- list(
-        cohortIdCases = input$selectCaseCohort_pickerInput,
-        cohortIdControls = input$selectControlCohort_pickerInput,
-        analysisIds = input$features_pickerInput,
+        cohortIdCases = input$selectCaseCohort_pickerInput |> as.integer(),
+        cohortIdControls = input$selectControlCohort_pickerInput |> as.integer(),
+        analysisIds = input$features_pickerInput |> as.integer(),
         temporalStartDays = rf_ranges()$temporalStartDays,
         temporalEndDays =   rf_ranges()$temporalEndDays
       )
