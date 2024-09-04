@@ -24,7 +24,7 @@ mod_resultsVisualisation_ui <- function(id, resultsVisualisationModuleUi, pathTo
   )
 
   header <-
-    shinydashboard::dashboardHeader(title = "cohortOverlaps", headerContent)
+    shinydashboard::dashboardHeader(title = title, headerContent)
 
   sidebarMenu <-
     shinydashboard::sidebarMenu(
@@ -64,11 +64,12 @@ mod_resultsVisualisation_ui <- function(id, resultsVisualisationModuleUi, pathTo
     ),
     shinydashboard::tabItem(
       tabName = "module",
-      resultsVisualisationModuleUi(ns(id)),
+      shiny::tags$h4("Cohorts"),
       shiny::div(
-        style = "margin-left: 20px; margin-top: 50px; margin-right:20px;",
+        style = "margin-left: 3px; margin-top: 10px; margin-right:3px; margin-bottom: 20px;",
         reactable::reactableOutput(ns("usedCohortsInfo"))
       ),
+      resultsVisualisationModuleUi(ns(id)),
     )
   )
 
@@ -85,7 +86,7 @@ mod_resultsVisualisation_ui <- function(id, resultsVisualisationModuleUi, pathTo
           padding-right: 10px;
         }
 
-      "
+       "
     ))),
     header = header,
     sidebar = sidebar,
@@ -137,7 +138,8 @@ mod_resultsVisualisation_server <- function(id, resultsVisualisationModuleServer
 
     output$usedCohortsInfo <- reactable::renderReactable({
       countsTable <- analysisResults |> dplyr::tbl('cohortsInfo') |>
-        dplyr::select(use, shortName, cohortName, cohortSubjects, cohortEntries) |>
+        dplyr::filter(!is.na(use) & use != "") |>
+        dplyr::select(shortName, cohortName, cohortSubjects, cohortEntries) |>
         dplyr::collect()
 
       reactable::reactable(countsTable)
