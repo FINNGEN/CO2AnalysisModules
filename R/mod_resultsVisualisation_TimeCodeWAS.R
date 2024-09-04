@@ -620,7 +620,7 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
 }
 
 
-.analysisResultsHandler_to_studyResults <- function(analysisResultsHandler){
+.analysisResultsHandler_to_studyResults <- function(analysisResults){
 
   studyResults  <- analysisResults |> dplyr::tbl("timeCodeWASResults")  |>
     dplyr::left_join(

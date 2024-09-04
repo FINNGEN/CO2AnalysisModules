@@ -24,7 +24,7 @@ app_server <- function(input, output, session) {
     shiny::req(rf_pathToResultsDatabase())
 
     # read database
-    analysisResults <- duckdb::dbConnect(duckdb::duckdb(), pathToResultsDatabase)
+    analysisResults <- duckdb::dbConnect(duckdb::duckdb(), rf_pathToResultsDatabase())
     analysisType <- analysisResults |> dplyr::tbl("analysisInfo") |> dplyr::collect() |> dplyr::pull("analysisType") |> unique()
 
     # select module ui based on analysisType
@@ -69,7 +69,7 @@ app_server <- function(input, output, session) {
     shiny::req(rf_pathToResultsDatabase())
 
     # read database
-    analysisResults <- duckdb::dbConnect(duckdb::duckdb(), pathToResultsDatabase)
+    analysisResults <- duckdb::dbConnect(duckdb::duckdb(), rf_pathToResultsDatabase())
     analysisType <- analysisResults |> dplyr::tbl("analysisInfo") |> dplyr::collect() |> dplyr::pull("analysisType") |> unique()
 
     # load module server based on analysisType
