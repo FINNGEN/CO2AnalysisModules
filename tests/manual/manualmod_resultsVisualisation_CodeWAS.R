@@ -15,7 +15,7 @@ on.exit({unlink(exportFolder, recursive = TRUE)})
 analysisSettings <- list(
   cohortIdCases = 1,
   cohortIdControls = 2,
-  analysisIds = c(101, 141, 1, 2, 402, 701, 702, 41),
+  analysisIds = c(141,1,2,8,10,41,641,341,404,741,841,541),#c(101, 141, 1, 2, 402, 701, 702, 41),
   covariatesIds = NULL,
   minCellCount = 1
 )
