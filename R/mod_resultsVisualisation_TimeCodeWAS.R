@@ -34,7 +34,7 @@ mod_resultsVisualisation_TimeCodeWAS_ui <- function(id) {
       shiny::tabPanel(
         "Table",
         shiny::div(
-          style = "margin-top: 10px; margin-bottom: 10px;",
+          style = "margin-top: 20px; margin-bottom: 10px;",
           DT::DTOutput(ns("demographicsData")),
         ),
         shiny::div(
@@ -171,7 +171,6 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
       )
 
       return(gg_girafe)
-      # replotting this triggers codeWASplot_selected
     })
 
     #
@@ -203,7 +202,7 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
           dplyr::mutate(cases_per = scales::percent(cases_per, accuracy = 0.01)) |>
           dplyr::mutate(controls_per = scales::percent(controls_per, accuracy = 0.01)) |>
           dplyr::mutate(p = as.numeric(formatC(p, format = "e", digits = 2))) |>
-          dplyr::select(name, upIn, nCasesYes, nControlsYes, cases_per, controls_per, GROUP, p)
+          dplyr::select(name, upIn, nCasesYes, nControlsYes, cases_per, controls_per, GROUP, OR, p)
 
         # show table
         shiny::showModal(
@@ -222,12 +221,15 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
                   'Cases %' = 'cases_per',
                   'Ctrls %' = 'controls_per',
                   'Group' = 'GROUP',
+                  'OR' = 'OR',
                   'p' = 'p'
                 ),
                 options = list(
                   formatter = list(
-                    p = function(x) format(x, scientific = TRUE)
-                  )
+                    p = function(x) format(x, scientific = TRUE),
+                    OR = function(x) format(x, scientific = TRUE)
+                  ),
+                  order = list(list(9, 'asc'), list(8, 'desc')) # order by p-value, then by OR
                 )
               )
             }),
@@ -270,7 +272,7 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
           code = round(code/1000),
           name = purrr::map2_chr(name, code, ~paste0('<a href="',atlasUrl,'/#/concept/', .y, '" target="_blank">', .x,'</a>'))
         ) |>
-        dplyr::select(name, upIn, OR, nCasesYes, nControlsYes, cases_per, controls_per, GROUP, p)
+        dplyr::select(name, upIn, nCasesYes, nControlsYes, cases_per, controls_per, GROUP, OR, p)
 
       # show table
       df_all |>
@@ -278,16 +280,16 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
           colnames = c(
             'Covariate name' = 'name',
             'Type' = 'upIn',
-            'OR' = 'OR',
             'Cases n' = 'nCasesYes',
             'Ctrls n' = 'nControlsYes',
             'Cases %' = 'cases_per',
             'Ctrls %' = 'controls_per',
             'Group' = 'GROUP',
+            'OR' = 'OR',
             'p' = 'p'
           ),
           options = list(
-            order = list(list(9, 'asc'))
+            order = list(list(9, 'asc'), list(8, 'desc')) # order by p-value, then by OR
           ),
           escape = FALSE,
         ) |>

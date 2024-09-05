@@ -23,10 +23,29 @@ mod_resultsVisualisation_CodeWAS_ui <- function(id) {
     ),
     shiny::uiOutput(ns("codeWASFilter")),
     htmltools::hr(style = "margin-top: 10px; margin-bottom: 10px;"),
-    shiny::tags$h4("Data"),
-    DT::dataTableOutput(ns("codeWAStable")),
-    htmltools::hr(style = "margin-top: 10px; margin-bottom: 10px;"),
-    shiny::downloadButton(ns("downloadCodeWAS"), "Download", icon = shiny::icon("download"))
+    shiny::tabsetPanel(
+      id = ns("tabset"),
+      shiny::tabPanel(
+        "Plot",
+        shiny::div(style = "height: 24px;"),
+        ggiraph::girafeOutput(ns("codeWASplot"), width = "80%", height = "500"),
+        shiny::div(
+          style = "margin-top: 10px; margin-bottom: 10px;",
+          shiny::downloadButton(ns("downloadPlot"), "Download")
+        )
+      ),
+      shiny::tabPanel(
+        "Table",
+        shiny::div(
+          style = "margin-top: 10px; margin-bottom: 10px;",
+          DT::dataTableOutput(ns("codeWAStable")),
+        ),
+        shiny::div(
+          style = "margin-top: 10px; margin-bottom: 10px;",
+          shiny::downloadButton(ns("downloadCodeWAS"), "Download", icon = shiny::icon("download"))
+        )
+      )
+    ), # tabsetPanel
   )
 }
 
@@ -179,11 +198,13 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
           dplyr::mutate(meanControls = as.numeric(formatC(meanControls, format = "e", digits = 2))) |>
           dplyr::mutate(sdControls = as.numeric(formatC(sdControls, format = "e", digits = 2))) |>
           dplyr::mutate(covariateNameFull = as.character(covariateName)) |>
-          dplyr::mutate(covariateName = stringr::str_trunc(covariateName, 40)) |>
+          dplyr::mutate(covariateName = stringr::str_trunc(covariateName, 50)) |>
+          dplyr::mutate(analysisName = stringr::str_trunc(analysisName, 20)) |>
           dplyr::mutate(
             covariateId = round(covariateId/1000),
             covariateName = purrr::map2_chr(covariateName, covariateId, ~paste0('<a href="',atlasUrl,'/#/concept/', .y, '" target="_blank">', .x,'</a>'))
           ) |>
+          dplyr::filter(pValue < 0.0005) |>
           dplyr::select(
             databaseId, domainId, analysisName, covariateName, conceptId,
             nCasesYes, nControlsYes, meanCases, sdCases, meanControls, sdControls,
@@ -191,7 +212,7 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
           ),
         escape = FALSE,
         class = 'display nowrap compact',
-        selection = 'single',
+        selection = 'none',
         rownames = FALSE,
         colnames = c(
           'Database' = 'databaseId',
@@ -219,35 +240,36 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
           # 'covariateNameFull' = 'covariateNameFull'
         ),
         options = list(
-            order = list(list(11, 'asc')),
+            order = list(list(11, 'asc'), list(12, 'desc')), # pValue, OR
           # rowCallback to show the full covariate name as a tooltip
-          rowCallback = htmlwidgets::JS(
-            "function(row, data) {",
-            "var full_text = data[13]", # covariateNameFull
-            "$('td', row).attr('title', full_text);",
-            "}"
-          ),
+          # rowCallback = htmlwidgets::JS(
+          #   "function(row, data) {",
+          #   "var full_text = data[13]", # covariateNameFull
+          #   "$('td', row).attr('title', full_text);",
+          #   "}"
+          # ),
           # change the color of the cells with NA (except for the Notes column)
-          createdRow = htmlwidgets::JS(
-            "function(row, data, dataIndex) {",
-            "  for(var i=0; i<data.length; i++){",
-            "    if(data[i] === null && ![5, 6, 12].includes(i)){", # skip Notes-column
-            "      $('td:eq('+i+')', row).html('NA')",
-            "        .css({'color': 'rgb(226,44,41)', 'font-style': 'italic'});",
-            "    }",
-            "  }",
-            "}"
-          ),
+          # createdRow = htmlwidgets::JS(
+          #   "function(row, data, dataIndex) {",
+          #   "  for(var i=0; i<data.length; i++){",
+          #   "    if(data[i] === null && ![5, 6, 12].includes(i)){", # skip Notes-column
+          #   "      $('td:eq('+i+')', row).html('NA')",
+          #   "        .css({'color': 'rgb(226,44,41)', 'font-style': 'italic'});",
+          #   "    }",
+          #   "  }",
+          #   "}"
+          # ),
           # autoWidth = TRUE,
           # arrange the table by pValue
-          order = list(list(7, 'asc')), # pValue
           # scrollX = TRUE,
           columnDefs = list(
-            list(width = '70px', targets = c(3, 13)), # covariateName
-            list(width = '45px', targets = c(2)), # conceptId
-            list(width = '40px', targets = c(0,1,4,5,6,7, 10, 11)),
+            list(width = '70px', targets = c(3, 13)), # covariateName, runNotes
+            list(width = '80px', targets = c(2)), # analysisName
+            list(width = '60px', targets = c(1)), # domainId
+            list(width = '50px', targets = c(4)), # conceptId
+            list(width = '40px', targets = c(0,5,6,7, 10, 11)),
             list(width = '50px', targets = c(8, 9)), # pValue, OR
-            list(visible = FALSE, targets = c(13))
+            list(visible = FALSE, targets = c(13)) # covariateNameFull
           ),
           pageLength = 20,
           lengthMenu = c(10, 15, 20, 25, 30)
@@ -266,6 +288,60 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
         write.csv(r$codeWASData, file, row.names = FALSE)
       }
     )
+
+    #
+    # create a ggiraph plot
+    #
+    output$codeWASplot <- ggiraph::renderGirafe({
+      shiny::req(r$codeWASData)
+      shiny::req(r$filteredCodeWASData)
+      shiny::req(r$filteredCodeWASData  |>  nrow() > 0)
+
+      df <- r$filteredCodeWASData |>
+        dplyr::mutate(fold = log2(meanControls / meanCases)) |>
+        dplyr::mutate(direction = ifelse(fold > 0, "up", "down")) |> # n.s. = not significant
+        dplyr::mutate(direction = ifelse(pValue > 0.0005, "n.s.", direction)) |>
+        dplyr::select(analysisName, covariateName, pValue, fold, direction, oddsRatio) |>
+        dplyr::mutate(pLog10 = -log10(pValue)) |>
+        dplyr::mutate(fold = ifelse(is.infinite(fold), 0, fold))
+
+      p <- ggplot2::ggplot(data = df, mapping = ggplot2::aes(x = fold, y = pLog10, color = direction)) +
+        ggiraph::geom_point_interactive(
+          ggplot2::aes(
+            tooltip = paste("Analysis: ", analysisName, "<br>",
+                            "Covariate: ", covariateName, "<br>",
+                            "Fold change: ", signif(fold, digits = 3), "<br>",
+                            "p-value: ", signif(pValue, digits = 2), "<br>",
+                            "OR: ", signif(oddsRatio, digits = 3), "<br>")
+          ),
+          hover_nearest = TRUE,
+          size = 1.5,
+          alpha = 0.4) +
+        ggplot2::geom_vline(xintercept = c(-0.6, 0.6), col = "gray", linetype = 'dashed') +
+        ggplot2::geom_hline(yintercept = -log10(0.05), col = "gray", linetype = 'dashed') +
+        ggplot2::labs(
+          x = "Fold change (log2)",
+          y = "-log10(p-value)"
+        ) +
+        ggplot2::scale_color_manual(values = c("up" = "#E41A1C", "down" = "#377EB8", "n.s." = "lightgrey"), guide = "none") +
+        ggplot2::theme_minimal()
+
+      gg_girafe <- ggiraph::girafe(ggobj = p,
+                      options = list(
+                        ggiraph::opts_tooltip(use_fill = TRUE),
+                        ggiraph::opts_zoom(min = 0.5, max = 5),
+                        ggiraph::opts_sizing(rescale = FALSE),
+                        ggiraph::opts_toolbar(saveaspng = TRUE, delay_mouseout = 2000)
+                      )
+      )
+
+      gg_plot <- ggiraph::girafe(ggobj = p) |> ggiraph::girafe_options(ggiraph::opts_hover(css = "fill: red;"))
+
+      gg_plot <- NULL
+
+      return(gg_plot)
+    })
+
 
   })
 }
