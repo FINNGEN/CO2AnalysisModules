@@ -4,12 +4,12 @@
 \alias{.checkSchema}
 \title{Check Schema Consistency}
 \usage{
-.checkSchema(schema, expected_schema)
+.checkSchema(schema, expectedSchema)
 }
 \arguments{
 \item{schema}{A tibble representing the schema of a database table, with columns \code{name} and \code{type}.}
 
-\item{expected_schema}{A tibble representing the expected schema of the database table, with columns \code{name} and \code{type}.}
+\item{expectedSchema}{A tibble representing the expected schema of the database table, with columns \code{name} and \code{type}.}
 }
 \value{
 Returns \code{TRUE} if the schema matches the expected schema. Otherwise, it returns an error message indicating the discrepancies.

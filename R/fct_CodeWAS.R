@@ -521,6 +521,15 @@ execute_CodeWAS <- function(
     )
   duckdb::dbWriteTable(connection, "analysisRef", analysisRef, overwrite = TRUE)
 
+  # TEMP
+  # If missing valueAsConceptId or collisions, add them as NA
+  if (!"valueAsConceptId" %in% names(covariateRef)) {
+    covariateRef$valueAsConceptId <- NA
+  }
+  if (!"collisions" %in% names(covariateRef)) {
+    covariateRef$collisions <- NA
+  }
+  # END TEMP
   covariateRef <- covariateRef |>
     dplyr::transmute(
       covariateId = as.double(covariateId),

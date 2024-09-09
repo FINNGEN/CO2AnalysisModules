@@ -27,7 +27,25 @@ Imports:
     htmltools,
     reactable,
     shinybrowser,
-    tibble
+    tibble,
+    markdown, 
+    DT,
+    DatabaseConnector,
+    FeatureExtraction,
+    SqlRender,
+    forcats,
+    ggiraph,
+    ggplotify,
+    ggrepel,
+    gtable,
+    htmlwidgets,
+    lubridate,
+    purrr,
+    readr,
+    scales,
+    speedglm,
+    stringr,
+    tidyr
 Remotes: 
     FINNGEN/HadesExtras
 Suggests: 

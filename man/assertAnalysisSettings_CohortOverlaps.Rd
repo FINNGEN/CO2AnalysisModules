@@ -7,7 +7,11 @@
 assertAnalysisSettings_CohortOverlaps(analysisSettings)
 }
 \arguments{
-\item{analysisSettings}{A list containing analysis settings, including \code{cohortIds} and \code{minCellCount}.}
+\item{analysisSettings}{A list containing analysis settings. It must include the following elements:
+\describe{
+\item{cohortIds}{A numeric vector of cohort IDs.}
+\item{minCellCount}{A numeric value representing the minimum cell count, must be 0 or higher.}
+}}
 }
 \value{
 TRUE if the settings are valid; otherwise, an error is thrown.
