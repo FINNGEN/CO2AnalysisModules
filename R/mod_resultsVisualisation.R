@@ -30,12 +30,9 @@ mod_resultsVisualisation_ui <- function(id, resultsVisualisationModuleUi, pathTo
     shinydashboard::sidebarMenu(
       id = ns("tabs"),
       shinydashboard::menuItem(text = title, tabName = "module", icon = shiny::icon("table")),
-      shinydashboard::menuItem(text = "About", tabName = "about", icon = shiny::icon("code")),
-      shinydashboard::menuItem(text = "Cohort Information", tabName = "cohortsInfo", icon = shiny::icon("code")),
-      shinydashboard::menuItem(text = "Analysis Information", tabName = "analysisInfo", icon = shiny::icon("code")),
-      shinydashboard::menuItem(text = "Database Information", tabName = "databaseInfo", icon = shiny::icon("code")),
+      shinydashboard::menuItem(text = "About", tabName = "about"),
+      shinydashboard::menuItem(text = "Study details", tabName = "cohortsInfo"),
       selected = "module"
-      #shinydashboard::menuItem(text = "Meta data", tabName = "databaseInformation", icon = shiny::icon("gear", verify_fa = FALSE))
     )
 
   # Side bar code
@@ -52,14 +49,11 @@ mod_resultsVisualisation_ui <- function(id, resultsVisualisationModuleUi, pathTo
     ),
     shinydashboard::tabItem(
       tabName = "cohortsInfo",
-      reactable::reactableOutput(ns("cohortsInfo"))
-    ),
-    shinydashboard::tabItem(
-      tabName = "analysisInfo",
-      reactable::reactableOutput(ns("analysisInfo"))
-    ),
-    shinydashboard::tabItem(
-      tabName = "databaseInfo",
+      shiny::tags$h4("Cohort Information"),
+      reactable::reactableOutput(ns("cohortsInfo")),
+      shiny::tags$h4("Analysis Information"),
+      reactable::reactableOutput(ns("analysisInfo")),
+      shiny::tags$h4("Database Information"),
       reactable::reactableOutput(ns("databaseInfo"))
     ),
     shinydashboard::tabItem(
@@ -130,10 +124,10 @@ mod_resultsVisualisation_server <- function(id, resultsVisualisationModuleServer
     })
 
     output$cohortsInfo <- reactable::renderReactable({
-      cohortsInfo <- analysisResults |> dplyr::tbl('cohortsInfo') |>
-        dplyr::select(-sql, -json) |>
-        dplyr::collect()
-      reactable::reactable(cohortsInfo)
+        cohortsInfo <- analysisResults |> dplyr::tbl('cohortsInfo') |>
+          dplyr::select(-sql, -json) |>
+          dplyr::collect()
+        reactable::reactable(cohortsInfo)
     })
 
     output$usedCohortsInfo <- reactable::renderReactable({
