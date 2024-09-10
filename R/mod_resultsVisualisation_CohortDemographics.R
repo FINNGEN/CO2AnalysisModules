@@ -182,7 +182,7 @@ mod_resultsVisualisation_CohortsDemographics_server <- function(id, analysisResu
       text_angle <- if(x == "calendarYear") 45 else 0
       gg_plot <- ggplotData() |>
         ggplot2::ggplot(ggplot2::aes(x = !!x, y = !!y, fill = !!fill)) +
-        ggplot2::geom_col(position = "dodge", width = 0.8) +
+        ggplot2::geom_col(position = ggplot2::position_dodge2(preserve = "single"), width = 0.8) +
         {if(input$show_count)
           ggplot2::geom_text(ggplot2::aes(label = count), vjust = -0.7, position = ggplot2::position_dodge(width = .8))
         } +
@@ -194,7 +194,7 @@ mod_resultsVisualisation_CohortsDemographics_server <- function(id, analysisResu
         ggplot2::expand_limits(y = max(ggplotData()$count) * 1.1) +
         ggplot2::theme_minimal(base_size = 13) +
         ggplot2::theme(
-          axis.text.x = ggplot2::element_text(size = 12, angle = text_angle, hjust = 1),
+          axis.text.x = ggplot2::element_text(size = 12, angle = text_angle, hjust = 0.5),
           strip.background = ggplot2::element_rect(fill="white"),
           strip.text = ggplot2::element_text(colour = 'black')
         ) +
