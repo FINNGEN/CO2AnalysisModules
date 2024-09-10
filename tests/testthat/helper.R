@@ -7,7 +7,7 @@ helper_createNewCohortTableHandler <- function(addCohorts = NULL){
     "HadesExtrasFractureCohortsMatched","HadesExtrasAsthmaCohortsMatched"
     ), empty.ok = TRUE)
 
-  cohortTableHandlerConfig <- cohortTableHandlerConfig # set by setup.R
+  cohortTableHandlerConfig <- test_cohortTableHandlerConfig # set by setup.R
   loadConnectionChecksLevel = "basicChecks"
 
   # TEMP
@@ -126,3 +126,5 @@ helper_createNewCohortTableHandler <- function(addCohorts = NULL){
 
   return(cohortTableHandler)
 }
+
+

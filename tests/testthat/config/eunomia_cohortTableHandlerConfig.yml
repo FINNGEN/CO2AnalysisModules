@@ -1,14 +1,13 @@
 # EUNOMIA
 cohortTableHandler:
   database:
-    databaseId: E1
-    databaseName: eunomia1
-    databaseDescription: Eunomia database 1
+    databaseId: <eunomiaDataSetName>
+    databaseName: Eunomia <eunomiaDataSetName>
+    databaseDescription: Eunomia dataset name <eunomiaDataSetName>
   connection:
     connectionDetailsSettings:
         dbms: sqlite
-        server: Eunomia
-        databaseName: GiBleed
+        server: <pathToEunomiaSqlite>
   cdm:
       cdmDatabaseSchema: main
       vocabularyDatabaseSchema: main
