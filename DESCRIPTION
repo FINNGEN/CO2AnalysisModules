@@ -45,9 +45,11 @@ Imports:
     scales,
     speedglm,
     stringr,
-    tidyr
+    tidyr,
+    CohortGenerator
 Remotes: 
-    FINNGEN/HadesExtras
+    FINNGEN/HadesExtras,
+    OHDSI/CohortGenerator
 Suggests: 
     devtools,
     testthat (>= 3.0.0), 
