@@ -1,11 +1,12 @@
-
-
+# build parameters --------------------------------------------------------------
 devtools::load_all(".")
+source(testthat::test_path("setup.R"))
+source(testthat::test_path("helper.R"))
 
-pathToCO2AnalysisModulesConfigYalm  <- testthat::test_path("config", "atlasDemo_CO2AnalysisModulesConfig.yml")
 
+# RUN APP --------------------------------------------------------------
 run_app(
-  pathToCO2AnalysisModulesConfigYalm = pathToCO2AnalysisModulesConfigYalm,
+  CO2AnalysisModulesConfig = test_CO2AnalysisModulesConfig,
   options = list(
     port = 5907,
     launch.browser=TRUE

@@ -7,11 +7,9 @@
 #' @export
 #' @importFrom shiny shinyApp
 #' @importFrom golem with_golem_options
-run_app <- function(pathToCO2AnalysisModulesConfigYalm, ...) {
+run_app <- function(CO2AnalysisModulesConfig, ...) {
 
-  # set up configuration
-  checkmate::assertFileExists(pathToCO2AnalysisModulesConfigYalm, extension = "yml")
-  CO2AnalysisModulesConfig <- yaml::read_yaml(pathToCO2AnalysisModulesConfigYalm)
+  CO2AnalysisModulesConfig |> checkmate::assert_list()
 
   # set options
   # options(shiny.maxRequestSize = 314572800)
