@@ -12,14 +12,6 @@
 #'
 #' @importFrom yaml yaml.load as.yaml
 #'
-#' @examples
-#' # Assuming the YAML file contains placeholders like <name>:
-#' # name: <name>
-#' # age: <age>
-#' #
-#' # You can replace those placeholders by passing named arguments:
-#' readAndParseYalm("path/to/yaml/file", name = "John", age = 30)
-#'
 #' @export
 readAndParseYalm <- function(pathToYalmFile, ...) {
   # read the yaml file

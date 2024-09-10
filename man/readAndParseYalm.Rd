@@ -19,12 +19,3 @@ Reads a YAML file from a given path, replaces specified placeholders with provid
 and returns the parsed content. If any provided placeholders are not found in the YAML file,
 the function throws an error.
 }
-\examples{
-# Assuming the YAML file contains placeholders like <name>:
-# name: <name>
-# age: <age>
-#
-# You can replace those placeholders by passing named arguments:
-readAndParseYalm("path/to/yaml/file", name = "John", age = 30)
-
-}
