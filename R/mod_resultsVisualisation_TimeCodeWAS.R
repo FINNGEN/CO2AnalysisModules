@@ -34,12 +34,13 @@ mod_resultsVisualisation_TimeCodeWAS_ui <- function(id) {
       shiny::tabPanel(
         "Table",
         shiny::div(
-          style = "margin-top: 10px; margin-bottom: 10px;",
+          style = "margin-top: 20px; margin-bottom: 10px;",
           DT::DTOutput(ns("demographicsData")),
         ),
         shiny::div(
           style = "margin-top: 10px; margin-bottom: 10px;",
-          shiny::downloadButton(ns("downloadData"), "Download")
+          shiny::downloadButton(ns("downloadDataFiltered"), "Download filtered"),
+          shiny::downloadButton(ns("downloadDataAll"), "Download all"),
         )
       )
     ), # tabsetPanel
@@ -93,9 +94,10 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
     #
     output$outputUI <- shiny::renderUI({
       shiny::tagList(
+        shinyFeedback::useShinyFeedback(),
         shiny::fluidRow(
           shiny::column(
-            3,
+            2,
             shinyWidgets::pickerInput(
               ns("selected_domains"),
               "Observation type",
@@ -110,13 +112,13 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
               options = shinyWidgets::pickerOptions(
                 actionsBox = TRUE,
                 selectedTextFormat = 'count',
-                countSelectedText = '{0} observation types selected'
+                countSelectedText = '{0} observation types'
               ),
               multiple = TRUE
             )
           ),
           shiny::column(
-            3,
+            2,
             shinyWidgets::pickerInput(
               ns("selected_p_groups"),
               "p-value groups",
@@ -130,14 +132,41 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
               options = shinyWidgets::pickerOptions(
                 actionsBox = TRUE,
                 selectedTextFormat = 'count',
-                countSelectedText = '{0} p-value groups selected'
+                countSelectedText = '{0} p-value groups'
               ),
               multiple = TRUE
             ),
-          )
+          ), # column
+          shiny::column(
+            2,
+            shiny::textInput(
+              inputId = ns("p_value_threshold"),
+              label =  "p-value threshold",
+              value = "1e-5",
+              width = "100%"
+            ),
+          ), # column
+          shinyWidgets::chooseSliderSkin("Flat"),
+          shiny::column(
+            width = 2, align = "left",
+            shiny::div(style = "height: 85px; width: 100%; margin-top: -15px;",
+                       shiny::sliderInput(ns("or_range"), "OR range filtered out", min = 0.0, max = 2, value = c(0.8,1.2), step = 0.1),
+            )
+          ),
+          shiny::column(
+            width = 2, align = "left",
+            shiny::div(style = "height: 85px; width: 100%; margin-top: -15px; margin-right: 20px;",
+                       shiny::sliderInput(ns("n_cases"), "Minimum # of cases", min = 0, max = 1000, value = 0, step = 1),
+            ),
+          ) # column
         )
-      )
+      ) # fluidRow
     })
+
+    is_valid_number <- function(input_string) {
+      # This regex matches regular and scientific notation numbers
+      return(grepl("^[-+]?[0-9]*\\.?[0-9]+([eE][-+]?[0-9]+)?$", input_string))
+    }
 
     #
     # observe the selected domains and p_groups
@@ -145,14 +174,39 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
     shiny::observe({
       shiny::req(input$selected_domains)
       shiny::req(input$selected_p_groups)
+      shiny::req(input$or_range)
+      shiny::req(input$n_cases)
+      # shiny::req(input$p_value_threshold)
 
-      # filter data
-      gg_data <- gg_data_saved |>
-        dplyr::filter(domain %in% input$selected_domains) |>
-        dplyr::filter(p_group_size %in% input$selected_p_groups)
+      # browser()
 
-      # update gg_data
-      r$gg_data <- gg_data
+      if(!is_valid_number(input$p_value_threshold)) {
+        shinyFeedback::showFeedbackWarning(
+          inputId = "p_value_threshold",
+          text = "Invalid input: Please give a valid number."
+        )
+      } else if(input$p_value_threshold == "") {
+        shinyFeedback::showFeedbackWarning(
+          inputId = "p_value_threshold",
+          text = "Missing input: Please give a number (1e-5 is the default).")
+      } else {
+        shinyFeedback::hideFeedback("p_value_threshold")
+        # cat("p-value threshold: ", as.numeric(input$p_value_threshold), "\n")
+        # cat("OR range: ", input$or_range, "\n")
+        #
+        # filter data
+        #
+        gg_data <- gg_data_saved |>
+          dplyr::filter(domain %in% input$selected_domains) |>
+          dplyr::filter(p_group_size %in% input$selected_p_groups) |>
+          dplyr::filter(p < as.numeric(input$p_value_threshold)) |>
+          dplyr::filter(OR <= input$or_range[1] | OR >= input$or_range[2]) |>
+          dplyr::filter(nCasesYes >= input$n_cases)
+
+        # update gg_data
+        r$gg_data <- gg_data
+      }
+
     })
 
     #
@@ -171,7 +225,6 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
       )
 
       return(gg_girafe)
-      # replotting this triggers codeWASplot_selected
     })
 
     #
@@ -203,7 +256,7 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
           dplyr::mutate(cases_per = scales::percent(cases_per, accuracy = 0.01)) |>
           dplyr::mutate(controls_per = scales::percent(controls_per, accuracy = 0.01)) |>
           dplyr::mutate(p = as.numeric(formatC(p, format = "e", digits = 2))) |>
-          dplyr::select(name, upIn, nCasesYes, nControlsYes, cases_per, controls_per, GROUP, p)
+          dplyr::select(name, upIn, nCasesYes, nControlsYes, cases_per, controls_per, GROUP, OR, p)
 
         # show table
         shiny::showModal(
@@ -222,12 +275,15 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
                   'Cases %' = 'cases_per',
                   'Ctrls %' = 'controls_per',
                   'Group' = 'GROUP',
+                  'OR' = 'OR',
                   'p' = 'p'
                 ),
                 options = list(
                   formatter = list(
-                    p = function(x) format(x, scientific = TRUE)
-                  )
+                    p = function(x) format(x, scientific = TRUE),
+                    OR = function(x) format(x, scientific = TRUE)
+                  ),
+                  order = list(list(9, 'asc'), list(8, 'desc')) # order by p-value, then by OR
                 )
               )
             }),
@@ -270,7 +326,7 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
           code = round(code/1000),
           name = purrr::map2_chr(name, code, ~paste0('<a href="',atlasUrl,'/#/concept/', .y, '" target="_blank">', .x,'</a>'))
         ) |>
-        dplyr::select(name, upIn, OR, nCasesYes, nControlsYes, cases_per, controls_per, GROUP, p)
+        dplyr::select(name, upIn, nCasesYes, nControlsYes, cases_per, controls_per, GROUP, OR, p)
 
       # show table
       df_all |>
@@ -278,32 +334,46 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
           colnames = c(
             'Covariate name' = 'name',
             'Type' = 'upIn',
-            'OR' = 'OR',
             'Cases n' = 'nCasesYes',
             'Ctrls n' = 'nControlsYes',
             'Cases %' = 'cases_per',
             'Ctrls %' = 'controls_per',
             'Group' = 'GROUP',
+            'OR' = 'OR',
             'p' = 'p'
           ),
           options = list(
-            order = list(list(9, 'asc'))
+            order = list(list(9, 'asc'), list(8, 'desc')) # order by p-value, then by OR
           ),
           escape = FALSE,
+          selection = 'none'
         ) |>
         DT::formatSignif(columns = c('p', 'OR'), digits = 3) |>
         DT::formatStyle('Covariate name', cursor = 'pointer' )
     })
 
     #
-    # download data as a table
+    # download filtered data as a table
     #
-    output$downloadData <- shiny::downloadHandler(
+    output$downloadDataFiltered <- shiny::downloadHandler(
       filename = function(){
-        paste('timecodewas_', format(lubridate::now(), "%Y_%m_%d_%H%M"), '.csv', sep='')
+        paste('timecodewas_filtered_', format(lubridate::now(), "%Y_%m_%d_%H%M"), '.csv', sep='')
       },
       content = function(fname){
         readr::write_csv(r$gg_data |> dplyr::select(-label), fname)
+        return(fname)
+      }
+    )
+
+    #
+    # download all data as a table
+    #
+    output$downloadDataAll <- shiny::downloadHandler(
+      filename = function(){
+        paste('timecodewas_all_', format(lubridate::now(), "%Y_%m_%d_%H%M"), '.csv', sep='')
+      },
+      content = function(fname){
+        readr::write_csv(gg_data_saved |> dplyr::select(-label), fname)
         return(fname)
       }
     )
@@ -390,7 +460,7 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
     dplyr::mutate(p = dplyr::if_else(p==0, 10^-323, p))
 
   gg_data <- studyResult |>
-    dplyr::filter(p<0.00001) |>
+    # dplyr::filter(p<0.00001) |>
     dplyr::arrange(time_period, name) |>
     dplyr::mutate_if(is.character, stringr::str_replace_na, "") |>
     dplyr::mutate(

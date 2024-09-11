@@ -23,10 +23,32 @@ mod_resultsVisualisation_CodeWAS_ui <- function(id) {
     ),
     shiny::uiOutput(ns("codeWASFilter")),
     htmltools::hr(style = "margin-top: 10px; margin-bottom: 10px;"),
-    shiny::tags$h4("Data"),
-    DT::dataTableOutput(ns("codeWAStable")),
-    htmltools::hr(style = "margin-top: 10px; margin-bottom: 10px;"),
-    shiny::downloadButton(ns("downloadCodeWAS"), "Download", icon = shiny::icon("download"))
+    shiny::tabsetPanel(
+      id = ns("tabset"),
+      shiny::tabPanel(
+        "Plot",
+        shiny::div(style = "height: 20px;"),
+        shiny::div(style = "height: 100%; width: 800px; margin-left:40px;",
+                   ggiraph::girafeOutput(ns("codeWASplot"))
+        ),
+        shiny::div(
+          style = "margin-top: 10px; margin-bottom: 10px;",
+          shiny::downloadButton(ns("downloadPlot"), "Download")
+        )
+      ),
+      shiny::tabPanel(
+        "Table",
+        shiny::div(
+          style = "margin-top: 10px; margin-bottom: 10px;",
+          DT::dataTableOutput(ns("codeWAStable")),
+        ),
+        shiny::div(
+          style = "margin-top: 10px; margin-bottom: 10px;",
+          shiny::downloadButton(ns("downloadCodeWASFiltered"), "Download filtered", icon = shiny::icon("download")),
+          shiny::downloadButton(ns("downloadCodeWASAll"), "Download all", icon = shiny::icon("download"))
+        )
+      )
+    ), # tabsetPanel
   )
 }
 
@@ -81,6 +103,7 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
     output$codeWASFilter <- shiny::renderUI({
       req(r$codeWASData)
 
+      shiny::tagList(
       shiny::fluidRow(
         shiny::column(
           width = 2,
@@ -137,24 +160,73 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
             options = list(`actions-box` = TRUE, `selected-text-format` = "count > 1", `count-selected-text` = "{0} classes selected")
           )
         )
-      )
+      ), # fluidRow
+
+      shiny::hr(style = "margin-top: 10px; margin-bottom: 5px;"),
+      shiny::fluidRow(
+        shiny::column(
+          2,
+          shiny::textInput(
+            inputId = ns("p_value_threshold"),
+            label =  "p-value threshold",
+            value = "1e-5",
+            width = "100%"
+          ),
+        ), # column
+        shinyWidgets::chooseSliderSkin("Flat"),
+        shiny::column(
+          width = 2, align = "left",
+          shiny::div(style = "height: 85px; width: 100%; margin-top: -15px;",
+                     shiny::sliderInput(ns("or_range"), "OR range filtered out", min = 0.0, max = 2, value = c(0.8,1.2), step = 0.1),
+          )
+        ),
+        shiny::column(
+          width = 2, align = "left",
+          shiny::div(style = "height: 85px; width: 100%; margin-top: -15px; margin-right: 20px;",
+                     shiny::sliderInput(ns("n_cases"), "Minimum # of cases", min = 0, max = 1000, value = 0, step = 1),
+          ),
+        ) # column
+      ) # fluidRow
+      ) # tagList
     })
 
+    is_valid_number <- function(input_string) {
+      # This regex matches regular and scientific notation numbers
+      return(grepl("^[-+]?[0-9]*\\.?[0-9]+([eE][-+]?[0-9]+)?$", input_string))
+    }
 
     #
     # filter the data
     #
     shiny::observe({
-      req(r$codeWASData)
+      shiny::req(r$codeWASData)
+      shiny::req(input$p_value_threshold)
+      shiny::req(input$or_range)
+      shiny::req(input$n_cases)
 
-      r$filteredCodeWASData <- r$codeWASData |>
-        dplyr::filter(
-          if (!is.null(input$database)) databaseId %in% input$database else FALSE,
-          if (!is.null(input$domain)) domainId %in% input$domain else FALSE,
-          if (!is.null(input$analysis)) analysisName %in% input$analysis else FALSE,
-          if (!is.null(input$model)) modelType %in% input$model else FALSE,
-          if (!is.null(input$pValue)) mplog %in% input$pValue | is.na(mplog) else FALSE
+      if(!is_valid_number(input$p_value_threshold)) {
+        shinyFeedback::showFeedbackWarning(
+          inputId = "p_value_threshold",
+          text = "Invalid input: Please give a valid number."
         )
+      } else if(input$p_value_threshold == "") {
+        shinyFeedback::showFeedbackWarning(
+          inputId = "p_value_threshold",
+          text = "Missing input: Please give a number (1e-5 is the default).")
+      } else {
+        shinyFeedback::hideFeedback("p_value_threshold")
+        r$filteredCodeWASData <- r$codeWASData |>
+          dplyr::filter(
+            if (!is.null(input$database)) databaseId %in% input$database else FALSE,
+            if (!is.null(input$domain)) domainId %in% input$domain else FALSE,
+            if (!is.null(input$analysis)) analysisName %in% input$analysis else FALSE,
+            if (!is.null(input$model)) modelType %in% input$model else FALSE,
+            if (!is.null(input$pValue)) mplog %in% input$pValue | is.na(mplog) else FALSE
+          )  |>
+          dplyr::filter(pValue < as.numeric(input$p_value_threshold)) |>
+          dplyr::filter(oddsRatio <= input$or_range[1] | oddsRatio >= input$or_range[2]) |>
+          dplyr::filter(nCasesYes >= input$n_cases)
+      }
     })
 
     #
@@ -179,11 +251,13 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
           dplyr::mutate(meanControls = as.numeric(formatC(meanControls, format = "e", digits = 2))) |>
           dplyr::mutate(sdControls = as.numeric(formatC(sdControls, format = "e", digits = 2))) |>
           dplyr::mutate(covariateNameFull = as.character(covariateName)) |>
-          dplyr::mutate(covariateName = stringr::str_trunc(covariateName, 40)) |>
+          dplyr::mutate(covariateName = stringr::str_trunc(covariateName, 50)) |>
+          dplyr::mutate(analysisName = stringr::str_trunc(analysisName, 20)) |>
           dplyr::mutate(
             covariateId = round(covariateId/1000),
             covariateName = purrr::map2_chr(covariateName, covariateId, ~paste0('<a href="',atlasUrl,'/#/concept/', .y, '" target="_blank">', .x,'</a>'))
           ) |>
+          dplyr::filter(pValue < as.numeric(input$p_value_threshold)) |>
           dplyr::select(
             databaseId, domainId, analysisName, covariateName, conceptId,
             nCasesYes, nControlsYes, meanCases, sdCases, meanControls, sdControls,
@@ -191,7 +265,7 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
           ),
         escape = FALSE,
         class = 'display nowrap compact',
-        selection = 'single',
+        selection = 'none',
         rownames = FALSE,
         colnames = c(
           'Database' = 'databaseId',
@@ -219,35 +293,36 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
           # 'covariateNameFull' = 'covariateNameFull'
         ),
         options = list(
-            order = list(list(11, 'asc')),
+            order = list(list(11, 'asc'), list(12, 'desc')), # pValue, OR
           # rowCallback to show the full covariate name as a tooltip
-          rowCallback = htmlwidgets::JS(
-            "function(row, data) {",
-            "var full_text = data[13]", # covariateNameFull
-            "$('td', row).attr('title', full_text);",
-            "}"
-          ),
+          # rowCallback = htmlwidgets::JS(
+          #   "function(row, data) {",
+          #   "var full_text = data[13]", # covariateNameFull
+          #   "$('td', row).attr('title', full_text);",
+          #   "}"
+          # ),
           # change the color of the cells with NA (except for the Notes column)
-          createdRow = htmlwidgets::JS(
-            "function(row, data, dataIndex) {",
-            "  for(var i=0; i<data.length; i++){",
-            "    if(data[i] === null && ![5, 6, 12].includes(i)){", # skip Notes-column
-            "      $('td:eq('+i+')', row).html('NA')",
-            "        .css({'color': 'rgb(226,44,41)', 'font-style': 'italic'});",
-            "    }",
-            "  }",
-            "}"
-          ),
+          # createdRow = htmlwidgets::JS(
+          #   "function(row, data, dataIndex) {",
+          #   "  for(var i=0; i<data.length; i++){",
+          #   "    if(data[i] === null && ![5, 6, 12].includes(i)){", # skip Notes-column
+          #   "      $('td:eq('+i+')', row).html('NA')",
+          #   "        .css({'color': 'rgb(226,44,41)', 'font-style': 'italic'});",
+          #   "    }",
+          #   "  }",
+          #   "}"
+          # ),
           # autoWidth = TRUE,
           # arrange the table by pValue
-          order = list(list(7, 'asc')), # pValue
           # scrollX = TRUE,
           columnDefs = list(
-            list(width = '70px', targets = c(3, 13)), # covariateName
-            list(width = '45px', targets = c(2)), # conceptId
-            list(width = '40px', targets = c(0,1,4,5,6,7, 10, 11)),
+            list(width = '70px', targets = c(3, 13)), # covariateName, runNotes
+            list(width = '80px', targets = c(2)), # analysisName
+            list(width = '60px', targets = c(1)), # domainId
+            list(width = '50px', targets = c(4)), # conceptId
+            list(width = '40px', targets = c(0,5,6,7, 10, 11)),
             list(width = '50px', targets = c(8, 9)), # pValue, OR
-            list(visible = FALSE, targets = c(13))
+            list(visible = FALSE, targets = c(13)) # covariateNameFull
           ),
           pageLength = 20,
           lengthMenu = c(10, 15, 20, 25, 30)
@@ -258,14 +333,101 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
     #
     # Download the CodeWAS results table as a csv file
     #
-    output$downloadCodeWAS <- downloadHandler(
+    output$downloadCodeWASFiltered <- downloadHandler(
       filename = function() {
-        paste('codewas_', format(lubridate::now(), "%Y_%m_%d_%H%M"), '.csv', sep='')
+        paste('codewas_filtered_', format(lubridate::now(), "%Y_%m_%d_%H%M"), '.csv', sep='')
+      },
+      content = function(file) {
+        write.csv(r$filteredCodeWASData, file, row.names = FALSE)
+      }
+    )
+
+    #
+    # Download the CodeWAS results table as a csv file
+    #
+    output$downloadCodeWASAll <- downloadHandler(
+      filename = function() {
+        paste('codewas_all_', format(lubridate::now(), "%Y_%m_%d_%H%M"), '.csv', sep='')
       },
       content = function(file) {
         write.csv(r$codeWASData, file, row.names = FALSE)
       }
     )
+
+    #
+    # create a ggiraph plot
+    #
+    output$codeWASplot <- ggiraph::renderGirafe({
+      shiny::req(r$codeWASData)
+      shiny::req(r$filteredCodeWASData)
+      shiny::req(r$filteredCodeWASData  |>  nrow() > 0)
+
+      df <- r$filteredCodeWASData |>
+        dplyr::mutate(oddsRatio = ifelse(is.na(oddsRatio), 1, oddsRatio)) |>
+        dplyr::mutate(pLog10 = -log10(pValue)) |>
+        # dplyr::mutate(beta = log(oddsRatio) - log(dplyr::lag(oddsRatio))) |>
+        dplyr::mutate(beta = log(oddsRatio)) |>
+        dplyr::mutate(beta = ifelse(beta > 5, 5, beta)) |>
+        dplyr::mutate(beta = ifelse(beta < -5, -5, beta)) |>
+        dplyr::mutate(direction = ifelse(beta > 0, "cases", "controls")) |> # n.s. = not significant
+        dplyr::select(analysisName, covariateName, pValue, oddsRatio, direction, oddsRatio, pLog10, beta, meanCases, meanControls) |>
+        dplyr::mutate(data_id = dplyr::row_number())
+
+      # browser()
+
+      p <- ggplot2::ggplot(data = df, mapping = ggplot2::aes(x = beta, y = pLog10, color = direction)) +
+        ggiraph::geom_point_interactive(
+          ggplot2::aes(
+            data_id = data_id,
+            tooltip = paste("Analysis: ", analysisName, "<br>",
+                            "Covariate: ", covariateName, "<br>",
+                            "beta: ", signif(beta, digits = 3), "<br>",
+                            "OR: ", signif(oddsRatio, digits = 3), "<br>",
+                            "p-value: ", signif(pValue, digits = 2), "<br>"
+            )
+          ),
+          hover_nearest = TRUE,
+          size = 1.5,
+          alpha = 0.4) +
+        # ggplot2::geom_vline(xintercept = c(input$or_range[1], input$or_range[2]), col = "red", linetype = 'dashed') +
+        # ggplot2::geom_hline(yintercept = -log10(as.numeric(input$p_value_threshold)), col = "red", linetype = 'dashed') +
+        ggplot2::geom_vline(xintercept = 0, col = "red", linetype = 'dashed') +
+        ggplot2::scale_x_continuous() +
+        ggplot2::scale_y_continuous(transform = "log10", labels = function(x)round(x,1)) +
+        # ggplot2::coord_cartesian(xlim = range(df$beta), ylim = range(df$pLog10)) +
+        ggplot2::coord_cartesian(xlim = c(-5, 5), ylim = range(df$pLog10)) +
+        ggplot2::labs(
+          x = "beta",
+          y = "-log10(p-value)",
+          color = "Enriched in"
+        ) +
+        ggplot2::scale_color_manual(values = c("cases" = "#E41A1C", "controls" = "#377EB8", "n.s." = "lightgrey")) + #, guide = "none") +
+        ggplot2::theme_minimal()
+
+      gg_plot <- ggiraph::girafe(
+        ggobj = p,
+        width_svg = 8,
+        height_svg = 4,
+        options = list(
+          ggiraph::opts_tooltip(use_fill = FALSE),
+          ggiraph::opts_zoom(min = 0.5, max = 5),
+          ggiraph::opts_sizing(rescale = FALSE, width = 1),
+          ggiraph::opts_toolbar(saveaspng = TRUE, delay_mouseout = 2000),
+          ggiraph::opts_hover(css = "fill: black;"),
+          ggiraph::opts_toolbar(
+            saveaspng = FALSE,
+            hidden = c("zoom", "reset", "zoomin", "zoomout", "pan", "lasso", "select", "lasso_select", "lasso_deselect", "box_select", "box_zoom", "reset", "saveaspng"),
+          )
+        )
+      )
+
+      # gg_plot <- ggiraph::girafe(ggobj = p) |> ggiraph::girafe_options(ggiraph::opts_hover(css = "fill: red;"))
+
+      # gg_plot <- NULL
+
+      return(gg_plot)
+    })
+
 
   })
 }
