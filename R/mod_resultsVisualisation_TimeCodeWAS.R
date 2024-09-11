@@ -256,7 +256,7 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
           dplyr::mutate(cases_per = scales::percent(cases_per, accuracy = 0.01)) |>
           dplyr::mutate(controls_per = scales::percent(controls_per, accuracy = 0.01)) |>
           dplyr::mutate(p = as.numeric(formatC(p, format = "e", digits = 2))) |>
-          dplyr::select(name, upIn, nCasesYes, nControlsYes, cases_per, controls_per, GROUP, OR, p)
+          dplyr::select(name, domain, upIn, nCasesYes, nControlsYes, cases_per, controls_per, GROUP, OR, p)
 
         # show table
         shiny::showModal(
@@ -269,6 +269,7 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
                 colnames = c(
                   # 'Covariate ID' = 'code',
                   'Covariate name' = 'name',
+                  'Domain' = 'domain',
                   'Type' = 'upIn',
                   'Cases n' = 'nCasesYes',
                   'Ctrls n' = 'nControlsYes',
@@ -283,7 +284,7 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
                     p = function(x) format(x, scientific = TRUE),
                     OR = function(x) format(x, scientific = TRUE)
                   ),
-                  order = list(list(9, 'asc'), list(8, 'desc')) # order by p-value, then by OR
+                  order = list(list(10, 'asc'), list(9, 'desc')) # order by p-value, then by OR
                 )
               )
             }),
@@ -326,13 +327,14 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
           code = round(code/1000),
           name = purrr::map2_chr(name, code, ~paste0('<a href="',atlasUrl,'/#/concept/', .y, '" target="_blank">', .x,'</a>'))
         ) |>
-        dplyr::select(name, upIn, nCasesYes, nControlsYes, cases_per, controls_per, GROUP, OR, p)
+        dplyr::select(name, domain, upIn, nCasesYes, nControlsYes, cases_per, controls_per, GROUP, OR, p)
 
       # show table
       df_all |>
         DT::datatable(
           colnames = c(
             'Covariate name' = 'name',
+            'Domain' = 'domain',
             'Type' = 'upIn',
             'Cases n' = 'nCasesYes',
             'Ctrls n' = 'nControlsYes',
@@ -343,7 +345,7 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
             'p' = 'p'
           ),
           options = list(
-            order = list(list(9, 'asc'), list(8, 'desc')) # order by p-value, then by OR
+            order = list(list(10, 'asc'), list(9, 'desc')) # order by p-value, then by OR
           ),
           escape = FALSE,
           selection = 'none'
