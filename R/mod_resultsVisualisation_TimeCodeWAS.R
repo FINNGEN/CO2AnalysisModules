@@ -550,11 +550,24 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
       )
     ) +
     {if(length(selection) > 1)
-      #
+      # label the selected points
       ggrepel::geom_text_repel(
         data =  gg_data |>
           dplyr::filter(data_id %in% selection$data_id),
         ggplot2::aes(label = stringr::str_wrap(stringr::str_trunc(name, 30), 15)),
+        max.overlaps = Inf,
+        size = 3,
+        hjust = 0.1,
+        xlim = c(facet_max_x / 4, NA),
+        box.padding = 0.8
+      )} +
+    {if(length(selection) == 0)
+      # label the top 10 values
+      ggrepel::geom_text_repel(
+        data =  gg_data |>
+          dplyr::arrange(p, OR) |>
+          dplyr::slice_head(n = 10),
+        ggplot2::aes(label = stringr::str_wrap(stringr::str_trunc(name, 45), 30)),
         max.overlaps = Inf,
         size = 3,
         hjust = 0.1,
