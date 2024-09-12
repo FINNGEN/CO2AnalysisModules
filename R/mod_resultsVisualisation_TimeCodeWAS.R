@@ -158,6 +158,12 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
             shiny::div(style = "height: 85px; width: 100%; margin-top: -15px; margin-right: 20px;",
                        shiny::sliderInput(ns("n_cases"), "Minimum # of cases", min = 0, max = 1000, value = 0, step = 1),
             ),
+          ), # column
+          shiny::column(
+            width = 2, align = "left",
+            shiny::div(style = "margin-top: 30px; ",
+                       shiny::checkboxInput(ns("top_10"), "Label top 10", value = TRUE),
+            ),
           ) # column
         )
       ) # fluidRow
@@ -221,7 +227,8 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
       gg_girafe <- .gg_data_to_gg_girafe(
         gg_data = r$gg_data,
         selection = r$line_to_plot,
-        r = r
+        r = r,
+        top_10 = input$top_10
       )
 
       return(gg_girafe)
@@ -508,7 +515,8 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
     # show_labels,
     # show_labels_cases_per,
     selection,
-    r
+    r,
+    top_10
 ){
   # adjust the label area according to facet width
   facet_max_x <- max( gg_data$controls_per, 0.03, na.rm = TRUE)
@@ -561,7 +569,7 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
         xlim = c(facet_max_x / 4, NA),
         box.padding = 0.8
       )} +
-    {if(length(selection) == 0)
+    {if((length(selection) == 0) & top_10)
       # label the top 10 values
       ggrepel::geom_text_repel(
         data =  gg_data |>
