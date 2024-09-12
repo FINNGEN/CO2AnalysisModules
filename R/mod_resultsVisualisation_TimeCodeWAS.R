@@ -70,7 +70,7 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
   shiny::moduleServer(id, function(input, output, session) {
     ns <- session$ns
 
-    atlasUrl <- "TEMP" #shiny::getShinyOption("cohortOperationsConfig")$atlasUrl
+    atlasUrl <- shiny::getShinyOption("cohortOperationsConfig")$atlasUrl # or "TEMP"
 
     studyResults  <- .analysisResultsHandler_to_studyResults(analysisResults)
 
@@ -101,14 +101,8 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
             shinyWidgets::pickerInput(
               ns("selected_domains"),
               "Observation type",
-              choices = c(
-                "Condition occurrence" = "condition_occurrence",
-                "Drug exposure" = "drug_exposure",
-                "Measurement" = "measurement",
-                "Procedure occurrence" = "procedure_occurrence",
-                "Observation" = "observation"
-              ),
-              selected = c("condition_occurrence", "drug_exposure", "measurement", "procedure_occurrence", "observation"),
+              choices = unique(gg_data_saved$domain),
+              selected = unique(gg_data_saved$domain),
               options = shinyWidgets::pickerOptions(
                 actionsBox = TRUE,
                 selectedTextFormat = 'count',
@@ -184,8 +178,6 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
       shiny::req(input$n_cases)
       # shiny::req(input$p_value_threshold)
 
-      # browser()
-
       if(!is_valid_number(input$p_value_threshold)) {
         shinyFeedback::showFeedbackWarning(
           inputId = "p_value_threshold",
@@ -197,8 +189,6 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
           text = "Missing input: Please give a number (1e-5 is the default).")
       } else {
         shinyFeedback::hideFeedback("p_value_threshold")
-        # cat("p-value threshold: ", as.numeric(input$p_value_threshold), "\n")
-        # cat("OR range: ", input$or_range, "\n")
         #
         # filter data
         #
@@ -254,6 +244,12 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
       # ignore selected rows that are currently plot as a line
       selected_rows  <- setdiff(selected_rows, r$line_to_plot$data_id)
 
+      # was the line unselected?
+      if(length(selected_rows) == 0){
+        r$line_to_plot <- NULL
+        return()
+      }
+
       line_to_plot <- NULL
 
       if(length(selected_rows) > 1){
@@ -263,7 +259,7 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
           dplyr::mutate(cases_per = scales::percent(cases_per, accuracy = 0.01)) |>
           dplyr::mutate(controls_per = scales::percent(controls_per, accuracy = 0.01)) |>
           dplyr::mutate(p = as.numeric(formatC(p, format = "e", digits = 2))) |>
-          dplyr::select(name, domain, upIn, nCasesYes, nControlsYes, cases_per, controls_per, GROUP, OR, p)
+          dplyr::select(name, analysisName, domain, upIn, nCasesYes, nControlsYes, cases_per, controls_per, GROUP, OR, p)
 
         # show table
         shiny::showModal(
@@ -275,13 +271,14 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
                 df_lasso,
                 colnames = c(
                   # 'Covariate ID' = 'code',
-                  'Covariate name' = 'name',
+                  'Covariate Name' = 'name',
+                  'Analysis Name' = 'analysisName',
                   'Domain' = 'domain',
                   'Type' = 'upIn',
-                  'Cases n' = 'nCasesYes',
-                  'Ctrls n' = 'nControlsYes',
-                  'Cases %' = 'cases_per',
-                  'Ctrls %' = 'controls_per',
+                  'N case' = 'nCasesYes',
+                  'N ctrl' = 'nControlsYes',
+                  'Case %' = 'cases_per',
+                  'Ctrl %' = 'controls_per',
                   'Group' = 'GROUP',
                   'OR' = 'OR',
                   'p' = 'p'
@@ -291,7 +288,7 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
                     p = function(x) format(x, scientific = TRUE),
                     OR = function(x) format(x, scientific = TRUE)
                   ),
-                  order = list(list(10, 'asc'), list(9, 'desc')) # order by p-value, then by OR
+                  order = list(list(11, 'asc'), list(10, 'desc')) # order by p-value, then by OR
                 )
               )
             }),
@@ -334,31 +331,32 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
           code = round(code/1000),
           name = purrr::map2_chr(name, code, ~paste0('<a href="',atlasUrl,'/#/concept/', .y, '" target="_blank">', .x,'</a>'))
         ) |>
-        dplyr::select(name, domain, upIn, nCasesYes, nControlsYes, cases_per, controls_per, GROUP, OR, p)
+        dplyr::select(name, analysisName, domain, upIn, nCasesYes, nControlsYes, cases_per, controls_per, GROUP, OR, p)
 
       # show table
       df_all |>
         DT::datatable(
           colnames = c(
-            'Covariate name' = 'name',
+            'Covariate Name' = 'name',
+            'Analysis Name' = 'analysisName',
             'Domain' = 'domain',
             'Type' = 'upIn',
-            'Cases n' = 'nCasesYes',
-            'Ctrls n' = 'nControlsYes',
-            'Cases %' = 'cases_per',
-            'Ctrls %' = 'controls_per',
+            'N case' = 'nCasesYes',
+            'N ctrl' = 'nControlsYes',
+            'Case %' = 'cases_per',
+            'Ctrl %' = 'controls_per',
             'Group' = 'GROUP',
             'OR' = 'OR',
             'p' = 'p'
           ),
           options = list(
-            order = list(list(10, 'asc'), list(9, 'desc')) # order by p-value, then by OR
+            order = list(list(11, 'asc'), list(10, 'desc')) #
           ),
           escape = FALSE,
           selection = 'none'
         ) |>
         DT::formatSignif(columns = c('p', 'OR'), digits = 3) |>
-        DT::formatStyle('Covariate name', cursor = 'pointer' )
+        DT::formatStyle('Covariate Name', cursor = 'pointer' )
     })
 
     #
@@ -456,6 +454,7 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
       code = covariateId,
       time_period = factor(timeRange, levels = time_periods, labels = time_periods),
       name = covariateName,
+      analysisName = analysisName,
       OR=OR,
       p=p,
       upIn=upIn,
@@ -606,19 +605,26 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
       strip.text.x = ggplot2::element_text(size = 10)
     ) +
     ggplot2::scale_color_manual(values = c("darkgray")) +
-    ggplot2::scale_fill_manual(values = c(
-      "condition_occurrence" = "khaki",
-      "drug_exposure" = "lightblue2",
-      "measurement" = "palegreen",
-      "procedure_occurrence" = "plum1",
-      "observation" = "orange"),
-      labels = c(
-        "condition_occurrence" = "Condition occurrence",
-        "drug_exposure" = "Drug exposure",
-        "measurement" ="Measurement",
-        "observation" = "Observation"
-      )
-    ) +
+    ggplot2::scale_fill_discrete() +
+    # ggplot2::scale_fill_manual(values = c(
+    #   "drug_era_group" = "green",
+    #   "drug_exposure" = "lightblue2",
+    #   "condition_occurrence" = "khaki",
+    #   "condition_era_group" = "blue",
+    #   "observation" = "orange",
+    #   "measurement" = "palegreen",
+    #   "procedure_occurrence" = "plum1"
+    # ),
+    #   labels = c(
+    #     "drug_era_group" = "Drug era",
+    #     "drug_exposure" = "Drug exposure",
+    #     "condition_occurrence" = "Condition occurrence",
+    #     "condition_era_group" = "Condition era",
+    #     "observation" = "Observation",
+    #     "measurement" ="Measurement",
+    #     "procedure_occurrence" = "Procedure occurrence"
+    #   )
+    # ) +
     ggplot2::guides(color = "none", fill = ggplot2::guide_legend(override.aes = list(size = 5))) +
     ggplot2::labs(size = "p value group", fill = "Domain", x = "\nControls %", y = "Cases %")
 
