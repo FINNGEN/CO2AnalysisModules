@@ -185,6 +185,12 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
           shiny::div(style = "height: 85px; width: 100%; margin-top: -15px; margin-right: 20px;",
                      shiny::sliderInput(ns("n_cases"), "Minimum # of cases", min = 0, max = 1000, value = 0, step = 1),
           ),
+        ), # column
+        shiny::column(
+          width = 2, align = "left",
+          shiny::div(style = "margin-top: 30px; ",
+                     shiny::checkboxInput(ns("top_10"), "Label top 10", value = TRUE),
+          ),
         ) # column
       ) # fluidRow
       ) # tagList
@@ -354,6 +360,11 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
       }
     )
 
+    # helper to remove the domain from the covariate name
+    .removeDomain <- function(s) {
+      return(gsub(".*:", "", s))
+    }
+
     #
     # create a ggiraph plot
     #
@@ -365,7 +376,6 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
       df <- r$filteredCodeWASData |>
         dplyr::mutate(oddsRatio = ifelse(is.na(oddsRatio), 1, oddsRatio)) |>
         dplyr::mutate(pLog10 = -log10(pValue)) |>
-        # dplyr::mutate(beta = log(oddsRatio) - log(dplyr::lag(oddsRatio))) |>
         dplyr::mutate(beta = log(oddsRatio)) |>
         dplyr::mutate(beta = ifelse(beta > 5, 5, beta)) |>
         dplyr::mutate(beta = ifelse(beta < -5, -5, beta)) |>
@@ -391,6 +401,21 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
           alpha = 0.4) +
         # ggplot2::geom_vline(xintercept = c(input$or_range[1], input$or_range[2]), col = "red", linetype = 'dashed') +
         # ggplot2::geom_hline(yintercept = -log10(as.numeric(input$p_value_threshold)), col = "red", linetype = 'dashed') +
+        {if(input$top_10)
+          # label the top 10 values
+          ggrepel::geom_text_repel(
+            data =  df |>
+              dplyr::arrange(pValue, oddsRatio) |>
+              dplyr::slice_head(n = 10),
+            ggplot2::aes(
+              label = stringr::str_wrap(stringr::str_trunc(.removeDomain(covariateName), 45), 30),
+              color = "grey",
+            ),
+            max.overlaps = Inf,
+            size = 3,
+            hjust = 0.1,
+            box.padding = 0.8
+          )} +
         ggplot2::geom_vline(xintercept = 0, col = "red", linetype = 'dashed') +
         ggplot2::scale_x_continuous() +
         ggplot2::scale_y_continuous(transform = "log10", labels = function(x)round(x,1)) +
