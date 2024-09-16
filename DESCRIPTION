@@ -45,7 +45,8 @@ Imports:
     scales,
     speedglm,
     stringr,
-    tidyr 
+    tidyr,
+    shinyFeedback
 Remotes: 
     FINNGEN/HadesExtras,
     OHDSI/CohortGenerator
