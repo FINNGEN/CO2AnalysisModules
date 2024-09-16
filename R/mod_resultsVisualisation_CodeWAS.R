@@ -78,7 +78,8 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
     # reactive values
     r <- shiny::reactiveValues(
       codeWASData = NULL,
-      filteredCodeWASData = NULL
+      filteredCodeWASData = NULL,
+      lastPlot = NULL
     )
 
     #
@@ -94,7 +95,12 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
         dplyr::mutate(mplog = cut(-log10(pValue),
                                   breaks = c(0, 5, 100, Inf),
                                   labels = c('-log10(p) (0,5]', '-log10(p) (5,100]', '-log10(p) (100,Inf]'))
-        )
+        ) |>
+        tidyr::separate(covariateName, c("domain", "name"), sep = ":", extra = "merge") |>
+        dplyr::mutate(covariateName = ifelse(is.na(name), domain, name)) |>
+        dplyr::mutate(covariateName = stringr::str_remove(covariateName, "^[:blank:]")) |>
+        dplyr::mutate(domain = stringr::str_remove(domain, "^[:blank:]"))
+
     })
 
     #
@@ -185,6 +191,12 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
           shiny::div(style = "height: 85px; width: 100%; margin-top: -15px; margin-right: 20px;",
                      shiny::sliderInput(ns("n_cases"), "Minimum # of cases", min = 0, max = 1000, value = 0, step = 1),
           ),
+        ), # column
+        shiny::column(
+          width = 2, align = "left",
+          shiny::div(style = "margin-top: 30px; ",
+                     shiny::checkboxInput(ns("top_10"), "Label top 10", value = TRUE),
+          ),
         ) # column
       ) # fluidRow
       ) # tagList
@@ -259,20 +271,20 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
           ) |>
           dplyr::filter(pValue < as.numeric(input$p_value_threshold)) |>
           dplyr::select(
-            databaseId, domainId, analysisName, covariateName, conceptId,
+            covariateName, analysisName, domainId,
             nCasesYes, nControlsYes, meanCases, sdCases, meanControls, sdControls,
-            pValue, oddsRatio, beta, standardError, modelType, runNotes
+            oddsRatio, pValue, beta, standardError, modelType, runNotes
           ),
         escape = FALSE,
         class = 'display nowrap compact',
         selection = 'none',
         rownames = FALSE,
         colnames = c(
-          'Database' = 'databaseId',
-          'Domain' = 'domainId',
-          'Analysis' = 'analysisName',
+          # 'Database' = 'databaseId',
           'Covariate Name' = 'covariateName',
-          'Concept ID' = 'conceptId',
+          'Analysis Name' = 'analysisName',
+          'Domain' = 'domainId',
+          # 'Concept ID' = 'conceptId',
           # 'Cov. ID' = 'covariateId',
           # 'N tot' = 'n_total',
           'N case' = 'nCasesYes',
@@ -281,8 +293,8 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
           'SD case' = 'sdCases',
           'Mean ctrl' = 'meanControls',
           'SD ctrl' = 'sdControls',
-          'p' = 'pValue',
           'OR' = 'oddsRatio',
+          'p' = 'pValue',
           'Beta' = 'beta',
           'SE' = 'standardError',
           'Model' = 'modelType',
@@ -293,7 +305,7 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
           # 'covariateNameFull' = 'covariateNameFull'
         ),
         options = list(
-            order = list(list(11, 'asc'), list(12, 'desc')), # pValue, OR
+            order = list(list(10, 'asc'), list(9, 'desc')), # pValue, OR
           # rowCallback to show the full covariate name as a tooltip
           # rowCallback = htmlwidgets::JS(
           #   "function(row, data) {",
@@ -318,11 +330,11 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
           columnDefs = list(
             list(width = '70px', targets = c(3, 13)), # covariateName, runNotes
             list(width = '80px', targets = c(2)), # analysisName
-            list(width = '60px', targets = c(1)), # domainId
+            list(width = '120px', targets = c(1)), # domainId
             list(width = '50px', targets = c(4)), # conceptId
             list(width = '40px', targets = c(0,5,6,7, 10, 11)),
-            list(width = '50px', targets = c(8, 9)), # pValue, OR
-            list(visible = FALSE, targets = c(13)) # covariateNameFull
+            list(width = '50px', targets = c(8, 9)) # pValue, OR
+            # list(visible = FALSE, targets = c(13)) # covariateNameFull
           ),
           pageLength = 20,
           lengthMenu = c(10, 15, 20, 25, 30)
@@ -354,6 +366,11 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
       }
     )
 
+    # helper to remove the domain from the covariate name
+    .removeDomain <- function(s) {
+      return(gsub(".*:", "", s))
+    }
+
     #
     # create a ggiraph plot
     #
@@ -365,7 +382,6 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
       df <- r$filteredCodeWASData |>
         dplyr::mutate(oddsRatio = ifelse(is.na(oddsRatio), 1, oddsRatio)) |>
         dplyr::mutate(pLog10 = -log10(pValue)) |>
-        # dplyr::mutate(beta = log(oddsRatio) - log(dplyr::lag(oddsRatio))) |>
         dplyr::mutate(beta = log(oddsRatio)) |>
         dplyr::mutate(beta = ifelse(beta > 5, 5, beta)) |>
         dplyr::mutate(beta = ifelse(beta < -5, -5, beta)) |>
@@ -391,6 +407,22 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
           alpha = 0.4) +
         # ggplot2::geom_vline(xintercept = c(input$or_range[1], input$or_range[2]), col = "red", linetype = 'dashed') +
         # ggplot2::geom_hline(yintercept = -log10(as.numeric(input$p_value_threshold)), col = "red", linetype = 'dashed') +
+        {if(input$top_10)
+          # label the top 10 values
+          ggrepel::geom_text_repel(
+            data =  df |>
+              dplyr::arrange(pValue, oddsRatio) |>
+              dplyr::slice_head(n = 10),
+            ggplot2::aes(
+              label = stringr::str_wrap(stringr::str_trunc(.removeDomain(covariateName), 45), 30),
+              color = "grey",
+            ),
+            max.overlaps = Inf,
+            force = 1,
+            size = grid::unit(3, "mm"),
+            # hjust = 0.1,
+            box.padding = grid::unit(3, "mm")
+          )} +
         ggplot2::geom_vline(xintercept = 0, col = "red", linetype = 'dashed') +
         ggplot2::scale_x_continuous() +
         ggplot2::scale_y_continuous(transform = "log10", labels = function(x)round(x,1)) +
@@ -403,6 +435,8 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
         ) +
         ggplot2::scale_color_manual(values = c("cases" = "#E41A1C", "controls" = "#377EB8", "n.s." = "lightgrey")) + #, guide = "none") +
         ggplot2::theme_minimal()
+
+      r$lastPlot <- p
 
       gg_plot <- ggiraph::girafe(
         ggobj = p,
@@ -427,6 +461,30 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
 
       return(gg_plot)
     })
+
+    #
+    # download data as a plot
+    #
+    output$downloadPlot <- shiny::downloadHandler(
+      filename = function(){
+        paste('codewas_', format(lubridate::now(), "%Y_%m_%d_%H%M"), '.pdf', sep='')
+      },
+      content = function(fname){
+
+        grDevices::cairo_pdf(filename = fname,
+                             width = 7,
+                             height = 5,
+                             pointsize = 1.0,
+                             family = "sans",
+                             bg = "transparent",
+                             antialias = "default",
+                             fallback_resolution = 300,
+        )
+        print(r$lastPlot)
+        grDevices::dev.off()
+      },
+      contentType = "application/pdf"
+    )
 
 
   })

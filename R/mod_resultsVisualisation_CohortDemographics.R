@@ -65,8 +65,13 @@ mod_resultsVisualisation_CohortsDemographics_server <- function(id, analysisResu
     ns <- session$ns
 
     cohortDemographicsData <- shiny::reactive({
-      analysisResults |> dplyr::tbl('demographicsCounts') |>
-        dplyr::collect()
+      dplyr::inner_join(
+        analysisResults |> dplyr::tbl('demographicsCounts') |>
+          dplyr::collect(),
+        analysisResults |> dplyr::tbl('cohortsInfo') |>
+          dplyr::collect() |>
+          dplyr::select(cohortId, cohortName)
+        , by = "cohortId")
     })
 
     # stores the last plot for download
@@ -79,12 +84,12 @@ mod_resultsVisualisation_CohortsDemographics_server <- function(id, analysisResu
       shiny::req(cohortDemographicsData())
       shiny::req(input$stratifyBy)
       # shiny::req(input$databaseId)
-      shiny::req(input$cohortId)
+      shiny::req(input$cohortName)
       shiny::req(input$gender)
       shiny::req(input$referenceYear)
 
-      # add cohortId to grouping_vars
-      grouping_vars <- c(input$stratifyBy, "cohortId")
+      # add cohortName to grouping_vars
+      grouping_vars <- c(input$stratifyBy, "cohortName")
 
       cohortDemographicsData() |>
         dplyr::mutate(
@@ -93,7 +98,7 @@ mod_resultsVisualisation_CohortsDemographics_server <- function(id, analysisResu
         ) |>
         # filters
         # dplyr::filter(databaseId %in% input$databaseId) |>
-        dplyr::filter(cohortId %in% input$cohortId) |>
+        dplyr::filter(cohortName %in% input$cohortName) |>
         dplyr::filter(gender %in% input$gender) |>
         dplyr::filter(referenceYear == input$referenceYear) |>
         dplyr::group_by(across(grouping_vars)) |>
@@ -110,8 +115,8 @@ mod_resultsVisualisation_CohortsDemographics_server <- function(id, analysisResu
       cdd <- cohortDemographicsData()
 
       cohorts_in_database <- cdd |>
-        dplyr::distinct(cohortId) |>
-        dplyr::pull(cohortId)
+        dplyr::distinct(cohortName) |>
+        dplyr::pull(cohortName)
 
 
       shiny::fluidPage(
@@ -124,7 +129,7 @@ mod_resultsVisualisation_CohortsDemographics_server <- function(id, analysisResu
             #   selected = dplyr::first(unique(cdd$databaseId)), multiple = FALSE
             # ),
             shinyWidgets::pickerInput(
-              ns("cohortId"), "Select cohorts", choices = cohorts_in_database, selected = cohorts_in_database, multiple = TRUE),
+              ns("cohortName"), "Select cohorts", choices = cohorts_in_database, selected = cohorts_in_database, multiple = TRUE),
             shinyWidgets::pickerInput(
               ns("referenceYear"), "Show patient counts for", choices = unique(cdd$referenceYear), selected = "cohort_start_date", multiple = FALSE),
           ),
@@ -157,21 +162,6 @@ mod_resultsVisualisation_CohortsDemographics_server <- function(id, analysisResu
 
     })
 
-    # #
-    # # Update cohortId picker based on databaseId
-    # #
-    # shiny::observeEvent(input$databaseId, {
-    #   shiny::req(cohortDemographicsData())
-    #   shiny::req(input$databaseId)
-    #
-    #   cohorts_in_database <- cohortDemographicsData() |>
-    #     dplyr::filter(databaseId %in% input$databaseId) |>
-    #     dplyr::distinct(cohortId) |>
-    #     dplyr::pull(cohortId)
-    #
-    #   shinyWidgets::updatePickerInput(session, "cohortId", choices = cohorts_in_database, selected = cohorts_in_database)
-    # }, ignoreInit = FALSE)
-
     #
     # helper function to build the plot
     #
@@ -196,7 +186,7 @@ mod_resultsVisualisation_CohortsDemographics_server <- function(id, analysisResu
         ggplot2::theme(
           axis.text.x = ggplot2::element_text(size = 12, angle = text_angle, hjust = 0.5),
           strip.background = ggplot2::element_rect(fill="white"),
-          strip.text = ggplot2::element_text(colour = 'black')
+          strip.text = ggplot2::element_text(colour = 'black', size = 12)
         ) +
         {if("gender" %in% input$stratifyBy)
           ggplot2::scale_fill_manual(values = c("Female" = "#BF616A", "Male" = "#2c5e77", "Other" = "#8C8C8C"))
@@ -218,37 +208,37 @@ mod_resultsVisualisation_CohortsDemographics_server <- function(id, analysisResu
       if(identical(c("ageGroup", "gender", "calendarYear"), input$stratifyBy)){
         gg_plot <- build_plot(
           x = "calendarYear", y = "count", fill = "gender",
-          rows = "cohortId", cols = "ageGroup",
+          rows = "cohortName", cols = "ageGroup",
           title = "Cohort Demographics", x_label = "Calendar time by age group", y_label = "Count")
       } else if(identical(c("ageGroup", "gender"), input$stratifyBy)) {
         gg_plot <- build_plot(
           x = "ageGroup", y = "count", fill = "gender",
-          rows = "cohortId", cols = ".",
+          rows = "cohortName", cols = ".",
           title = "Cohort Demographics", x_label = "Age group", y_label = "Count")
       } else if(identical(c("ageGroup", "calendarYear"), input$stratifyBy)) {
         gg_plot <- build_plot(
           x = "calendarYear", y = "count", fill = "",
-          rows = "cohortId", cols = "ageGroup",
+          rows = "cohortName", cols = "ageGroup",
           title = "Cohort Demographics", x_label = "Calendar time by age group", y_label = "Count")
       } else if(identical(c("gender", "calendarYear"), input$stratifyBy)) {
         gg_plot <- build_plot(
           x = "calendarYear", y = "count", fill = "gender",
-          rows = "cohortId", cols = "gender",
+          rows = "cohortName", cols = "gender",
           title = "Cohort Demographics", x_label = "Calendar time by gender", y_label = "Count")
       } else if(identical(c("ageGroup"), input$stratifyBy)) {
         gg_plot <- build_plot(
           x = "ageGroup", y = "count", fill = "",
-          rows = "cohortId", cols = ".",
+          rows = "cohortName", cols = ".",
           title = "Cohort Demographics", x_label = "Age group", y_label = "Count")
       } else if(identical(c("gender"), input$stratifyBy)) {
         gg_plot <- build_plot(
           x = "gender", y = "count", fill = "gender",
-          rows = "cohortId", cols = ".",
+          rows = "cohortName", cols = ".",
           title = "Cohort Demographics", x_label = "Gender", y_label = "Count")
       } else if(identical(c("calendarYear"), input$stratifyBy)) {
         gg_plot <- build_plot(
           x = "calendarYear", y = "count", fill = "",
-          rows = "cohortId", cols = ".",
+          rows = "cohortName", cols = ".",
           title = "Cohort Demographics", x_label = "Calendar time", y_label = "Count")
       } else {
         return(NULL)
