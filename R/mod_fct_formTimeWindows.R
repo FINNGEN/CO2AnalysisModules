@@ -221,8 +221,11 @@ mod_fct_formTimeWindows_server <- function(id, session) {
     #
     # reactive for the time windows
     #
-    shiny::reactive({
-      shiny::req(input$the_slider)
+    rf_range <- shiny::reactive({
+      if(is.null(input$the_slider)){
+        range  <- list(temporalStartDays = 0, temporalEndDays = 0)
+        return(range)
+      }
       breaks <- as.vector(input$the_slider)
       if(input$zero_window && !0 %in% breaks) breaks <- c(0, breaks)
       result <- c()
@@ -239,9 +242,12 @@ mod_fct_formTimeWindows_server <- function(id, session) {
         endDays <- c(endDays, result[i + 1])
       }
 
-      list(temporalStartDays = startDays, temporalEndDays = endDays)
+      range  <- list(temporalStartDays = startDays, temporalEndDays = endDays)
+
+      return(range)
     })
 
+    return(rf_range)
 
   })
 }
