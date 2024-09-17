@@ -2,7 +2,7 @@
 % Please edit documentation in R/mod_resultsVisualisation_CodeWAS.R
 \name{mod_resultsVisualisation_CodeWAS_ui}
 \alias{mod_resultsVisualisation_CodeWAS_ui}
-\title{Cohort Demographics Visualization UI}
+\title{CodeWAS Results Visualization UI}
 \usage{
 mod_resultsVisualisation_CodeWAS_ui(id)
 }
@@ -13,5 +13,5 @@ mod_resultsVisualisation_CodeWAS_ui(id)
 A Shiny UI element that can be included in a Shiny app.
 }
 \description{
-UI module for visualizing cohort overlaps using an UpSet plot. This module provides controls to customize the appearance of the plot and options to download the plot and data.
+UI module for visualizing CodeWAS results. This module provides controls to customize the appearance of the plot and options to download the plot and data.
 }

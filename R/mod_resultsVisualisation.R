@@ -10,7 +10,7 @@
 #'
 #' @importFrom shiny NS tags icon
 #' @importFrom shinydashboard dashboardHeader dashboardSidebar dashboardBody dashboardPage sidebarMenu menuItem tabItems tabItem
-#' @importFrom htmltools includeMarkdown tags style HTML
+#' @importFrom htmltools includeMarkdown tags HTML
 #' @importFrom reactable reactableOutput
 #'
 #' @export
@@ -98,11 +98,11 @@ mod_resultsVisualisation_ui <- function(id, resultsVisualisationModuleUi, pathTo
 #'
 #' @param id A string representing the module's namespace.
 #' @param resultsVisualisationModuleServer A server function representing the specific visualization module's server logic.
-#' @param analysisResults Pooled connection to the analisys results duckdb.
+#' @param analysisResults Pooled connection to the analysis results duckdb.
 #'
 #' @return The module returns server-side logic to manage the results visualization dashboard.
 #'
-#' @importFrom shiny moduleServer renderReactable
+#' @importFrom shiny moduleServer
 #' @importFrom dplyr tbl select collect
 #' @importFrom reactable renderReactable
 #'

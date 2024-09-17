@@ -1,5 +1,14 @@
 
 
+#' Form Time Windows UI Module
+#'
+#' This module provides the UI for forming time windows.
+#'
+#' @param id Module ID
+#'
+#' @return A Shiny UI element
+#' @import shiny shinyjs shinyFeedback shinyWidgets
+#' @export
 mod_fct_formTimeWindows_ui <- function(id) {
   ns <- shiny::NS(id)
   shiny::tagList(
@@ -77,7 +86,16 @@ mod_fct_formTimeWindows_ui <- function(id) {
   )
 }
 
-
+#' Form Time Windows Server Module
+#'
+#' This module provides the server logic for forming time windows.
+#'
+#' @param id Module ID
+#' @param session Shiny session object
+#'
+#' @return A reactive list containing the start and end days of the time windows
+#' @import shiny shinyjs shinyFeedback shinyWidgets
+#' @export
 mod_fct_formTimeWindows_server <- function(id, session) {
   shiny::moduleServer(id, function(input, output, session) {
     ns <- session$ns

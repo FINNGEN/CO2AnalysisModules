@@ -2,14 +2,18 @@
 % Please edit documentation in R/app_Run.R
 \name{run_app}
 \alias{run_app}
-\title{Run the Shiny Application}
+\title{Launch the Shiny Application}
 \usage{
 run_app(CO2AnalysisModulesConfig, ...)
 }
 \arguments{
-\item{...}{arguments to pass to golem_opts.
-See \code{?golem::get_golem_options} for more details.}
+\item{CO2AnalysisModulesConfig}{A list containing the configuration for the CO2 analysis modules.}
+
+\item{...}{Additional arguments passed to \code{shiny::shinyApp}.}
+}
+\value{
+A Shiny application object.
 }
 \description{
-Run the Shiny Application
+This function launches a Shiny application for CO2 analysis, configured with the provided modules.
 }

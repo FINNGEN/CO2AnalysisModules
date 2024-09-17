@@ -2,7 +2,7 @@
 % Please edit documentation in R/fct_timeCodeWAS.R
 \name{checkResults_timeCodeWAS}
 \alias{checkResults_timeCodeWAS}
-\title{Check Cohort Overlaps Results}
+\title{Check TimeCodeWAS Results}
 \usage{
 checkResults_timeCodeWAS(pathToResultsDatabase)
 }
@@ -13,5 +13,5 @@ checkResults_timeCodeWAS(pathToResultsDatabase)
 TRUE if the results are valid; otherwise, a vector of error messages.
 }
 \description{
-This function checks the integrity and correctness of the exported cohort overlaps results in a DuckDB database.
+This function checks the integrity and correctness of the exported timeCodeWAS results in a DuckDB database.
 }

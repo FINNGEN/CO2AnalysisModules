@@ -2,22 +2,25 @@
 % Please edit documentation in R/fct_CodeWAS.R
 \name{assertAnalysisSettings_CodeWAS}
 \alias{assertAnalysisSettings_CodeWAS}
-\title{Assert Analysis Settings for Cohort Demographics Overlaps}
+\title{Assert Analysis Settings for CodeWAS}
 \usage{
 assertAnalysisSettings_CodeWAS(analysisSettings)
 }
 \arguments{
 \item{analysisSettings}{A list containing analysis settings. It must include the following elements:
 \describe{
-\item{cohortIds}{A numeric vector of cohort IDs.}
-\item{referenceYears}{A character vector specifying the reference years, must be one of \code{cohort_start_date}, \code{cohort_end_date}, or \code{birth_datetime}.}
-\item{groupBy}{A character vector indicating the demographic groups for analysis, must be one of \code{calendarYear}, \code{ageGroup}, or \code{gender}.}
+\item{cohortIdCases}{A numeric value representing the cohort ID for cases.}
+\item{cohortIdControls}{A numeric value representing the cohort ID for controls.}
+\item{analysisIds}{A numeric vector of analysis IDs.}
+\item{covariatesIds}{A numeric vector of covariate IDs (optional).}
 \item{minCellCount}{A numeric value representing the minimum cell count, must be 0 or higher.}
+\item{chunksSizeNOutcomes}{A numeric value representing the chunk size for outcomes (optional).}
+\item{cores}{A numeric value representing the number of cores to use for parallel processing.}
 }}
 }
 \value{
-Returns \code{TRUE} if all settings are valid; otherwise, throws an error.
+Returns the validated \code{analysisSettings} list.
 }
 \description{
-Validates the \code{analysisSettings} list to ensure it contains the required elements (\code{cohortIds}, \code{referenceYears}, \code{groupBy}, \code{minCellCount}) with correct types and values. This function is specifically designed for checking settings related to cohort demographics analysis.
+Validates the \code{analysisSettings} list to ensure it contains the required elements (\code{cohortIdCases}, \code{cohortIdControls}, \code{analysisIds}, \code{covariatesIds}, \code{minCellCount}, \code{chunksSizeNOutcomes}, \code{cores}) with correct types and values. This function is specifically designed for checking settings related to CodeWAS analysis.
 }

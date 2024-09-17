@@ -3,9 +3,9 @@
 #' @title .addFisherTestToCodeCounts
 #' @description performs an Fisher test in each row of the case_controls_counts table
 #' @param tibbleWithCodeCounts table obtained from `getCodeCounts`.
-#' @return inputed table with appened columsn :
+#' @return imputed table with append columns :
 #' - p : for the p-value
-#' - OR; for the ods ratio
+#' - OR; for the odds ratio
 #' @export
 #' @importFrom dplyr setdiff bind_cols select mutate if_else
 #' @importFrom purrr pmap_df
@@ -27,6 +27,18 @@
 
 }
 
+
+#' @title .binaryTest
+#' @description performs a Fisher or Chi-square test based on the input counts
+#' @param a number of cases with the condition
+#' @param b number of cases without the condition
+#' @param c number of controls with the condition
+#' @param d number of controls without the condition
+#' @param fiserLimit threshold to decide between Fisher and Chi-square test
+#' @return a list with:
+#' - `countsPValue`: the p-value of the test
+#' - `countsOddsRatio`: the odds ratio
+#' - `countsTest`: the type of test performed
 .binaryTest <- function(a,b,c,d, fiserLimit=10){
   data <-matrix(c(a,b,c,d),ncol=2)
   if(a<fiserLimit | b<fiserLimit | c<fiserLimit | d<fiserLimit){
@@ -47,10 +59,16 @@
   ))
 }
 
-
-
-
-
+#' @title .addTestTotibbleWithValueSummary
+#' @description performs a continuous test in each row of the tibbleWithValueSummary table
+#' @param tibbleWithValueSummary table containing summary statistics for cases and controls.
+#' @return input table with appended columns:
+#' - continuousPValue: the p-value of the test
+#' - continuousStandardError: the standard error of the test
+#' - continuousTest: the type of test performed
+#' @export
+#' @importFrom dplyr setdiff bind_cols select mutate if_else
+#' @importFrom purrr pmap_df
 .addTestTotibbleWithValueSummary <- function(tibbleWithValueSummary){
 
   checkmate::assertDataFrame(tibbleWithValueSummary)
@@ -67,12 +85,20 @@
 
 }
 
-
-# m1, m2: the sample means
-# s1, s2: the sample standard deviations
-# n1, n2: the same sizes
-# m0: the null value for the difference in means to be tested for. Default is 0.
-# equal.variance: whether or not to assume equal variance. Default is FALSE.
+#' @title .continuousTest
+#' @description performs a Welch Two Sample t-test or a t-test with equal variance based on the input parameters
+#' @param m1 the sample mean of the first group
+#' @param m2 the sample mean of the second group
+#' @param s1 the sample standard deviation of the first group
+#' @param s2 the sample standard deviation of the second group
+#' @param n1 the sample size of the first group
+#' @param n2 the sample size of the second group
+#' @param m0 the null value for the difference in means to be tested for. Default is 0.
+#' @param equal.variance whether or not to assume equal variance. Default is FALSE.
+#' @return a list with:
+#' - continuousPValue: the p-value of the test
+#' - continuousStandardError: the standard error of the test
+#' - continuousTest: the type of test performed
 .continuousTest <- function(m1,m2,s1,s2,n1,n2,m0=0,equal.variance=FALSE)
 {
   # # special case

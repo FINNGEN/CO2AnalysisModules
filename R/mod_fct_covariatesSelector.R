@@ -1,7 +1,24 @@
 
-
+#' Covariate Selector UI Module
+#'
+#' This module creates a UI component for selecting covariates based on analysis IDs.
+#'
+#' @param inputId The input ID for the UI component.
+#' @param label The label for the UI component.
+#' @param analysisIdsToShow A vector of analysis IDs to show in the selector. If NULL, all analysis IDs are shown.
+#' @param analysisIdsSelected A vector of analysis IDs to be selected by default. If NULL, all analysis IDs are selected.
+#'
+#' @return A shiny UI component for selecting covariates.
+#' @importFrom dplyr left_join mutate filter select
+#' @importFrom tibble tribble
+#' @importFrom stringr str_replace_all
+#' @importFrom tidyr nest
+#' @importFrom purrr map
+#' @importFrom shinyWidgets pickerInput
+#' @importFrom checkmate assertNumeric assertSubset
+#' @export
+#'
 mod_fct_covariateSelector_ui <- function(inputId, label = NULL, analysisIdsToShow = NULL, analysisIdsSelected = NULL) {
-
 
   if(is.null(analysisIdsToShow)) {
     analysisIdsToShow  <- HadesExtras::getListOfAnalysis()$analysisId
@@ -61,7 +78,3 @@ mod_fct_covariateSelector_ui <- function(inputId, label = NULL, analysisIdsToSho
   return(picker)
 
 }
-
-
-
-

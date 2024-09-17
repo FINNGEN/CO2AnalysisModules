@@ -1,15 +1,12 @@
 #' @title Cohort Demographics Visualization UI
-#' @description UI module for visualizing cohort overlaps using an UpSet plot. This module provides controls to customize the appearance of the plot and options to download the plot and data.
+#' @description UI module for visualizing cohort demographics. This module provides controls to customize the appearance of the plot and options to download the plot and data.
 #'
 #' @param id A string representing the module's namespace.
 #'
 #' @return A Shiny UI element that can be included in a Shiny app.
 #'
-#' @importFrom shiny NS fluidPage div fluidRow column actionButton checkboxInput plotOutput downloadButton observeEvent
-#' @importFrom shinyWidgets sliderInput chooseSliderSkin
-#' @importFrom shinyjs useShinyjs toggle hidden
-#' @importFrom htmltools tagList
-#' @importFrom shinybrowser detect
+#' @importFrom shiny NS tagList tags h4 uiOutput tabsetPanel tabPanel plotOutput div downloadButton
+#' @importFrom reactable reactableOutput
 #'
 #' @export
 #'
@@ -38,24 +35,29 @@ mod_resultsVisualisation_CohortsDemographics_ui <- function(id) {
           shiny::downloadButton(ns("downloadDataActionButton"), "Download")
         )
       )
-    ), # tabsetPanel
+    )
   )
 
 }
 
 
 #' @title Cohort Demographics Visualization Server
-#' @description Server module for handling the logic of the cohort overlaps visualization UI. This module creates an UpSet plot based on the analysis results and allows the plot and data to be downloaded.
+#' @description Server module for handling the logic of the cohort demographics visualization UI. This module creates a demographics plot based on the analysis results and allows the plot and data to be downloaded.
 #'
 #' @param id A string representing the module's namespace.
-#' @param analysisResults Pooled connection to the analisys results duckdb.
+#' @param analysisResults Pooled connection to the analysis results duckdb.
 #'
-#' @return The module returns server-side logic to generate and manage the cohort overlaps UpSet plot.
+#' @return The module returns server-side logic to generate and manage the cohort demographics plot.
 #'
-#' @importFrom shiny moduleServer reactive req renderPlot downloadHandler
+#' @importFrom shiny moduleServer reactive req renderPlot downloadHandler renderUI isTruthy
 #' @importFrom shinyjs toggle
-#' @importFrom dplyr tbl collect mutate
-#' @importFrom UpSetR upset fromExpression
+#' @importFrom dplyr tbl collect mutate inner_join select filter group_by summarise ungroup across
+#' @importFrom forcats fct_reorder
+#' @importFrom stringr str_extract
+#' @importFrom ggplot2 sym aes geom_col position_dodge2 geom_text facet_grid scale_x_continuous coord_cartesian expand_limits theme_minimal element_text element_rect labs ggplot
+#' @importFrom reactable renderReactable reactable
+#' @importFrom readr write_csv
+#' @importFrom lubridate now
 #' @importFrom grDevices cairo_pdf dev.off
 #'
 #' @export
