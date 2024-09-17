@@ -2,18 +2,18 @@
 % Please edit documentation in R/mod_resultsVisualisation_CodeWAS.R
 \name{mod_resultsVisualisation_CodeWAS_server}
 \alias{mod_resultsVisualisation_CodeWAS_server}
-\title{Cohort Demographics Visualization Server}
+\title{CodeWAS Results Visualization Server}
 \usage{
 mod_resultsVisualisation_CodeWAS_server(id, analysisResults)
 }
 \arguments{
 \item{id}{A string representing the module's namespace.}
 
-\item{analysisResults}{Pooled connection to the analisys results duckdb.}
+\item{analysisResults}{Pooled connection to the analysis results duckdb.}
 }
 \value{
-The module returns server-side logic to generate and manage the cohort overlaps UpSet plot.
+The module returns server-side logic to generate and manage the CodeWAS results visualization.
 }
 \description{
-Server module for handling the logic of the cohort overlaps visualization UI. This module creates an UpSet plot based on the analysis results and allows the plot and data to be downloaded.
+Server module for handling the logic of the CodeWAS results visualization UI. This module creates interactive plots and tables based on the analysis results and allows the plot and data to be downloaded.
 }

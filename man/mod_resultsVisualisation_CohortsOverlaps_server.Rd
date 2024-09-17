@@ -9,7 +9,7 @@ mod_resultsVisualisation_CohortsOverlaps_server(id, analysisResults)
 \arguments{
 \item{id}{A string representing the module's namespace.}
 
-\item{analysisResults}{Pooled connection to the analisys results duckdb.}
+\item{analysisResults}{Pooled connection to the analysis results duckdb.}
 }
 \value{
 The module returns server-side logic to generate and manage the cohort overlaps UpSet plot.

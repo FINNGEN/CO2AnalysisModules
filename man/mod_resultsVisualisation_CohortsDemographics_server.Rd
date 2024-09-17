@@ -9,11 +9,11 @@ mod_resultsVisualisation_CohortsDemographics_server(id, analysisResults)
 \arguments{
 \item{id}{A string representing the module's namespace.}
 
-\item{analysisResults}{Pooled connection to the analisys results duckdb.}
+\item{analysisResults}{Pooled connection to the analysis results duckdb.}
 }
 \value{
-The module returns server-side logic to generate and manage the cohort overlaps UpSet plot.
+The module returns server-side logic to generate and manage the cohort demographics plot.
 }
 \description{
-Server module for handling the logic of the cohort overlaps visualization UI. This module creates an UpSet plot based on the analysis results and allows the plot and data to be downloaded.
+Server module for handling the logic of the cohort demographics visualization UI. This module creates a demographics plot based on the analysis results and allows the plot and data to be downloaded.
 }

@@ -15,7 +15,7 @@ mod_resultsVisualisation_server(
 
 \item{resultsVisualisationModuleServer}{A server function representing the specific visualization module's server logic.}
 
-\item{analysisResults}{Pooled connection to the analisys results duckdb.}
+\item{analysisResults}{Pooled connection to the analysis results duckdb.}
 }
 \value{
 The module returns server-side logic to manage the results visualization dashboard.
