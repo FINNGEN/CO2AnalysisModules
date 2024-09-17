@@ -5,11 +5,9 @@
 #'
 #' @return A Shiny UI element that can be included in a Shiny app.
 #'
-#' @importFrom shiny NS fluidPage div fluidRow column actionButton checkboxInput plotOutput downloadButton observeEvent
-#' @importFrom shinyWidgets sliderInput chooseSliderSkin
-#' @importFrom shinyjs useShinyjs toggle hidden
-#' @importFrom htmltools tagList
-#' @importFrom shinybrowser detect
+#' @importFrom shiny NS tagList tags h4 uiOutput tabsetPanel tabPanel div downloadButton
+#' @importFrom ggiraph girafeOutput
+#' @importFrom DT DTOutput
 #'
 #' @export
 #'
@@ -43,26 +41,39 @@ mod_resultsVisualisation_TimeCodeWAS_ui <- function(id) {
           shiny::downloadButton(ns("downloadDataAll"), "Download all"),
         )
       )
-    ), # tabsetPanel
+    )
   )
 
 
 }
 
-
 #' @title Cohort Demographics Visualization Server
 #' @description Server module for handling the logic of the cohort overlaps visualization UI. This module creates an UpSet plot based on the analysis results and allows the plot and data to be downloaded.
 #'
 #' @param id A string representing the module's namespace.
-#' @param analysisResults Pooled connection to the analisys results duckdb.
+#' @param analysisResults Pooled connection to the analysis results duckdb.
 #'
 #' @return The module returns server-side logic to generate and manage the cohort overlaps UpSet plot.
 #'
-#' @importFrom shiny moduleServer reactive req renderPlot downloadHandler
-#' @importFrom shinyjs toggle
-#' @importFrom dplyr tbl collect mutate
-#' @importFrom UpSetR upset fromExpression
+#' @importFrom shiny moduleServer reactive req renderUI observeEvent downloadHandler
+#' @importFrom shinyFeedback showFeedbackWarning hideFeedback
+#' @importFrom shinyWidgets pickerInput pickerOptions chooseSliderSkin
+#' @importFrom ggiraph renderGirafe girafe opts_sizing opts_hover opts_selection opts_toolbar geom_point_interactive
+#' @importFrom ggrepel geom_text_repel
+#' @importFrom DT renderDataTable datatable formatSignif formatStyle
+#' @importFrom dplyr filter mutate select arrange transmute left_join pull case_when if_else inner_join row_number
+#' @importFrom tidyr separate
+#' @importFrom stringr str_remove_all str_remove str_c str_wrap str_trunc str_split str_extract_all str_sub
+#' @importFrom scales percent number rescale
+#' @importFrom lubridate now days
+#' @importFrom readr write_csv
+#' @importFrom purrr map2_chr
+#' @importFrom grid unit gpar
+#' @importFrom gtable gtable_add_grob
+#' @importFrom ggplot2 ggplot aes geom_segment scale_size_manual scale_x_continuous scale_y_continuous facet_grid theme_minimal theme scale_color_manual scale_fill_discrete guides labs ggplot_build ggplot_gtable
+#' @importFrom ggplotify as.ggplot
 #' @importFrom grDevices cairo_pdf dev.off
+#' @importFrom shinyjs toggle
 #'
 #' @export
 #'

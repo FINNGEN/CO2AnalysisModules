@@ -1,13 +1,13 @@
 Package: CO2AnalysisModules
 Title: CO2AnalysisModules
-Version: 0.0.0.9001
+Version: 1.0.0
 Authors@R: 
     person("Javier", "Gracia-Tabuenca", , "javier.graciatabuenca@tuni.fi", role = c("aut", "cre"),
            comment = c(ORCID = "0000-0002-2455-0598"))
 Description: Analysis modules to be added to CO2
-License: MIT + file LICENSE
+License: MIT
 Encoding: UTF-8
-Language: en
+Language: en-US
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.2
 Imports: 
@@ -46,15 +46,17 @@ Imports:
     speedglm,
     stringr,
     tidyr,
-    shinyFeedback
+    shinyFeedback,
+    CohortGenerator
 Remotes: 
-    FINNGEN/HadesExtras,
-    OHDSI/CohortGenerator
+    FINNGEN/HadesExtras
 Suggests: 
     devtools,
     testthat (>= 3.0.0), 
     Eunomia, 
-    withr
+    withr,
+    spelling,
+    covr
 Config/testthat/edition: 3
 URL: https://github.com/javier-gracia-tabuenca-tuni/CO2AnalysisModules
 BugReports: https://github.com/javier-gracia-tabuenca-tuni/CO2AnalysisModules/issues

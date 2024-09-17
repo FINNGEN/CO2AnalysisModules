@@ -2,7 +2,7 @@
 % Please edit documentation in R/fct_CodeWAS.R
 \name{checkResults_CodeWAS}
 \alias{checkResults_CodeWAS}
-\title{Check Cohort Overlaps Results}
+\title{Check CodeWAS Results}
 \usage{
 checkResults_CodeWAS(pathToResultsDatabase)
 }
@@ -13,5 +13,5 @@ checkResults_CodeWAS(pathToResultsDatabase)
 TRUE if the results are valid; otherwise, a vector of error messages.
 }
 \description{
-This function checks the integrity and correctness of the exported cohort overlaps results in a DuckDB database.
+This function checks the integrity and correctness of the exported CodeWAS results in a DuckDB database.
 }

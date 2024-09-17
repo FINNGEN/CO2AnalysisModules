@@ -5,11 +5,12 @@
 #'
 #' @return A Shiny UI element that can be included in a Shiny app.
 #'
-#' @importFrom shiny NS fluidPage div fluidRow column actionButton checkboxInput plotOutput downloadButton observeEvent
-#' @importFrom shinyWidgets sliderInput chooseSliderSkin
+#' @importFrom shiny NS fluidPage div fluidRow column actionButton checkboxInput plotOutput downloadButton tabsetPanel tabPanel
+#' @importFrom shinyWidgets chooseSliderSkin
 #' @importFrom shinyjs useShinyjs toggle hidden
 #' @importFrom htmltools tagList
 #' @importFrom shinybrowser detect
+#' @importFrom reactable reactableOutput
 #'
 #' @export
 #'
@@ -107,12 +108,11 @@ mod_resultsVisualisation_CohortsOverlaps_ui <- function(id) {
     ))
 }
 
-
 #' @title Cohort Overlaps Visualization Server
 #' @description Server module for handling the logic of the cohort overlaps visualization UI. This module creates an UpSet plot based on the analysis results and allows the plot and data to be downloaded.
 #'
 #' @param id A string representing the module's namespace.
-#' @param analysisResults Pooled connection to the analisys results duckdb.
+#' @param analysisResults Pooled connection to the analysis results duckdb.
 #'
 #' @return The module returns server-side logic to generate and manage the cohort overlaps UpSet plot.
 #'
@@ -121,6 +121,8 @@ mod_resultsVisualisation_CohortsOverlaps_ui <- function(id) {
 #' @importFrom dplyr tbl collect mutate
 #' @importFrom UpSetR upset fromExpression
 #' @importFrom grDevices cairo_pdf dev.off
+#' @importFrom reactable renderReactable
+#' @importFrom lubridate now
 #'
 #' @export
 #'

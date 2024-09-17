@@ -172,12 +172,12 @@ mod_analysisSettings_timeCodeWAS_server <- function(id, r_connectionHandler) {
 
       # overlap
       if(nSubjectsOverlap==0){
-        message <- paste0(message, "✅ No subjects overlap between case and control cohorts\n")
+        message <- paste0(message, "\u2705 No subjects overlap between case and control cohorts\n")
       }else{
         if(nSubjectsOverlap > nSubjectsCase * .20){
-          message <- paste0(message, "❌ There are many subjects, ",nSubjectsOverlap, ", that overlap  berween case and control cohorts. Consider removing them in Operate Cohorts tab\n")
+          message <- paste0(message, "\u274C There are many subjects, ",nSubjectsOverlap, ", that overlap  berween case and control cohorts. Consider removing them in Operate Cohorts tab\n")
         }else{
-          message <- paste0(message, "⚠️ There are few subjects, ",nSubjectsOverlap, ", that overlap between case and control cohorts. \n")
+          message <- paste0(message, "\u26A0 There are few subjects, ",nSubjectsOverlap, ", that overlap between case and control cohorts. \n")
         }
       }
 
@@ -201,7 +201,7 @@ mod_analysisSettings_timeCodeWAS_server <- function(id, r_connectionHandler) {
       fisher_results <- stats::fisher.test(data)
 
       if(fisher_results$p.value < 0.05){
-        message <- paste0(message, "⚠️ There is a significant difference in sex distribution between case and control cohorts. (Fisher's test p = ", scales::scientific(fisher_results$p.value)," ) \n")
+        message <- paste0(message, "\u26A0 There is a significant difference in sex distribution between case and control cohorts. (Fisher's test p = ", scales::scientific(fisher_results$p.value)," ) \n")
         message <- paste0(message, "Consider controling for sex  creating a new control cohort that match case cohort by sex in the Match Cohorts tab\n")
       }
 
@@ -216,7 +216,7 @@ mod_analysisSettings_timeCodeWAS_server <- function(id, r_connectionHandler) {
       ttestResult <- t.test(yearOfBirthCase[[1]]  |> tidyr::uncount(n), yearOfBirthControl[[1]]  |> tidyr::uncount(n))
 
       if(ttestResult$p.value < 0.05){
-        message <- paste0(message, "⚠️ There is a significant difference in year of birth distribution between case and control cohorts. (t-test p = ", scales::scientific(ttestResult$p.value)," ) \n")
+        message <- paste0(message, "\u26A0 There is a significant difference in year of birth distribution between case and control cohorts. (t-test p = ", scales::scientific(ttestResult$p.value)," ) \n")
         message <- paste0(message, "Consider controling for year of birth creating a new control cohort that match case cohort by year of birth in the Match Cohorts tab\n")
       }
 

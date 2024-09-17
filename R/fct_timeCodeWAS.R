@@ -11,7 +11,6 @@
 #' @importFrom checkmate assertDirectoryExists assertR6 assertList assertSubset assertNumeric checkFileExists
 #' @importFrom ParallelLogger logInfo
 #' @importFrom dplyr filter mutate select as_tibble
-#' @importFrom HadesExtras removeCohortIdsFromtimeCodeWASTable
 #' @importFrom duckdb dbConnect dbDisconnect dbWriteTable dbListTables
 #' @importFrom DBI dbGetQuery
 #' @importFrom tibble tibble
@@ -324,8 +323,8 @@ assertAnalysisSettings_timeCodeWAS <- function(analysisSettings) {
 }
 
 
-#' @title Check Cohort Overlaps Results
-#' @description This function checks the integrity and correctness of the exported cohort overlaps results in a DuckDB database.
+#' @title Check TimeCodeWAS Results
+#' @description This function checks the integrity and correctness of the exported timeCodeWAS results in a DuckDB database.
 #'
 #' @param pathToResultsDatabase A string representing the path to the DuckDB database file containing the results.
 #'

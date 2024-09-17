@@ -1,4 +1,17 @@
 
+#' @title Check Database Schema
+#' @description This function checks the schema of a DuckDB database against expected schemas.
+#'
+#' @param pathToResultsDatabase A string representing the path to the DuckDB database file.
+#' @param expectedSchemas A named list of tibbles, where each tibble represents the expected schema of a database table with columns `name` and `type`.
+#'
+#' @return Returns `TRUE` if all scheme match the expected scheme. Otherwise, it returns a list of error messages indicating the discrepancies.
+#'
+#' @importFrom checkmate checkFileExists checkSubset
+#' @importFrom duckdb dbConnect dbListTables dbDisconnect
+#' @importFrom DBI dbGetQuery
+#' @importFrom dplyr select as_tibble
+#'
 .checkDatabase <- function(pathToResultsDatabase, expectedSchemas) {
 
   #
@@ -18,7 +31,7 @@
     checkmate::checkSubset(expectedSchemas |> names())
   if (!check) { errors <- c(errors, check) ; return(errors) }
 
-  # check schemas
+  # check scheme
   for (expectedSchemaName in  names(expectedSchemas)) {
     expectedSchema <- expectedSchemas[[expectedSchemaName]]
     schema <- DBI::dbGetQuery(connection, paste0("PRAGMA table_info('",expectedSchemaName, "')")) |>

@@ -1,3 +1,4 @@
-# CO2AnalysisModules (development version)
+# CO2AnalysisModules 1.0.0
 
-* Initial CRAN submission.
+- Initial release
+- Modules: CohortsOverlaps, CohortDemographics, CodeWAS, TimeCodeWAS

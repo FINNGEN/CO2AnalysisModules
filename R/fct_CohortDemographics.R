@@ -11,7 +11,6 @@
 #' @importFrom checkmate assertDirectoryExists assertR6 assertList assertSubset assertNumeric checkFileExists
 #' @importFrom ParallelLogger logInfo
 #' @importFrom dplyr filter mutate select as_tibble
-#' @importFrom HadesExtras removeCohortIdsFromCohortDemographicsTable
 #' @importFrom duckdb dbConnect dbDisconnect dbWriteTable dbListTables
 #' @importFrom DBI dbGetQuery
 #' @importFrom tibble tibble

@@ -11,7 +11,6 @@
 #' @importFrom checkmate assertDirectoryExists assertR6 assertList assertSubset assertNumeric checkFileExists
 #' @importFrom ParallelLogger logInfo
 #' @importFrom dplyr filter mutate select as_tibble
-#' @importFrom HadesExtras removeCohortIdsFromCodeWASTable
 #' @importFrom duckdb dbConnect dbDisconnect dbWriteTable dbListTables
 #' @importFrom DBI dbGetQuery
 #' @importFrom tibble tibble
@@ -562,20 +561,23 @@ execute_CodeWAS <- function(
 
 }
 
-#' @title Assert Analysis Settings for Cohort Demographics Overlaps
-#' @description Validates the `analysisSettings` list to ensure it contains the required elements (`cohortIds`, `referenceYears`, `groupBy`, `minCellCount`) with correct types and values. This function is specifically designed for checking settings related to cohort demographics analysis.
+#' @title Assert Analysis Settings for CodeWAS
+#' @description Validates the `analysisSettings` list to ensure it contains the required elements (`cohortIdCases`, `cohortIdControls`, `analysisIds`, `covariatesIds`, `minCellCount`, `chunksSizeNOutcomes`, `cores`) with correct types and values. This function is specifically designed for checking settings related to CodeWAS analysis.
 #'
 #' @param analysisSettings A list containing analysis settings. It must include the following elements:
 #' \describe{
-#'   \item{cohortIds}{A numeric vector of cohort IDs.}
-#'   \item{referenceYears}{A character vector specifying the reference years, must be one of `cohort_start_date`, `cohort_end_date`, or `birth_datetime`.}
-#'   \item{groupBy}{A character vector indicating the demographic groups for analysis, must be one of `calendarYear`, `ageGroup`, or `gender`.}
+#'   \item{cohortIdCases}{A numeric value representing the cohort ID for cases.}
+#'   \item{cohortIdControls}{A numeric value representing the cohort ID for controls.}
+#'   \item{analysisIds}{A numeric vector of analysis IDs.}
+#'   \item{covariatesIds}{A numeric vector of covariate IDs (optional).}
 #'   \item{minCellCount}{A numeric value representing the minimum cell count, must be 0 or higher.}
+#'   \item{chunksSizeNOutcomes}{A numeric value representing the chunk size for outcomes (optional).}
+#'   \item{cores}{A numeric value representing the number of cores to use for parallel processing.}
 #' }
 #'
-#' @return Returns `TRUE` if all settings are valid; otherwise, throws an error.
+#' @return Returns the validated `analysisSettings` list.
 #'
-#' @importFrom checkmate assertList assertSubset assertNumeric assertCharacter
+#' @importFrom checkmate assertList assertSubset assertNumeric
 #'
 #' @export
 assertAnalysisSettings_CodeWAS <- function(analysisSettings) {
@@ -611,8 +613,8 @@ assertAnalysisSettings_CodeWAS <- function(analysisSettings) {
 }
 
 
-#' @title Check Cohort Overlaps Results
-#' @description This function checks the integrity and correctness of the exported cohort overlaps results in a DuckDB database.
+#' @title Check CodeWAS Results
+#' @description This function checks the integrity and correctness of the exported CodeWAS results in a DuckDB database.
 #'
 #' @param pathToResultsDatabase A string representing the path to the DuckDB database file containing the results.
 #'

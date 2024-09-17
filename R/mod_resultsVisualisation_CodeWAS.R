@@ -1,15 +1,14 @@
-#' @title Cohort Demographics Visualization UI
-#' @description UI module for visualizing cohort overlaps using an UpSet plot. This module provides controls to customize the appearance of the plot and options to download the plot and data.
+#' @title CodeWAS Results Visualization UI
+#' @description UI module for visualizing CodeWAS results. This module provides controls to customize the appearance of the plot and options to download the plot and data.
 #'
 #' @param id A string representing the module's namespace.
 #'
 #' @return A Shiny UI element that can be included in a Shiny app.
 #'
-#' @importFrom shiny NS fluidPage div fluidRow column actionButton checkboxInput plotOutput downloadButton observeEvent
-#' @importFrom shinyWidgets sliderInput chooseSliderSkin
-#' @importFrom shinyjs useShinyjs toggle hidden
-#' @importFrom htmltools tagList
-#' @importFrom shinybrowser detect
+#' @importFrom shiny NS tagList h4 div uiOutput tabsetPanel tabPanel downloadButton
+#' @importFrom htmltools hr
+#' @importFrom ggiraph girafeOutput
+#' @importFrom DT dataTableOutput
 #'
 #' @export
 #'
@@ -48,27 +47,36 @@ mod_resultsVisualisation_CodeWAS_ui <- function(id) {
           shiny::downloadButton(ns("downloadCodeWASAll"), "Download all", icon = shiny::icon("download"))
         )
       )
-    ), # tabsetPanel
+    )
   )
 }
 
 
-#' @title Cohort Demographics Visualization Server
-#' @description Server module for handling the logic of the cohort overlaps visualization UI. This module creates an UpSet plot based on the analysis results and allows the plot and data to be downloaded.
+#' @title CodeWAS Results Visualization Server
+#' @description Server module for handling the logic of the CodeWAS results visualization UI. This module creates interactive plots and tables based on the analysis results and allows the plot and data to be downloaded.
 #'
 #' @param id A string representing the module's namespace.
-#' @param analysisResults Pooled connection to the analisys results duckdb.
+#' @param analysisResults Pooled connection to the analysis results duckdb.
 #'
-#' @return The module returns server-side logic to generate and manage the cohort overlaps UpSet plot.
+#' @return The module returns server-side logic to generate and manage the CodeWAS results visualization.
 #'
-#' @importFrom shiny moduleServer reactive req renderPlot downloadHandler
-#' @importFrom shinyjs toggle
-#' @importFrom dplyr tbl collect mutate
-#' @importFrom UpSetR upset fromExpression
+#' @importFrom shiny moduleServer reactive req renderUI downloadHandler
+#' @importFrom shinyWidgets pickerInput chooseSliderSkin
+#' @importFrom shinyFeedback showFeedbackWarning hideFeedback
+#' @importFrom dplyr tbl collect mutate left_join filter select arrange slice_head row_number
+#' @importFrom tidyr separate
+#' @importFrom stringr str_remove str_trunc str_wrap
+#' @importFrom purrr map2_chr
+#' @importFrom DT dataTableOutput renderDataTable datatable formatStyle
+#' @importFrom ggiraph renderGirafe girafeOutput geom_point_interactive girafe opts_tooltip opts_zoom opts_sizing opts_toolbar opts_hover
+#' @importFrom ggrepel geom_text_repel
+#' @importFrom ggplot2 ggplot aes geom_vline geom_hline scale_x_continuous scale_y_continuous coord_cartesian labs scale_color_manual theme_minimal
 #' @importFrom grDevices cairo_pdf dev.off
+#' @importFrom lubridate now
+#' @importFrom htmltools hr
+#' @importFrom grid unit
 #'
 #' @export
-#'
 mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
   shiny::moduleServer(id, function(input, output, session) {
     ns <- session$ns

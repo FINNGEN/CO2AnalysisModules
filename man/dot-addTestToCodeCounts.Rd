@@ -10,10 +10,10 @@
 \item{tibbleWithCodeCounts}{table obtained from \code{getCodeCounts}.}
 }
 \value{
-inputed table with appened columsn :
+imputed table with append columns :
 \itemize{
 \item p : for the p-value
-\item OR; for the ods ratio
+\item OR; for the odds ratio
 }
 }
 \description{
