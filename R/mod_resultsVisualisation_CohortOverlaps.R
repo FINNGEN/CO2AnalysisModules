@@ -21,7 +21,9 @@ mod_resultsVisualisation_CohortsOverlaps_ui <- function(id) {
     shinybrowser::detect(),
     shiny::fluidPage(style = "padding: 0px;",
       shinyjs::useShinyjs(),
-
+      shiny::tags$head(
+        shiny::tags$title("Cohort Overlaps")
+      ),
       shiny::tagList(
         # shiny::tags$h4("Filters"),
 

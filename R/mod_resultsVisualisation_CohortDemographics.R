@@ -13,31 +13,34 @@
 mod_resultsVisualisation_CohortsDemographics_ui <- function(id) {
   ns <- shiny::NS(id)
 
-  shiny::tagList(
-    shiny::tags$h4("Filters"),
-    shiny::uiOutput(ns("CDPlot_ui")),
-    shiny::tags$h4("Data"),
-    shiny::tabsetPanel(
-      id = ns("tabset"),
-      shiny::tabPanel(
-        "Plot",
-        shiny::plotOutput(ns("demographicsPlot"), height = "600px"),
-        shiny::div(
-          style = "margin-top: 10px; margin-bottom: 10px;",
-          shiny::downloadButton(ns("downloadPlotButton"), "Download")
-        )
-      ),
-      shiny::tabPanel(
-        "Table",
-        reactable::reactableOutput(ns("demographicsData")),
-        shiny::div(
-          style = "margin-top: 10px; margin-bottom: 10px;",
-          shiny::downloadButton(ns("downloadDataActionButton"), "Download")
+  shiny::fluidPage(
+    # set page title
+    title = "Cohort Demographics",
+    shiny::tagList(
+      shiny::tags$h4("Filters"),
+      shiny::uiOutput(ns("CDPlot_ui")),
+      shiny::tags$h4("Data"),
+      shiny::tabsetPanel(
+        id = ns("tabset"),
+        shiny::tabPanel(
+          "Plot",
+          shiny::plotOutput(ns("demographicsPlot"), height = "600px"),
+          shiny::div(
+            style = "margin-top: 10px; margin-bottom: 10px;",
+            shiny::downloadButton(ns("downloadPlotButton"), "Download")
+          )
+        ),
+        shiny::tabPanel(
+          "Table",
+          reactable::reactableOutput(ns("demographicsData")),
+          shiny::div(
+            style = "margin-top: 10px; margin-bottom: 10px;",
+            shiny::downloadButton(ns("downloadDataActionButton"), "Download")
+          )
         )
       )
     )
   )
-
 }
 
 

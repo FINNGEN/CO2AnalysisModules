@@ -14,36 +14,38 @@
 mod_resultsVisualisation_TimeCodeWAS_ui <- function(id) {
   ns <- shiny::NS(id)
 
-  shiny::tagList(
-    shiny::tags$h4("Filters"),
-    shiny::uiOutput(ns("outputUI")),
-    shiny::tags$h4("Data"),
-    shiny::tabsetPanel(
-      id = ns("tabset"),
-      shiny::tabPanel(
-        "Plot",
-        shiny::div(style = "height: 12px;"),
-        ggiraph::girafeOutput(ns("codeWASplot"), width = "100%", height = "100%"),
-        shiny::div(
-          style = "margin-top: 10px; margin-bottom: 10px;",
-          shiny::downloadButton(ns("downloadPlot"), "Download")
-        )
-      ),
-      shiny::tabPanel(
-        "Table",
-        shiny::div(
-          style = "margin-top: 20px; margin-bottom: 10px;",
-          DT::DTOutput(ns("demographicsData")),
+  shiny::fluidPage(
+    title = "TimeCodeWAS",
+    shiny::tagList(
+      shiny::tags$h4("Filters"),
+      shiny::uiOutput(ns("outputUI")),
+      shiny::tags$h4("Data"),
+      shiny::tabsetPanel(
+        id = ns("tabset"),
+        shiny::tabPanel(
+          "Plot",
+          shiny::div(style = "height: 12px;"),
+          ggiraph::girafeOutput(ns("codeWASplot"), width = "100%", height = "100%"),
+          shiny::div(
+            style = "margin-top: 10px; margin-bottom: 10px;",
+            shiny::downloadButton(ns("downloadPlot"), "Download")
+          )
         ),
-        shiny::div(
-          style = "margin-top: 10px; margin-bottom: 10px;",
-          shiny::downloadButton(ns("downloadDataFiltered"), "Download filtered"),
-          shiny::downloadButton(ns("downloadDataAll"), "Download all"),
+        shiny::tabPanel(
+          "Table",
+          shiny::div(
+            style = "margin-top: 20px; margin-bottom: 10px;",
+            DT::DTOutput(ns("demographicsData")),
+          ),
+          shiny::div(
+            style = "margin-top: 10px; margin-bottom: 10px;",
+            shiny::downloadButton(ns("downloadDataFiltered"), "Download filtered"),
+            shiny::downloadButton(ns("downloadDataAll"), "Download all"),
+          )
         )
       )
     )
   )
-
 
 }
 
