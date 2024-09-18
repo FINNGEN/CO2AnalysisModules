@@ -15,36 +15,39 @@
 mod_resultsVisualisation_CodeWAS_ui <- function(id) {
   ns <- shiny::NS(id)
 
-  shiny::tagList(
-    shiny::h4("Filters"),
-    shiny::div(
-      style = "margin-top: 10px; margin-bottom: 20px;"
-    ),
-    shiny::uiOutput(ns("codeWASFilter")),
-    htmltools::hr(style = "margin-top: 10px; margin-bottom: 10px;"),
-    shiny::tabsetPanel(
-      id = ns("tabset"),
-      shiny::tabPanel(
-        "Plot",
-        shiny::div(style = "height: 20px;"),
-        shiny::div(style = "height: 100%; width: 800px; margin-left:40px;",
-                   ggiraph::girafeOutput(ns("codeWASplot"))
-        ),
-        shiny::div(
-          style = "margin-top: 10px; margin-bottom: 10px;",
-          shiny::downloadButton(ns("downloadPlot"), "Download")
-        )
+  shiny::fluidPage(
+    title = "CodeWAS Results",
+    shiny::tagList(
+      shiny::h4("Filters"),
+      shiny::div(
+        style = "margin-top: 10px; margin-bottom: 20px;"
       ),
-      shiny::tabPanel(
-        "Table",
-        shiny::div(
-          style = "margin-top: 10px; margin-bottom: 10px;",
-          DT::dataTableOutput(ns("codeWAStable")),
+      shiny::uiOutput(ns("codeWASFilter")),
+      htmltools::hr(style = "margin-top: 10px; margin-bottom: 10px;"),
+      shiny::tabsetPanel(
+        id = ns("tabset"),
+        shiny::tabPanel(
+          "Plot",
+          shiny::div(style = "height: 20px;"),
+          shiny::div(style = "height: 100%; width: 800px; margin-left:40px;",
+                     ggiraph::girafeOutput(ns("codeWASplot"))
+          ),
+          shiny::div(
+            style = "margin-top: 10px; margin-bottom: 10px;",
+            shiny::downloadButton(ns("downloadPlot"), "Download")
+          )
         ),
-        shiny::div(
-          style = "margin-top: 10px; margin-bottom: 10px;",
-          shiny::downloadButton(ns("downloadCodeWASFiltered"), "Download filtered", icon = shiny::icon("download")),
-          shiny::downloadButton(ns("downloadCodeWASAll"), "Download all", icon = shiny::icon("download"))
+        shiny::tabPanel(
+          "Table",
+          shiny::div(
+            style = "margin-top: 10px; margin-bottom: 10px;",
+            DT::dataTableOutput(ns("codeWAStable")),
+          ),
+          shiny::div(
+            style = "margin-top: 10px; margin-bottom: 10px;",
+            shiny::downloadButton(ns("downloadCodeWASFiltered"), "Download filtered", icon = shiny::icon("download")),
+            shiny::downloadButton(ns("downloadCodeWASAll"), "Download all", icon = shiny::icon("download"))
+          )
         )
       )
     )

@@ -19,12 +19,12 @@ mod_resultsVisualisation_CohortsOverlaps_ui <- function(id) {
 
   shiny::tagList(
     shinybrowser::detect(),
-    shiny::fluidPage(style = "padding: 0px;",
+    shiny::fluidPage(
+      style = "padding: 0px;",
+      title = "Cohort Overlaps",
       shinyjs::useShinyjs(),
 
       shiny::tagList(
-        # shiny::tags$h4("Filters"),
-
         shiny::tags$h4("Data"),
         shiny::tabsetPanel(
           id = ns("tabset"),
