@@ -128,11 +128,6 @@ mod_resultsVisualisation_CohortsDemographics_server <- function(id, analysisResu
         column(
           3,
           shiny::tagList(
-            # shinyWidgets::pickerInput(
-            #   ns("databaseId"), "Select database",
-            #   choices = unique(cdd$databaseId), unique(cdd$databaseId),
-            #   selected = dplyr::first(unique(cdd$databaseId)), multiple = FALSE
-            # ),
             shinyWidgets::pickerInput(
               ns("shortName"), "Select cohorts", choices = cohorts_in_database, selected = cohorts_in_database, multiple = TRUE),
             shinyWidgets::pickerInput(
