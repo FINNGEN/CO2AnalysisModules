@@ -288,12 +288,9 @@ mod_resultsVisualisation_CohortsDemographics_server <- function(id, analysisResu
                              antialias = "default",
                              fallback_resolution = 300,
         )
-
         print(last_plot)
-
         grDevices::dev.off()
       },
-
       contentType = "application/pdf"
     )
 
