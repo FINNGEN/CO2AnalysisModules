@@ -69,6 +69,7 @@ mod_resultsVisualisation_ui <- function(id, resultsVisualisationModuleUi, pathTo
 
   # body
   body <- shinydashboard::dashboardBody(
+<<<<<<< HEAD
     shiny::fluidPage(
       title = title,
       shiny::column(
@@ -79,6 +80,9 @@ mod_resultsVisualisation_ui <- function(id, resultsVisualisationModuleUi, pathTo
         )
       )
     ),
+=======
+    shiny::tags$head(shiny::tags$title(title)),
+>>>>>>> 22d72f9 (pass the module title as page title)
     bodyTabItems
   )
 
