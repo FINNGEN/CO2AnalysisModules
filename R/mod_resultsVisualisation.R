@@ -78,6 +78,7 @@ mod_resultsVisualisation_ui <- function(id, resultsVisualisationModuleUi, pathTo
   ui <- shinydashboard::dashboardPage(
     shiny::tags$head(shiny::tags$style(htmltools::HTML(
       "
+      <title>Results Visualization</title>
         th, td {
           padding-right: 10px;
         }
