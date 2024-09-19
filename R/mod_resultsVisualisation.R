@@ -69,6 +69,16 @@ mod_resultsVisualisation_ui <- function(id, resultsVisualisationModuleUi, pathTo
 
   # body
   body <- shinydashboard::dashboardBody(
+    shiny::fluidPage(
+      title = title,
+      shiny::column(
+        width = 12,
+        shiny::tabsetPanel(
+          id = ns("tabset"),
+          bodyTabItems
+        )
+      )
+    ),
     bodyTabItems
   )
 
