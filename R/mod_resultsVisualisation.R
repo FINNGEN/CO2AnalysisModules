@@ -69,6 +69,7 @@ mod_resultsVisualisation_ui <- function(id, resultsVisualisationModuleUi, pathTo
 
   # body
   body <- shinydashboard::dashboardBody(
+    # set the title of the page
     shiny::tags$head(shiny::tags$title(title)),
     bodyTabItems
   )
