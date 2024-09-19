@@ -75,6 +75,7 @@ mod_resultsVisualisation_ui <- function(id, resultsVisualisationModuleUi, pathTo
   # main
   ui <- shinydashboard::dashboardPage(
     title = title,
+    header = header,
     shiny::tags$head(
       shiny::tags$style(htmltools::HTML(
       "
@@ -84,7 +85,6 @@ mod_resultsVisualisation_ui <- function(id, resultsVisualisationModuleUi, pathTo
 
        "
     ))),
-    header = header,
     sidebar = sidebar,
     body = body
   )
