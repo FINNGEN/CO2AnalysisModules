@@ -74,16 +74,16 @@ mod_resultsVisualisation_ui <- function(id, resultsVisualisationModuleUi, pathTo
 
   # main
   ui <- shinydashboard::dashboardPage(
-    shiny::tags$head(shiny::tags$style(htmltools::HTML(
-      paste(
-      "<title>", title, "</title>",
+    shiny::tags$head(
+      paste(htmltools::HTML("<title>", title, "</title>")),
+      shiny::tags$style(htmltools::HTML(
       "
         th, td {
           padding-right: 10px;
         }
 
        "
-    )))),
+    ))),
     header = header,
     sidebar = sidebar,
     body = body
