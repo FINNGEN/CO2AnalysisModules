@@ -14,7 +14,8 @@ mod_resultsVisualisation_CohortsDemographics_ui <- function(id) {
   ns <- shiny::NS(id)
 
   shiny::fluidPage(
-    title = "Cohort Demographics",
+    shiny::tags$head(HTML("<title>Cohort Demographics</title>")
+    ),
     shiny::tagList(
       shiny::tags$h4("Filters"),
       shiny::uiOutput(ns("CDPlot_ui")),
