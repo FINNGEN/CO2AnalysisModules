@@ -74,8 +74,8 @@ mod_resultsVisualisation_ui <- function(id, resultsVisualisationModuleUi, pathTo
 
   # main
   ui <- shinydashboard::dashboardPage(
+    title = title,
     shiny::tags$head(
-      paste(htmltools::HTML("<title>", title, "</title>")),
       shiny::tags$style(htmltools::HTML(
       "
         th, td {
