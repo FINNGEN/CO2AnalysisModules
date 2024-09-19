@@ -108,7 +108,7 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
         dplyr::left_join(analysisResults |> dplyr::tbl('analysisRef') , by = c('analysisId' = 'analysisId')) |>
         dplyr::collect() |>
         dplyr::mutate(oddsRatio = ifelse(is.na(oddsRatio) & modelType != 'linear', exp(beta), oddsRatio)) |>
-        dplyr:::select(-c('isBinary', 'missingMeansZero')) |>
+        dplyr::select(-c('isBinary', 'missingMeansZero')) |>
         dplyr::mutate(mplog = cut(-log10(pValue),
                                   breaks = c(0, 5, 100, Inf),
                                   labels = c('-log10(p) (0,5]', '-log10(p) (5,100]', '-log10(p) (100,Inf]'))

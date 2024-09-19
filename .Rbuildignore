@@ -5,3 +5,6 @@
 ^LICENSE\.md$
 ^README\.Rmd$
 ^\.github$
+
+dev/*
+errorReportSql.txt
