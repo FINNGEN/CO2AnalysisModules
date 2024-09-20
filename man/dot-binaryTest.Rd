@@ -4,7 +4,7 @@
 \alias{.binaryTest}
 \title{.binaryTest}
 \usage{
-.binaryTest(a, b, c, d, fiserLimit = 10)
+.binaryTest(a, b, c, d, fisherLimit = 10)
 }
 \arguments{
 \item{a}{number of cases with the condition}
@@ -15,7 +15,7 @@
 
 \item{d}{number of controls without the condition}
 
-\item{fiserLimit}{threshold to decide between Fisher and Chi-square test}
+\item{fisherLimit}{threshold to decide between Fisher and Chi-square test}
 }
 \value{
 a list with:

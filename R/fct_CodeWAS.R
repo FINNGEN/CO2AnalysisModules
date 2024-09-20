@@ -167,8 +167,7 @@ execute_CodeWAS <- function(
           sdControls = sqrt(meanControls * (1 - meanControls)),
           pValue = countsPValue,
           oddsRatio = dplyr::if_else(is.infinite(countsOddsRatio), .Machine$double.xmax, countsOddsRatio),
-          beta = NA_real_,
-          standard_error = NA_real_,
+          beta = log(countsOddsRatio),
           modelType = countsTest,
           runNotes =  ''
         )
@@ -207,9 +206,8 @@ execute_CodeWAS <- function(
           meanControls = meanValueControls,
           sdControls = sdValueControls,
           pValue = continuousPValue,
-          oddsRatio = NA_real_,
-          beta = NA_real_,
-          standard_error = continuousStandardError,
+          oddsRatio = dplyr::if_else(is.infinite(continuousOddsRatio), .Machine$double.xmax, continuousOddsRatio),
+          beta = log(continuousOddsRatio),
           modelType = continuousTest,
           runNotes = ""
         )
@@ -504,7 +502,6 @@ execute_CodeWAS <- function(
       pValue = as.double(pValue),
       oddsRatio = as.double(oddsRatio),
       beta = as.double(beta),
-      standardError = as.double(standard_error),
       modelType = as.character(modelType),
       runNotes = as.character(runNotes)
     )
@@ -641,8 +638,8 @@ checkResults_CodeWAS <- function(pathToResultsDatabase) {
       type = c("INTEGER", "VARCHAR", "VARCHAR", "VARCHAR", "VARCHAR", "INTEGER", "BOOLEAN", "INTEGER", "INTEGER", "INTEGER", "VARCHAR")
     ),
     codewasResults = tibble::tibble(
-      name = c("databaseId", "covariateId", "covariateType", "nCasesYes", "meanCases", "sdCases", "nControlsYes", "meanControls", "sdControls", "pValue", "oddsRatio", "beta", "standardError", "modelType", "runNotes"),
-      type = c("VARCHAR", "DOUBLE", "VARCHAR", "INTEGER", "DOUBLE", "DOUBLE", "INTEGER", "DOUBLE", "DOUBLE", "DOUBLE", "DOUBLE", "DOUBLE", "DOUBLE", "VARCHAR", "VARCHAR")
+      name = c("databaseId", "covariateId", "covariateType", "nCasesYes", "meanCases", "sdCases", "nControlsYes", "meanControls", "sdControls", "pValue", "oddsRatio", "beta", "modelType", "runNotes"),
+      type = c("VARCHAR", "DOUBLE", "VARCHAR", "INTEGER", "DOUBLE", "DOUBLE", "INTEGER", "DOUBLE", "DOUBLE", "DOUBLE", "DOUBLE", "DOUBLE", "VARCHAR", "VARCHAR")
     ),
     analysisRef = tibble::tibble(
       name = c("analysisId", "analysisName", "domainId", "isBinary", "missingMeansZero"),
