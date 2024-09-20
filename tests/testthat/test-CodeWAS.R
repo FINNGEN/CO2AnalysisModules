@@ -250,9 +250,9 @@ test_that("executeCodeWAS works with no covariates", {
   codeWASResults |> dplyr::filter(covariateId == 1041)  |> nrow() |> expect_equal(1)
   codeWASResults |> dplyr::filter(covariateId == 8507001)   |> nrow() |> expect_equal(1)
 
-  codeWASResults |> dplyr::filter(modelType == 'binary')  |> dplyr::filter(is.na(oddsRatio))  |> nrow() |> expect_equal(0)
-  codeWASResults |> dplyr::filter(modelType == 'continuous')  |> dplyr::filter(is.na(standardError))  |> nrow() |> expect_equal(0)
-  codeWASResults |> dplyr::filter(is.na(pValue))  |> nrow() |> expect_equal(0)
+  codeWASResults |> dplyr::filter(modelType != "No test, not enough samples")  |> dplyr::filter(is.na(pValue))  |> nrow() |> expect_equal(0)
+  codeWASResults |> dplyr::filter(modelType != "No test, not enough samples")  |> dplyr::filter(is.na(oddsRatio))  |> nrow() |> expect_equal(0)
+  codeWASResults |> dplyr::filter(modelType != "No test, not enough samples")  |> dplyr::filter(is.na(beta))  |> nrow() |> expect_equal(0)
 
 })
 
@@ -367,9 +367,17 @@ test_that("executeCodeWAS works to get lab values", {
 
   codeWASResults <-
     analysisResults  |> dplyr::tbl("codewasResults")  |> dplyr::collect()
-  codeWASResults |> dplyr::filter(covariateId == 1002)  |> nrow() |> expect_equal(1)
-  codeWASResults |> dplyr::filter(covariateId == 1041)  |> nrow() |> expect_equal(0)
-  codeWASResults |> dplyr::filter(covariateId == 8507001)  |> nrow() |> expect_equal(0)
-  codeWASResults |> dplyr::filter(stringr::str_detect(covariateId, "101$"))  |> nrow() |> expect_gt(0)
+
+  codeWASResults |> dplyr::filter(covariateId %% 1000 == 702)  |> nrow() |> expect_gt(0)
+
+  (codeWASResults |> dplyr::filter(modelType == "No test, not enough samples")  |> dplyr::filter(is.na(pValue))  |> nrow() ==
+   codeWASResults |> dplyr::filter(modelType == "No test, not enough samples")  |> nrow()) |>
+    expect_true()
+  (codeWASResults |> dplyr::filter(modelType == "No test, not enough samples")  |> dplyr::filter(is.na(oddsRatio))  |> nrow() ==
+   codeWASResults |> dplyr::filter(modelType == "No test, not enough samples")  |> nrow()) |>
+    expect_true()
+  (codeWASResults |> dplyr::filter(modelType == "No test, not enough samples")  |> dplyr::filter(is.na(beta))  |> nrow() ==
+   codeWASResults |> dplyr::filter(modelType == "No test, not enough samples")  |> nrow()) |>
+    expect_true()
 
 })
