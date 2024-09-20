@@ -179,20 +179,6 @@ mod_resultsVisualisation_CohortsOverlaps_server <- function(id, analysisResults)
       cohortDefinitionData <- cohortsInfo()
       cohortOverlapsData <- cohortOverlaps()
 
-      # check that we have more than one cohort
-      if(nrow(cohortOverlapsData) < 2){
-        # give a modal dialog explaining the error
-        shiny::showModal(
-          shiny::modalDialog(
-            title = "Error",
-            "There are not enough cohorts to generate an UpSet plot.",
-            easyClose = TRUE,
-            footer = shiny::modalButton("OK")
-          )
-        )
-        return(NULL)
-      }
-
       for(i in 1:nrow(cohortDefinitionData)){
         cohortOverlapsData$cohortIdCombinations <-
           gsub(paste0("-", cohortDefinitionData$cohortId[i], "-"), paste0("-", cohortDefinitionData$shortName[i], "-"), cohortOverlapsData$cohortIdCombinations)
@@ -201,6 +187,10 @@ mod_resultsVisualisation_CohortsOverlaps_server <- function(id, analysisResults)
       cohortOverlapsData$cohortIdCombinations <- gsub("^&|&$", "", cohortOverlapsData$cohortIdCombinations)
 
       upset_expr <- with(cohortOverlapsData, setNames(numberOfSubjects, cohortIdCombinations))
+
+      if(length(upset_expr) < 2){
+        return(NULL)
+      }
 
       UpSetR::upset(
         UpSetR::fromExpression(upset_expr),
