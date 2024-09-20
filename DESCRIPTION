@@ -38,6 +38,7 @@ Imports:
     ggplotify,
     ggrepel,
     gtable,
+    grid,
     htmlwidgets,
     lubridate,
     purrr,
