@@ -646,6 +646,7 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
   selected_items <- ""
 
   if(!is.null(selection) && length(unique(selection$code)) == 1){
+    grDevices::pdf(NULL)
     # one point selected -> draw a line connecting the same code in each facet
     gb <- ggplot2::ggplot_build(gg_fig)
     g <- ggplot2::ggplot_gtable(gb)
