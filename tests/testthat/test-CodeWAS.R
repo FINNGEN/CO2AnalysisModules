@@ -3,10 +3,13 @@
 #
 
 test_that("executeCodeWAS works", {
-
   # set up
-  cohortTableHandler <- helper_createNewCohortTableHandler(addCohorts = "HadesExtrasFractureCohorts")
-  withr::defer({rm(cohortTableHandler);gc()})
+  cohortTableHandler <-
+    helper_createNewCohortTableHandler(addCohorts = "HadesExtrasFractureCohorts")
+  withr::defer({
+    rm(cohortTableHandler)
+    gc()
+  })
 
   exportFolder <- withr::local_tempdir('testCodeWAS')
 
@@ -31,22 +34,27 @@ test_that("executeCodeWAS works", {
   expect_true(file.exists(pathToResultsDatabase))
   checkResults_CodeWAS(pathToResultsDatabase) |> expect_true()
 
-  analysisResults <- duckdb::dbConnect(duckdb::duckdb(), pathToResultsDatabase)
+  analysisResults <-
+    duckdb::dbConnect(duckdb::duckdb(), pathToResultsDatabase)
 
-  codeWASResults <- analysisResults  |> dplyr::tbl("codewasResults")  |> dplyr::collect()
+  codeWASResults <-
+    analysisResults  |> dplyr::tbl("codewasResults")  |> dplyr::collect()
   codeWASResults |> dplyr::filter(covariateId == 1002)  |> nrow() |> expect_equal(1)
   codeWASResults |> dplyr::filter(covariateId == 1041)  |> nrow() |> expect_equal(0)
   codeWASResults |> dplyr::filter(covariateId == 8507001)  |> nrow() |> expect_equal(0)
-  codeWASResults |> dplyr::filter( stringr::str_detect(covariateId, "101$"))  |> nrow() |> expect_gt(0)
+  codeWASResults |> dplyr::filter(stringr::str_detect(covariateId, "101$"))  |> nrow() |> expect_gt(0)
 
 })
 
 
 test_that("executeCodeWAS warnings with cohort overlap", {
-
   # set up
-  cohortTableHandler <- helper_createNewCohortTableHandler(addCohorts = "HadesExtrasFractureCohorts")
-  withr::defer({rm(cohortTableHandler);gc()})
+  cohortTableHandler <-
+    helper_createNewCohortTableHandler(addCohorts = "HadesExtrasFractureCohorts")
+  withr::defer({
+    rm(cohortTableHandler)
+    gc()
+  })
 
   exportFolder <- withr::local_tempdir('HadesExtrasAsthmaCohorts')
 
@@ -71,22 +79,27 @@ test_that("executeCodeWAS warnings with cohort overlap", {
   expect_true(file.exists(pathToResultsDatabase))
   checkResults_CodeWAS(pathToResultsDatabase) |> expect_true()
 
-  analysisResults <- duckdb::dbConnect(duckdb::duckdb(), pathToResultsDatabase)
+  analysisResults <-
+    duckdb::dbConnect(duckdb::duckdb(), pathToResultsDatabase)
 
-  codeWASResults <- analysisResults  |> dplyr::tbl("codewasResults")  |> dplyr::collect()
+  codeWASResults <-
+    analysisResults  |> dplyr::tbl("codewasResults")  |> dplyr::collect()
   codeWASResults |> dplyr::filter(covariateId == 1002)  |> nrow() |> expect_equal(1)
   codeWASResults |> dplyr::filter(covariateId == 1041)  |> nrow() |> expect_equal(0)
   codeWASResults |> dplyr::filter(covariateId == 8507001)  |> nrow() |> expect_equal(0)
-  codeWASResults |> dplyr::filter( stringr::str_detect(covariateId, "101$"))  |> nrow() |> expect_gt(0)
+  codeWASResults |> dplyr::filter(stringr::str_detect(covariateId, "101$"))  |> nrow() |> expect_gt(0)
 
 })
 
 
 test_that("executeCodeWAS works spliting in chuncs", {
-
   # set up
-  cohortTableHandler <- helper_createNewCohortTableHandler(addCohorts = "HadesExtrasFractureCohorts")
-  withr::defer({rm(cohortTableHandler);gc()})
+  cohortTableHandler <-
+    helper_createNewCohortTableHandler(addCohorts = "HadesExtrasFractureCohorts")
+  withr::defer({
+    rm(cohortTableHandler)
+    gc()
+  })
 
   exportFolder <- withr::local_tempdir('testCodeWAS')
 
@@ -112,13 +125,15 @@ test_that("executeCodeWAS works spliting in chuncs", {
   expect_true(file.exists(pathToResultsDatabase))
   checkResults_CodeWAS(pathToResultsDatabase) |> expect_true()
 
-  analysisResults <- duckdb::dbConnect(duckdb::duckdb(), pathToResultsDatabase)
+  analysisResults <-
+    duckdb::dbConnect(duckdb::duckdb(), pathToResultsDatabase)
 
-  codeWASResults <- analysisResults  |> dplyr::tbl("codewasResults")  |> dplyr::collect()
+  codeWASResults <-
+    analysisResults  |> dplyr::tbl("codewasResults")  |> dplyr::collect()
   codeWASResults |> dplyr::filter(covariateId == 1002)  |> nrow() |> expect_equal(1)
   codeWASResults |> dplyr::filter(covariateId == 1041)  |> nrow() |> expect_equal(0)
   codeWASResults |> dplyr::filter(covariateId == 8507001)  |> nrow() |> expect_equal(0)
-  codeWASResults |> dplyr::filter( stringr::str_detect(covariateId, "101$"))  |> nrow() |> expect_gt(0)
+  codeWASResults |> dplyr::filter(stringr::str_detect(covariateId, "101$"))  |> nrow() |> expect_gt(0)
 
 })
 
@@ -195,10 +210,13 @@ test_that("executeCodeWAS works spliting in chuncs", {
 
 
 test_that("executeCodeWAS works with no covariates", {
-
   # set up
-  cohortTableHandler <- helper_createNewCohortTableHandler(addCohorts = "HadesExtrasFractureCohorts")
-  withr::defer({rm(cohortTableHandler);gc()})
+  cohortTableHandler <-
+    helper_createNewCohortTableHandler(addCohorts = "HadesExtrasFractureCohorts")
+  withr::defer({
+    rm(cohortTableHandler)
+    gc()
+  })
 
   exportFolder <- withr::local_tempdir('testCodeWAS')
 
@@ -223,15 +241,17 @@ test_that("executeCodeWAS works with no covariates", {
   expect_true(file.exists(pathToResultsDatabase))
   checkResults_CodeWAS(pathToResultsDatabase) |> expect_true()
 
-  analysisResults <- duckdb::dbConnect(duckdb::duckdb(), pathToResultsDatabase)
+  analysisResults <-
+    duckdb::dbConnect(duckdb::duckdb(), pathToResultsDatabase)
 
-  codeWASResults <- analysisResults  |> dplyr::tbl("codewasResults")  |> dplyr::collect()
+  codeWASResults <-
+    analysisResults  |> dplyr::tbl("codewasResults")  |> dplyr::collect()
   codeWASResults |> dplyr::filter(covariateId == 1002)  |> nrow() |> expect_equal(1)
   codeWASResults |> dplyr::filter(covariateId == 1041)  |> nrow() |> expect_equal(1)
   codeWASResults |> dplyr::filter(covariateId == 8507001)   |> nrow() |> expect_equal(1)
 
-  codeWASResults |> dplyr::filter(modelType=='binary')  |> dplyr::filter(is.na(oddsRatio))  |> nrow() |> expect_equal(0)
-  codeWASResults |> dplyr::filter(modelType=='continuous')  |> dplyr::filter(is.na(standardError))  |> nrow() |> expect_equal(0)
+  codeWASResults |> dplyr::filter(modelType == 'binary')  |> dplyr::filter(is.na(oddsRatio))  |> nrow() |> expect_equal(0)
+  codeWASResults |> dplyr::filter(modelType == 'continuous')  |> dplyr::filter(is.na(standardError))  |> nrow() |> expect_equal(0)
   codeWASResults |> dplyr::filter(is.na(pValue))  |> nrow() |> expect_equal(0)
 
 })
@@ -239,10 +259,13 @@ test_that("executeCodeWAS works with no covariates", {
 
 
 test_that("executeCodeWAS works when n multiple events per subject", {
-
   # set up
-  cohortTableHandler <- helper_createNewCohortTableHandler(addCohorts = "HadesExtrasAsthmaCohorts")
-  withr::defer({rm(cohortTableHandler);gc()})
+  cohortTableHandler <-
+    helper_createNewCohortTableHandler(addCohorts = "HadesExtrasAsthmaCohorts")
+  withr::defer({
+    rm(cohortTableHandler)
+    gc()
+  })
 
   # Match to sex and bday, match ratio 10
   subsetDef <- CohortGenerator::createCohortSubsetDefinition(
@@ -261,12 +284,11 @@ test_that("executeCodeWAS works when n multiple events per subject", {
     )
   )
 
-  cohortDefinitionSetWithSubsetDef <- cohortTableHandler$cohortDefinitionSet |>
+  cohortDefinitionSetWithSubsetDef <-
+    cohortTableHandler$cohortDefinitionSet |>
     CohortGenerator::addCohortSubsetDefinition(subsetDef, targetCohortIds = 2)
 
-  suppressWarnings(
-    cohortTableHandler$insertOrUpdateCohorts(cohortDefinitionSetWithSubsetDef)
-  )
+  suppressWarnings(cohortTableHandler$insertOrUpdateCohorts(cohortDefinitionSetWithSubsetDef))
 
   exportFolder <- withr::local_tempdir('testCodeWAS')
 
@@ -291,14 +313,63 @@ test_that("executeCodeWAS works when n multiple events per subject", {
   expect_true(file.exists(pathToResultsDatabase))
   checkResults_CodeWAS(pathToResultsDatabase) |> expect_true()
 
-  analysisResults <- duckdb::dbConnect(duckdb::duckdb(), pathToResultsDatabase)
+  analysisResults <-
+    duckdb::dbConnect(duckdb::duckdb(), pathToResultsDatabase)
 
-  codeWASResults <- analysisResults  |> dplyr::tbl("codewasResults")  |> dplyr::collect()
+  codeWASResults <-
+    analysisResults  |> dplyr::tbl("codewasResults")  |> dplyr::collect()
   codeWASResults |> dplyr::filter(covariateId == 1002)  |> nrow() |> expect_equal(1)
   codeWASResults |> dplyr::filter(covariateId == 1041)  |> nrow() |> expect_equal(1)
   codeWASResults |> dplyr::filter(covariateId == 8507001)  |> nrow() |> expect_equal(1)
-  codeWASResults |> dplyr::filter( stringr::str_detect(covariateId, "101$"))  |> nrow() |> expect_gt(0)
+  codeWASResults |> dplyr::filter(stringr::str_detect(covariateId, "101$"))  |> nrow() |> expect_gt(0)
 
 })
 
 
+
+test_that("executeCodeWAS works to get lab values", {
+  skip_if(testingDatabase != "EunomiaFinnGen",
+          "Skip test, it is only for EunomiaFinnGen")
+
+  # set up
+  cohortTableHandler <-
+    helper_createNewCohortTableHandler(addCohorts = "HadesExtrasFractureCohorts")
+  withr::defer({
+    rm(cohortTableHandler)
+    gc()
+  })
+
+  exportFolder <- withr::local_tempdir('testCodeWAS')
+
+  analysisSettings <- list(
+    cohortIdCases = 1,
+    cohortIdControls = 2,
+    analysisIds = c(101, 141, 1, 2, 402, 701, 702, 41),
+    covariatesIds = NULL,
+    minCellCount = 1
+  )
+
+  # function
+  suppressWarnings(
+    pathToResultsDatabase <- execute_CodeWAS(
+      exportFolder = exportFolder,
+      cohortTableHandler = cohortTableHandler,
+      analysisSettings = analysisSettings
+    )
+  )
+
+  # test
+  expect_true(file.exists(pathToResultsDatabase))
+  checkResults_CodeWAS(pathToResultsDatabase) |> expect_true()
+
+  analysisResults <-
+    duckdb::dbConnect(duckdb::duckdb(), pathToResultsDatabase)
+
+  codeWASResults <-
+    analysisResults  |> dplyr::tbl("codewasResults")  |> dplyr::collect()
+  codeWASResults |> dplyr::filter(covariateId == 1002)  |> nrow() |> expect_equal(1)
+  codeWASResults |> dplyr::filter(covariateId == 1041)  |> nrow() |> expect_equal(0)
+  codeWASResults |> dplyr::filter(covariateId == 8507001)  |> nrow() |> expect_equal(0)
+  codeWASResults |> dplyr::filter(stringr::str_detect(covariateId, "101$"))  |> nrow() |> expect_gt(0)
+
+})

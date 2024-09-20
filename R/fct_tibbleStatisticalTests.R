@@ -34,21 +34,21 @@
 #' @param b number of cases without the condition
 #' @param c number of controls with the condition
 #' @param d number of controls without the condition
-#' @param fiserLimit threshold to decide between Fisher and Chi-square test
+#' @param fisherLimit threshold to decide between Fisher and Chi-square test
 #' @return a list with:
 #' - `countsPValue`: the p-value of the test
 #' - `countsOddsRatio`: the odds ratio
 #' - `countsTest`: the type of test performed
-.binaryTest <- function(a,b,c,d, fiserLimit=10){
+.binaryTest <- function(a,b,c,d, fisherLimit=10){
   data <-matrix(c(a,b,c,d),ncol=2)
-  if(a<fiserLimit | b<fiserLimit | c<fiserLimit | d<fiserLimit){
+  if(a<fisherLimit | b<fisherLimit | c<fisherLimit | d<fisherLimit){
     results <- stats::fisher.test(data)
-    p.value <- results$p.value
-    odds.ratio <- results$estimate
+    p.value <- results$p.value |> as.numeric()
+    odds.ratio <- results$estimate |> as.numeric()
     test <- 'Fisher'
   }else{
     results <- chisq.test(data)
-    p.value <- results$p.value
+    p.value <- results$p.value |> as.numeric()
     odds.ratio <- (a * d)/(b * c)
     test <- 'Chi-square'
   }
@@ -64,7 +64,7 @@
 #' @param tibbleWithValueSummary table containing summary statistics for cases and controls.
 #' @return input table with appended columns:
 #' - continuousPValue: the p-value of the test
-#' - continuousStandardError: the standard error of the test
+#' - continuousOddsRatio: the standard error of the test
 #' - continuousTest: the type of test performed
 #' @export
 #' @importFrom dplyr setdiff bind_cols select mutate if_else
@@ -97,7 +97,7 @@
 #' @param equal.variance whether or not to assume equal variance. Default is FALSE.
 #' @return a list with:
 #' - continuousPValue: the p-value of the test
-#' - continuousStandardError: the standard error of the test
+#' - continuousOddsRatio: odds ration calculated as meanValueCases/meanValueControls
 #' - continuousTest: the type of test performed
 .continuousTest <- function(m1,m2,s1,s2,n1,n2,m0=0,equal.variance=FALSE)
 {
@@ -105,7 +105,7 @@
   # if(n1 <= 10 | n2 <= 10 ){
   #   return(list(
   #     continuousPValue = NA_real_,
-  #     continuousStandardError = NA_real_,
+  #     continuousOddsRatio = NA_real_,
   #     continuousTest = "no test, less than 10 samples"
   #   ))
   # }
@@ -113,8 +113,8 @@
   if(is.na(m1)||is.na(m2)||is.na(s1)||is.na(s2)){
     return(list(
       continuousPValue = NA_real_,
-      continuousStandardError = NA_real_,
-      continuousTest = ""
+      continuousOddsRatio = NA_real_,
+      continuousTest = "No test, not enough samples"
     ))
   }
 
@@ -122,16 +122,7 @@
   if(m1==0 & m2==0 & s1==0 & s2==0 ){
     return(list(
       continuousPValue = 1,
-      continuousStandardError = 0,
-      continuousTest = "Welch Two Sample t-test"
-    ))
-  }
-
-  # special case
-  if(m1==0 & m2==0 & s1==0 & s2==0 ){
-    return(list(
-      continuousPValue = 1,
-      continuousStandardError = 0,
+      continuousOddsRatio = 0,
       continuousTest = "Welch Two Sample t-test"
     ))
   }
@@ -148,31 +139,18 @@
     df <- n1+n2-2
   }
   t <- (m1-m2-m0)/se
+
+  continuousOddsRatio <- exp(t * sqrt(1/n1 + 1/n2))
+  #continuousOddsRatio = m1/m2
+
   #dat <- c(m1-m2, se, t, 2*pt(-abs(t),df))
   #names(dat) <- c("Difference of means", "Std Error", "t", "p-value")
   return(list(
     continuousPValue = 2*pt(-abs(t),df),
-    continuousStandardError = se,
+    continuousOddsRatio = continuousOddsRatio,
     continuousTest = ifelse(is.na(se), '',"Welch Two Sample t-test")
   ))
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
