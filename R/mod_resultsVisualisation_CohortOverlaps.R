@@ -189,6 +189,14 @@ mod_resultsVisualisation_CohortsOverlaps_server <- function(id, analysisResults)
       upset_expr <- with(cohortOverlapsData, setNames(numberOfSubjects, cohortIdCombinations))
 
       if(length(upset_expr) < 2){
+        shiny::showModal(
+          shiny::modalDialog(
+            title = "Error",
+            "There are not enough cohorts to generate an UpSet plot.",
+            easyClose = TRUE,
+            footer = shiny::modalButton("OK")
+          )
+        )
         return(NULL)
       }
 
