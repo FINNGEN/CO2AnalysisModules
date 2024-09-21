@@ -29,6 +29,12 @@ mod_resultsVisualisation_CodeWAS_ui <- function(id) {
         shiny::tabPanel(
           "Plot",
           shiny::div(style = "height: 20px;"),
+          shiny::column(
+            width = 2, align = "left",
+            shiny::div(style = "margin-top: 30px; ",
+                       shiny::checkboxInput(ns("top_10"), "Label top 10", value = TRUE),
+            ),
+          ), # column
           shiny::div(style = "height: 100%; width: 800px; margin-left:40px;",
                      ggiraph::girafeOutput(ns("codeWASplot"))
           ),
@@ -202,13 +208,13 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
           shiny::div(style = "height: 85px; width: 100%; margin-top: -15px; margin-right: 20px;",
                      shiny::sliderInput(ns("n_cases"), "Minimum # of cases", min = 0, max = 1000, value = 0, step = 1),
           ),
-        ), # column
-        shiny::column(
-          width = 2, align = "left",
-          shiny::div(style = "margin-top: 30px; ",
-                     shiny::checkboxInput(ns("top_10"), "Label top 10", value = TRUE),
-          ),
         ) # column
+        # shiny::column(
+        #   width = 2, align = "left",
+        #   shiny::div(style = "margin-top: 30px; ",
+        #              shiny::checkboxInput(ns("top_10"), "Label top 10", value = TRUE),
+        #   ),
+        # ) # column
       ) # fluidRow
       ) # tagList
     })
