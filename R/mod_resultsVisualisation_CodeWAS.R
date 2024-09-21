@@ -28,7 +28,7 @@ mod_resultsVisualisation_CodeWAS_ui <- function(id) {
         id = ns("tabset"),
         shiny::tabPanel(
           "Plot",
-          shiny::div(style = "height: 20px;"),
+          # shiny::div(style = "height: 20px;"),
           shiny::column(
             width = 2, align = "left",
             shiny::div(style = "margin-top: 30px; ",
