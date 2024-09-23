@@ -730,7 +730,7 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
 
 
 .analysisResultsHandler_to_studyResults <- function(analysisResults){
-browser()
+
   studyResults  <- analysisResults |> dplyr::tbl("timeCodeWASResults")  |>
     dplyr::left_join(
       analysisResults |> dplyr::tbl("timeRef") |>
