@@ -40,6 +40,13 @@
 #' - `countsOddsRatio`: the odds ratio
 #' - `countsTest`: the type of test performed
 .binaryTest <- function(a,b,c,d, fisherLimit=10){
+  if(is.na(a) | is.na(b) | is.na(c) | is.na(d)){
+    return(list(
+      countsPValue = NA_real_,
+      countsOddsRatio = NA_real_,
+      countsTest = "No test, not enough samples"
+    ))
+  }
   data <-matrix(c(a,b,c,d),ncol=2)
   if(a<fisherLimit | b<fisherLimit | c<fisherLimit | d<fisherLimit){
     results <- stats::fisher.test(data)
