@@ -101,7 +101,7 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
         dplyr::left_join(analysisResults |> dplyr::tbl('covariateRef') , by = c('covariateId' = 'covariateId'))  |>
         dplyr::left_join(analysisResults |> dplyr::tbl('analysisRef') , by = c('analysisId' = 'analysisId')) |>
         dplyr::collect() |>
-        dplyr::mutate(oddsRatio = ifelse(is.na(oddsRatio) & modelType != 'linear', exp(beta), oddsRatio)) |>
+        dplyr::mutate(beta  = log(oddsRatio)) |>
         dplyr::select(-c('isBinary', 'missingMeansZero')) |>
         dplyr::mutate(mplog = cut(-log10(pValue),
                                   breaks = c(0, 5, 100, Inf),
@@ -268,7 +268,6 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
           dplyr::mutate(pValue = as.numeric(formatC(pValue, format = "e", digits = 2))) |>
           dplyr::mutate(oddsRatio = as.numeric(formatC(oddsRatio, format = "e", digits = 2))) |>
           dplyr::mutate(beta = as.numeric(formatC(beta, format = "e", digits = 2))) |>
-          dplyr::mutate(standardError = as.numeric(formatC(standardError, format = "e", digits = 2))) |>
           dplyr::mutate(meanCases = as.numeric(formatC(meanCases, format = "e", digits = 2))) |>
           dplyr::mutate(sdCases = as.numeric(formatC(sdCases, format = "e", digits = 2))) |>
           dplyr::mutate(meanControls = as.numeric(formatC(meanControls, format = "e", digits = 2))) |>
@@ -284,7 +283,7 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
           dplyr::select(
             covariateName, analysisName, domainId,
             nCasesYes, nControlsYes, meanCases, sdCases, meanControls, sdControls,
-            oddsRatio, pValue, beta, standardError, modelType, runNotes
+            oddsRatio, pValue, beta, modelType, runNotes
           ),
         escape = FALSE,
         class = 'display nowrap compact',
@@ -307,7 +306,6 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
           'OR' = 'oddsRatio',
           'p' = 'pValue',
           'Beta' = 'beta',
-          'SE' = 'standardError',
           'Model' = 'modelType',
           # 'ID' = 'analysisId',
           'Notes' = 'runNotes'
