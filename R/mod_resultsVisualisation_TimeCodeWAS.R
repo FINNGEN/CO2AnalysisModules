@@ -24,12 +24,17 @@ mod_resultsVisualisation_TimeCodeWAS_ui <- function(id) {
         id = ns("tabset"),
         shiny::tabPanel(
           "Plot",
-          shiny::div(style = "height: 12px;"),
+          shiny::column(
+            width = 2, align = "left",
+            shiny::div(style = "margin-top: 20px; ",
+                       shiny::checkboxInput(ns("top_10"), "Label top 10", value = TRUE),
+            ),
+          ), # column
           ggiraph::girafeOutput(ns("codeWASplot"), width = "100%", height = "100%"),
           shiny::div(
             style = "margin-top: 10px; margin-bottom: 10px;",
             shiny::downloadButton(ns("downloadPlot"), "Download")
-          )
+          ),
         ),
         shiny::tabPanel(
           "Table",
@@ -164,12 +169,6 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
             width = 2, align = "left",
             shiny::div(style = "height: 85px; width: 100%; margin-top: -15px; margin-right: 20px;",
                        shiny::sliderInput(ns("n_cases"), "Minimum # of cases", min = 0, max = 1000, value = 0, step = 1),
-            ),
-          ), # column
-          shiny::column(
-            width = 2, align = "left",
-            shiny::div(style = "margin-top: 30px; ",
-                       shiny::checkboxInput(ns("top_10"), "Label top 10", value = TRUE),
             ),
           ) # column
         )
