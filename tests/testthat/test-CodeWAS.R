@@ -252,7 +252,6 @@ test_that("executeCodeWAS works with no covariates", {
 
   codeWASResults |> dplyr::filter(modelType != "No test, not enough samples")  |> dplyr::filter(is.na(pValue))  |> nrow() |> expect_equal(0)
   codeWASResults |> dplyr::filter(modelType != "No test, not enough samples")  |> dplyr::filter(is.na(oddsRatio))  |> nrow() |> expect_equal(0)
-  codeWASResults |> dplyr::filter(modelType != "No test, not enough samples")  |> dplyr::filter(is.na(beta))  |> nrow() |> expect_equal(0)
 
 })
 
@@ -374,9 +373,6 @@ test_that("executeCodeWAS works to get lab values", {
    codeWASResults |> dplyr::filter(modelType == "No test, not enough samples")  |> nrow()) |>
     expect_true()
   (codeWASResults |> dplyr::filter(modelType == "No test, not enough samples")  |> dplyr::filter(is.na(oddsRatio))  |> nrow() ==
-   codeWASResults |> dplyr::filter(modelType == "No test, not enough samples")  |> nrow()) |>
-    expect_true()
-  (codeWASResults |> dplyr::filter(modelType == "No test, not enough samples")  |> dplyr::filter(is.na(beta))  |> nrow() ==
    codeWASResults |> dplyr::filter(modelType == "No test, not enough samples")  |> nrow()) |>
     expect_true()
 

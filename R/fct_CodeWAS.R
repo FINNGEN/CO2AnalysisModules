@@ -400,7 +400,6 @@ execute_CodeWAS <- function(
             sdControls = sd(data[[outcome]][data$caseControl == FALSE], na.rm = TRUE),
             pValue = p,
             oddsRatio = or,
-            standard_error = se,
             modelType = modelType,
             runNotes = note
           ))

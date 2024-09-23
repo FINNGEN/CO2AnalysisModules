@@ -5,7 +5,7 @@ source(testthat::test_path("setup.R"))
 source(testthat::test_path("helper.R"))
 
 # set up
-cohortTableHandler <- helper_createNewCohortTableHandler(addCohorts = "HadesExtrasAsthmaCohorts")
+cohortTableHandler <- helper_createNewCohortTableHandler(addCohorts = "HadesExtrasFractureCohortsMatched")
 on.exit({rm(cohortTableHandler);gc()})
 
 exportFolder <- file.path(tempdir(), "testCodeWAS")
