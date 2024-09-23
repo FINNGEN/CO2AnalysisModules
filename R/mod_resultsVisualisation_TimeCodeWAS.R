@@ -24,12 +24,9 @@ mod_resultsVisualisation_TimeCodeWAS_ui <- function(id) {
         id = ns("tabset"),
         shiny::tabPanel(
           "Plot",
-          shiny::column(
-            width = 2, align = "left",
-            shiny::div(style = "margin-top: 20px; ",
-                       shiny::checkboxInput(ns("top_10"), "Label top 10", value = TRUE),
-            ),
-          ), # column
+          shiny::div(style = "margin-top: 10px; ",
+                     shiny::checkboxInput(ns("top_10"), "Label top 10", value = TRUE),
+          ),
           ggiraph::girafeOutput(ns("codeWASplot"), width = "100%", height = "100%"),
           shiny::div(
             style = "margin-top: 10px; margin-bottom: 10px;",
