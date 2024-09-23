@@ -471,8 +471,8 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
       OR=OR,
       p=p,
       upIn=upIn,
-      cases_per = nCasesYes/nCases,
-      controls_per = nControlsYes/nControls,
+      cases_per = nCasesYes/nCasesInWindow,
+      controls_per = nControlsYes/nCasesInWindow,
       nCasesYes = nCasesYes,
       nControlsYes = nControlsYes
     ) |>
@@ -733,7 +733,7 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
 
 
 .analysisResultsHandler_to_studyResults <- function(analysisResults){
-
+browser()
   studyResults  <- analysisResults |> dplyr::tbl("timeCodeWASResults")  |>
     dplyr::left_join(
       analysisResults |> dplyr::tbl("timeRef") |>
@@ -750,8 +750,8 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
     )  |>
     dplyr::mutate(
       upIn = dplyr::if_else(oddsRatio>1, "Case", "Ctrl"),
-      nCases = nCasesYes + nCasesNo,
-      nControls = nControlsYes + nControlsNo
+      nCasesInWindow = nCasesInWindow,
+      nControlsInWindow = nControlsInWindow
     ) |>
     # dplyr::select(
     #   covariateId, timeId, nCasesYes, nControlsYes, nCases, nControls, nCasesNo, nControlsNo, startDay,endDay,
