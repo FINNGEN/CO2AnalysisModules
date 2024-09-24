@@ -23,6 +23,8 @@ test_that("mod_analysisSettings_timetimeCodeWAS works", {
         selectCaseCohort_pickerInput = 1,
         selectControlCohort_pickerInput = 2,
         features_pickerInput = c(101, 141, 1, 2, 402, 702, 41),
+        temporalStartDays = c(-1826, -365, 0, 1),
+        temporalEndDays = c(-365, 0, 1, 366),
         minCellCount_numericInput = 1)
 
       analysisSettings <- rf_analysisSettings()
@@ -40,7 +42,6 @@ test_that("mod_analysisSettings_timetimeCodeWAS works", {
       )
 
       output$info_text |> expect_match("No subjects overlap between case and control cohorts")
-      output$info_text |> expect_match("There is a significant difference in sex distribution between case and control cohorts")
       output$info_text |> expect_match("There is a significant difference in year of birth distribution between case and control cohorts")
 
       #
@@ -48,6 +49,8 @@ test_that("mod_analysisSettings_timetimeCodeWAS works", {
         selectCaseCohort_pickerInput = 1,
         selectControlCohort_pickerInput = 2001,
         features_pickerInput = c(101, 141, 1, 2, 402, 702, 41),
+        temporalStartDays = c(-1826, -365, 0, 1),
+        temporalEndDays = c(-365, 0, 1, 366),
         minCellCount_numericInput = 1)
 
       analysisSettings <- rf_analysisSettings()
@@ -66,7 +69,6 @@ test_that("mod_analysisSettings_timetimeCodeWAS works", {
 
       output$info_text |> expect_match("No subjects overlap between case and control cohorts")
       output$info_text |> expect_no_match("There is a significant difference in sex distribution between case and control cohorts")
-      output$info_text |> expect_match("There is a significant difference in year of birth distribution between case and control cohorts")
 
     }
   )

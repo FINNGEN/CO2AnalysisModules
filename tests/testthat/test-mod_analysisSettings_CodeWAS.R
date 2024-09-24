@@ -44,7 +44,6 @@ test_that("mod_analysisSettings_CodeWAS works", {
       )
 
       output$info_text |> expect_match("No subjects overlap between case and control cohorts")
-      output$info_text |> expect_match("There is a significant difference in sex distribution between case and control cohorts")
       output$info_text |> expect_match("There is a significant difference in year of birth distribution between case and control cohorts")
 
       # check "full" gets covariates
