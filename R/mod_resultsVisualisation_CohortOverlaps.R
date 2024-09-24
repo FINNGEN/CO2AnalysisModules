@@ -71,15 +71,18 @@ mod_resultsVisualisation_CohortsOverlaps_ui <- function(id) {
                                 shiny::div(style = "height: 85px; width: 100%;",
                                            shiny::sliderInput(ns("plot_height"), "Plot height (in)", min = 2, max = 30, value = 7, step = 0.5),
                                 ),
-                  ),
-                ),
+                  ), # column
+                ), # fluidRow
                 shiny::fluidRow(
-                  shiny::column(12, align = "left",
+                  shiny::column(4, align = "left",
+                                shiny::sliderInput(ns("rm_intersection_size_n"), "Remove intersections with size less than", min = 2, max = 50, value = 50, step = 1),
+                  ), # column
+                  shiny::column(3, align = "left",
                                 shiny::checkboxInput(ns("show_numbers"), "Show intersection sizes", value = TRUE),
                                 shiny::checkboxInput(ns("set_size_show"), "Show set sizes", value = TRUE),
-                  )
-                )
-              )
+                  ),
+                ) # fluidRow
+              ) # div
             ), # hidden
             shiny::div(
               style = "margin-left: -20px; margin-right: -20px;",
@@ -134,7 +137,12 @@ mod_resultsVisualisation_CohortsOverlaps_server <- function(id, analysisResults)
     # cohort overlaps
     #
     cohortOverlaps <- shiny::reactive({
-      cohortOverlapsData <- analysisResults |> dplyr::tbl("cohortOverlaps") |> dplyr::collect()
+      cohortOverlapsData <- analysisResults |>
+        dplyr::tbl("cohortOverlaps") |>
+        dplyr::collect() |>
+        # remove cohort overlaps with size less than n
+        dplyr::filter(as.numeric(numberOfSubjects) >= input$rm_intersection_size_n)
+
     })
 
     cohortsInfo <- shiny::reactive({
@@ -187,6 +195,18 @@ mod_resultsVisualisation_CohortsOverlaps_server <- function(id, analysisResults)
       cohortOverlapsData$cohortIdCombinations <- gsub("^&|&$", "", cohortOverlapsData$cohortIdCombinations)
 
       upset_expr <- with(cohortOverlapsData, setNames(numberOfSubjects, cohortIdCombinations))
+
+      if(length(upset_expr) < 2){
+        shiny::showModal(
+          shiny::modalDialog(
+            title = "Error",
+            "There are not enough cohorts to generate an UpSet plot.",
+            easyClose = TRUE,
+            footer = shiny::modalButton("OK")
+          )
+        )
+        return(NULL)
+      }
 
       UpSetR::upset(
         UpSetR::fromExpression(upset_expr),

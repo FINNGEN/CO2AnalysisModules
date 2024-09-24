@@ -24,12 +24,14 @@ mod_resultsVisualisation_TimeCodeWAS_ui <- function(id) {
         id = ns("tabset"),
         shiny::tabPanel(
           "Plot",
-          shiny::div(style = "height: 12px;"),
+          shiny::div(style = "margin-top: 10px; ",
+                     shiny::checkboxInput(ns("top_10"), "Label top 10", value = TRUE),
+          ),
           ggiraph::girafeOutput(ns("codeWASplot"), width = "100%", height = "100%"),
           shiny::div(
             style = "margin-top: 10px; margin-bottom: 10px;",
             shiny::downloadButton(ns("downloadPlot"), "Download")
-          )
+          ),
         ),
         shiny::tabPanel(
           "Table",
@@ -124,26 +126,26 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
               multiple = TRUE
             )
           ),
-          shiny::column(
-            2,
-            shinyWidgets::pickerInput(
-              ns("selected_p_groups"),
-              "p-value groups",
-              choices = c(
-                "-log10(p) [0,50]" = 1,
-                "-log10(p) (50,100]" = 5,
-                "-log10(p) (100,200]" = 10,
-                "-log10(p) (200,Inf]" = 20
-                ),
-              selected = c(1, 5, 10, 20),
-              options = shinyWidgets::pickerOptions(
-                actionsBox = TRUE,
-                selectedTextFormat = 'count',
-                countSelectedText = '{0} p-value groups'
-              ),
-              multiple = TRUE
-            ),
-          ), # column
+          # shiny::column(
+          #   2,
+          #   shinyWidgets::pickerInput(
+          #     ns("selected_p_groups"),
+          #     "p-value groups",
+          #     choices = c(
+          #       "-log10(p) [0,50]" = 1,
+          #       "-log10(p) (50,100]" = 5,
+          #       "-log10(p) (100,200]" = 10,
+          #       "-log10(p) (200,Inf]" = 20
+          #       ),
+          #     selected = c(1, 5, 10, 20),
+          #     options = shinyWidgets::pickerOptions(
+          #       actionsBox = TRUE,
+          #       selectedTextFormat = 'count',
+          #       countSelectedText = '{0} p-value groups'
+          #     ),
+          #     multiple = TRUE
+          #   ),
+          # ), # column
           shiny::column(
             2,
             shiny::textInput(
@@ -168,8 +170,8 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
           ), # column
           shiny::column(
             width = 2, align = "left",
-            shiny::div(style = "margin-top: 30px; ",
-                       shiny::checkboxInput(ns("top_10"), "Label top 10", value = TRUE),
+            shiny::div(style = "height: 85px; width: 100%; margin-top: 30px; margin-right: 20px;",
+                       shiny::checkboxInput(ns("filter_na"), "Filter out NA", value = TRUE),
             ),
           ) # column
         )
@@ -186,10 +188,11 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
     #
     shiny::observe({
       shiny::req(input$selected_domains)
-      shiny::req(input$selected_p_groups)
+      # shiny::req(input$selected_p_groups)
       shiny::req(input$or_range)
       shiny::req(input$n_cases)
       # shiny::req(input$p_value_threshold)
+      shiny::req(input$filter_na)
 
       if(!is_valid_number(input$p_value_threshold)) {
         shinyFeedback::showFeedbackWarning(
@@ -207,10 +210,14 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
         #
         gg_data <- gg_data_saved |>
           dplyr::filter(domain %in% input$selected_domains) |>
-          dplyr::filter(p_group_size %in% input$selected_p_groups) |>
+          # dplyr::filter(p_group_size %in% input$selected_p_groups) |>
           dplyr::filter(p < as.numeric(input$p_value_threshold)) |>
           dplyr::filter(OR <= input$or_range[1] | OR >= input$or_range[2]) |>
           dplyr::filter(nCasesYes >= input$n_cases)
+
+        if(input$filter_na){
+          gg_data <- na.omit(gg_data)
+        }
 
         # update gg_data
         r$gg_data <- gg_data
@@ -268,11 +275,7 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
       if(length(selected_rows) > 1){
         # we have a marquee selection with n > 1
         df_lasso <- r$gg_data |>
-          dplyr::filter(data_id %in% selected_rows) |>
-          dplyr::mutate(cases_per = scales::percent(cases_per, accuracy = 0.01)) |>
-          dplyr::mutate(controls_per = scales::percent(controls_per, accuracy = 0.01)) |>
-          dplyr::mutate(p = as.numeric(formatC(p, format = "e", digits = 2))) |>
-          dplyr::select(name, analysisName, domain, upIn, nCasesYes, nControlsYes, cases_per, controls_per, GROUP, OR, p)
+          dplyr::filter(data_id %in% selected_rows)
 
         # show table
         shiny::showModal(
@@ -280,30 +283,7 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
             shiny::div(
             tags$style(HTML(".modal-dialog {width: 90%; max-width: 90%;}")),
             DT::renderDataTable({
-              DT::datatable(
-                df_lasso,
-                colnames = c(
-                  # 'Covariate ID' = 'code',
-                  'Covariate Name' = 'name',
-                  'Analysis Name' = 'analysisName',
-                  'Domain' = 'domain',
-                  'Type' = 'upIn',
-                  'N case' = 'nCasesYes',
-                  'N ctrl' = 'nControlsYes',
-                  'Case %' = 'cases_per',
-                  'Ctrl %' = 'controls_per',
-                  'Group' = 'GROUP',
-                  'OR' = 'OR',
-                  'p' = 'p'
-                ),
-                options = list(
-                  formatter = list(
-                    p = function(x) format(x, scientific = TRUE),
-                    OR = function(x) format(x, scientific = TRUE)
-                  ),
-                  order = list(list(11, 'asc'), list(10, 'desc')) # order by p-value, then by OR
-                )
-              )
+              .renderTable(df_lasso)
             }),
             size = "l",
             easyClose = FALSE,
@@ -332,44 +312,59 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
     }, ignoreInit = TRUE)
 
     #
-    # show the data as a table ####
+    # render the table ####
     #
-    output$demographicsData <- DT::renderDataTable({
-      shiny::req(r$gg_data)
-
-      df_all <- r$gg_data |>
-        dplyr::mutate(cases_per = scales::percent(cases_per, accuracy = 0.01)) |>
-        dplyr::mutate(controls_per = scales::percent(controls_per, accuracy = 0.01))|>
+    .renderTable <- function(df){
+      df |>
+        dplyr::mutate(meanCases = round(meanCases, 3)) |>
+        dplyr::mutate(meanControls = round(meanControls, 3))|>
+        dplyr::mutate(sdCases = round(sdCases, 3)) |>
+        dplyr::mutate(sdControls = round(sdControls, 3))|>
+        dplyr::mutate(beta = round(log(OR), 3)) |>
         dplyr::mutate(
           code = round(code/1000),
           name = purrr::map2_chr(name, code, ~paste0('<a href="',atlasUrl,'/#/concept/', .y, '" target="_blank">', .x,'</a>'))
         ) |>
-        dplyr::select(name, analysisName, domain, upIn, nCasesYes, nControlsYes, cases_per, controls_per, GROUP, OR, p)
-
-      # show table
-      df_all |>
+        dplyr::select(
+          GROUP, name, analysisName, domain, upIn,
+          nCasesYes, nControlsYes, meanCases, meanControls, sdCases, sdControls,
+          OR, p, beta, notes) |>
         DT::datatable(
           colnames = c(
+            'Time ID' = 'GROUP',
             'Covariate Name' = 'name',
             'Analysis Name' = 'analysisName',
             'Domain' = 'domain',
             'Type' = 'upIn',
             'N case' = 'nCasesYes',
             'N ctrl' = 'nControlsYes',
-            'Case %' = 'cases_per',
-            'Ctrl %' = 'controls_per',
-            'Group' = 'GROUP',
+            'Mean case' = 'meanCases',
+            'Mean ctrl' = 'meanControls',
+            'SD case' = 'sdCases',
+            'SD ctrl' = 'sdControls',
             'OR' = 'OR',
-            'p' = 'p'
+            'p' = 'p',
+            'Beta' = 'beta',
+            'Notes' = 'notes'
           ),
           options = list(
-            order = list(list(11, 'asc'), list(10, 'desc')) #
+            order = list(list(12, 'asc'), list(11, 'desc')) #
           ),
           escape = FALSE,
-          selection = 'none'
+          selection = 'none',
+          rownames = FALSE
         ) |>
         DT::formatSignif(columns = c('p', 'OR'), digits = 3) |>
         DT::formatStyle('Covariate Name', cursor = 'pointer' )
+    }
+
+    #
+    # output "Table" tab ####
+    #
+    output$demographicsData <- DT::renderDataTable({
+      shiny::req(r$gg_data)
+
+      .renderTable(r$gg_data)
     })
 
     #
@@ -446,8 +441,7 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
 }
 
 .get_time_periods <- function(studyResult){
-
-  l <- unique(studyResult$timeRange)
+  l <- unique(studyResult |> dplyr::filter(!is.na(startDay) & !is.na(endDay)) |> dplyr::pull(timeRange))
   l_split <- lapply(l, function(x) {stringr::str_split(x, " ", simplify = TRUE)})
   time_periods <- as.data.frame(do.call(rbind, l_split)) |>
     dplyr::arrange(as.numeric(V2)) |>
@@ -462,17 +456,27 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
 
   time_periods <- .get_time_periods(studyResult)
 
+  # browser()
+
   studyResult <- studyResult |>
     dplyr::transmute(
       code = covariateId,
       time_period = factor(timeRange, levels = time_periods, labels = time_periods),
       name = covariateName,
       analysisName = analysisName,
+      model = modelType,
+      notes = runNotes,
       OR=OR,
       p=p,
       upIn=upIn,
+      nCasesInWindow = nCasesInWindow,
+      nControlsInWindow = nControlsInWindow,
       cases_per = nCasesYes/nCasesInWindow,
-      controls_per = nControlsYes/nCasesInWindow,
+      meanCases = nCasesYes/nCasesInWindow,
+      meanControls = nControlsYes/nControlsInWindow,
+      sdCases = sdCases,
+      sdControls = sdControls,
+      controls_per = nControlsYes/nControlsInWindow,
       nCasesYes = nCasesYes,
       nControlsYes = nControlsYes
     ) |>
@@ -481,7 +485,6 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
     dplyr::mutate(p = dplyr::if_else(p==0, 10^-323, p))
 
   gg_data <- studyResult |>
-    # dplyr::filter(p<0.00001) |>
     dplyr::arrange(time_period, name) |>
     dplyr::mutate_if(is.character, stringr::str_replace_na, "") |>
     dplyr::mutate(
@@ -646,6 +649,7 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
   selected_items <- ""
 
   if(!is.null(selection) && length(unique(selection$code)) == 1){
+    grDevices::pdf(NULL)
     # one point selected -> draw a line connecting the same code in each facet
     gb <- ggplot2::ggplot_build(gg_fig)
     g <- ggplot2::ggplot_gtable(gb)
