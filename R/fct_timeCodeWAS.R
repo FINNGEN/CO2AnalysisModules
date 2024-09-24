@@ -77,7 +77,8 @@ execute_timeCodeWAS <- function(
 
   # binary
   timeCovariateCountsBinary <- tibble::tibble()
-  if (covariateCasesControls$covariates |> dplyr::count()  |> dplyr::pull(n) != 0 ) {
+  if (is.null(covariateCasesControls$covariates) == FALSE &&
+    covariateCasesControls$covariates |> dplyr::count()  |> dplyr::pull(n) != 0 ) {
 
     ParallelLogger::logInfo("Running statistical test for binary covariates")
 
@@ -180,7 +181,8 @@ execute_timeCodeWAS <- function(
 
   # continuous
   timeCovariateCountsContinuous <- tibble::tibble()
-  if (covariateCasesControls$covariatesContinuous |> dplyr::count()  |> dplyr::pull(n) != 0) {
+  if (is.null(covariateCasesControls$covariatesContinuous) == FALSE &&
+    covariateCasesControls$covariatesContinuous |> dplyr::count()  |> dplyr::pull(n) != 0) {
 
     ParallelLogger::logInfo("Running statistical test for continuous covariates")
 
