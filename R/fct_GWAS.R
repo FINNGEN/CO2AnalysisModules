@@ -73,6 +73,7 @@ execute_GWAS <- function(
                            "\nanalysisType: ", analysisType,
                            "\nrelease: ", release)
 
+  result <- list( status = NULL, content = NULL )
 
   tryCatch({
     result <- FinnGenUtilsR::runGWASAnalysis(
@@ -88,7 +89,7 @@ execute_GWAS <- function(
     )
   }, error = function(e){
     ParallelLogger::logError("Error in FinnGenUtilsR::runGWASAnalysis: ", e$message)
-    result = list(status)
+    result$content <<- e$message
   })
 
   if (result$status){
@@ -121,10 +122,12 @@ execute_GWAS <- function(
 #'
 assertAnalysisSettings_GWAS <- function(analysisSettings) {
   analysisSettings |> checkmate::assertList()
-  c('analysisType', 'phenotype', 'description', 'casesCohort', 'controlsCohort')  |> checkmate::assertSubset(names(analysisSettings))
+  c('analysisType', 'phenotype', 'description', 'casesCohort', 'controlsCohort', 'connectionSandboxAPI')  |> checkmate::assertSubset(names(analysisSettings))
   analysisSettings$analysisType |> checkmate::assert_choice(choices = c("additive", "recessive", "dominant"))
   analysisSettings$casesCohort |> checkmate::assertNumeric()
   analysisSettings$controlsCohort |> checkmate::assertNumeric()
+  analysisSettings$connectionSandboxAPI$notification_email |> checkmate::assertCharacter(min.chars = 12)
+  analysisSettings$connectionSandboxAPI$name |> checkmate::assertCharacter(min.chars = 1)
   return(analysisSettings)
 }
 
