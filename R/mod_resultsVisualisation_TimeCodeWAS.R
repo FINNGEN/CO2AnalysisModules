@@ -480,12 +480,12 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
       OR=OR,
       p=p,
       upIn=upIn,
-      nCases = nCases,
-      nControls = nControls,
-      cases_per = nCasesYes/nCases,
-      meanCases = nCasesYes/nCases,
-      meanControls = nControlsYes/nControls,
-      controls_per = nControlsYes/nControls,
+      nCasesInWindow = nCasesInWindow,
+      nControlsInWindow = nControlsInWindow,
+      cases_per = nCasesYes/nCasesInWindow,
+      meanCases = nCasesYes/nCasesInWindow,
+      meanControls = nControlsYes/nControlsInWindow,
+      controls_per = nControlsYes/nControlsInWindow,
       nCasesYes = nCasesYes,
       nControlsYes = nControlsYes
     ) |>
@@ -494,8 +494,8 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
     dplyr::mutate(p = dplyr::if_else(p==0, 10^-323, p)) |>
     dplyr::group_by(time_period, upIn) |>
     dplyr::mutate(
-      sdCases = sqrt(meanCases*(1-meanCases)/nCases),
-      sdControls = sqrt(meanControls*(1-meanControls)/nControls)
+      sdCases = sqrt(meanCases*(1-meanCases)/nCasesInWindow),
+      sdControls = sqrt(meanControls*(1-meanControls)/nControlsInWindow)
     ) |>
     dplyr::ungroup()
 
