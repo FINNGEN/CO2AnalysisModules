@@ -51,7 +51,7 @@ Imports:
     FinnGenUtilsR
 Remotes: 
     FINNGEN/HadesExtras,
-    FINNGEN/FinnGenUtilsR
+    FINNGEN/FinnGenUtilsR@fix-logtibble-in-gwas-functionality
 Suggests: 
     devtools,
     testthat (>= 3.0.0), 
