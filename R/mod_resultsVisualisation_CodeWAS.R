@@ -117,7 +117,6 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
         dplyr::mutate(covariateName = ifelse(is.na(name), domain, name)) |>
         dplyr::mutate(covariateName = stringr::str_remove(covariateName, "^[:blank:]")) |>
         dplyr::mutate(domain = stringr::str_remove(domain, "^[:blank:]"))
-
     })
 
     #
@@ -172,17 +171,17 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
             multiple = TRUE,
             options = list(`actions-box` = TRUE, `selected-text-format` = "count > 3", `count-selected-text` = "{0} model types selected")
           )),
-        shiny::column(
-          width = 2,
-          shinyWidgets::pickerInput(
-            ns("pValue"),
-            "p",
-            choices = c('-log10(p) (0,5]', '-log10(p) (5,100]', '-log10(p) (100,Inf]'),
-            selected = c('-log10(p) (0,5]', '-log10(p) (5,100]', '-log10(p) (100,Inf]'),
-            multiple = TRUE,
-            options = list(`actions-box` = TRUE, `selected-text-format` = "count > 1", `count-selected-text` = "{0} classes selected")
-          )
-        )
+        # shiny::column(
+        #   width = 2,
+        #   shinyWidgets::pickerInput(
+        #     ns("pValue"),
+        #     "p",
+        #     choices = c('-log10(p) (0,5]', '-log10(p) (5,100]', '-log10(p) (100,Inf]'),
+        #     selected = c('-log10(p) (0,5]', '-log10(p) (5,100]', '-log10(p) (100,Inf]'),
+        #     multiple = TRUE,
+        #     options = list(`actions-box` = TRUE, `selected-text-format` = "count > 1", `count-selected-text` = "{0} classes selected")
+        #   )
+        # ) # column
       ), # fluidRow
 
       shiny::hr(style = "margin-top: 10px; margin-bottom: 5px;"),
@@ -208,13 +207,13 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
           shiny::div(style = "height: 85px; width: 100%; margin-top: -15px; margin-right: 20px;",
                      shiny::sliderInput(ns("n_cases"), "Minimum # of cases", min = 0, max = 1000, value = 0, step = 1),
           ),
+        ), # column
+        shiny::column(
+          width = 2, align = "left",
+          shiny::div(style = "height: 85px; width: 100%; margin-top: 30px; margin-right: 20px;",
+                     shiny::checkboxInput(ns("filter_na"), "Filter out NA", value = TRUE),
+          ),
         ) # column
-        # shiny::column(
-        #   width = 2, align = "left",
-        #   shiny::div(style = "margin-top: 30px; ",
-        #              shiny::checkboxInput(ns("top_10"), "Label top 10", value = TRUE),
-        #   ),
-        # ) # column
       ) # fluidRow
       ) # tagList
     })
@@ -232,6 +231,7 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
       shiny::req(input$p_value_threshold)
       shiny::req(input$or_range)
       shiny::req(input$n_cases)
+      shiny::req(input$filter_na)
 
       if(!is_valid_number(input$p_value_threshold)) {
         shinyFeedback::showFeedbackWarning(
@@ -249,12 +249,13 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
             if (!is.null(input$database)) databaseId %in% input$database else FALSE,
             if (!is.null(input$domain)) domainId %in% input$domain else FALSE,
             if (!is.null(input$analysis)) analysisName %in% input$analysis else FALSE,
-            if (!is.null(input$model)) modelType %in% input$model else FALSE,
-            if (!is.null(input$pValue)) mplog %in% input$pValue | is.na(mplog) else FALSE
+            if (!is.null(input$model)) modelType %in% input$model else FALSE
           )  |>
           dplyr::filter(pValue < as.numeric(input$p_value_threshold)) |>
           dplyr::filter(oddsRatio <= input$or_range[1] | oddsRatio >= input$or_range[2]) |>
-          dplyr::filter(nCasesYes >= input$n_cases)
+          dplyr::filter(nCasesYes >= input$n_cases) |>
+          dplyr::filter(!is.na(oddsRatio) | !input$filter_na) |>
+          dplyr::filter(!is.na(pValue) | !input$filter_na)
       }
     })
 
@@ -303,11 +304,12 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
           # 'Concept ID' = 'conceptId',
           # 'Cov. ID' = 'covariateId',
           # 'N tot' = 'n_total',
+          # 'Type' = 'upIn',          # upIn MISSING from data
           'N case' = 'nCasesYes',
           'N ctrl' = 'nControlsYes',
           'Mean case' = 'meanCases',
-          'SD case' = 'sdCases',
           'Mean ctrl' = 'meanControls',
+          'SD case' = 'sdCases',
           'SD ctrl' = 'sdControls',
           'OR' = 'oddsRatio',
           'p' = 'pValue',
