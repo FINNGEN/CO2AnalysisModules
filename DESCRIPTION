@@ -47,7 +47,8 @@ Imports:
     stringr,
     tidyr,
     shinyFeedback,
-    CohortGenerator
+    CohortGenerator,
+    FinnGenUtilsR
 Remotes: 
     FINNGEN/HadesExtras,
     FINNGEN/FinnGenUtilsR
