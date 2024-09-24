@@ -1,7 +1,7 @@
 #
 # SELECT DATABASE and CO2 CONFIGURATION
 #
-testingDatabase <- "EunomiaGiBleed"
+testingDatabase <- "EunomiaFinnGen"
 testingCO2AnalysisModulesConfig <- "AtlasDemo"
 
 # check correct settings
