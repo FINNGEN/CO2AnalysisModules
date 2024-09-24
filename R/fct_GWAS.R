@@ -109,7 +109,7 @@ execute_GWAS <- function(
 #'
 assertAnalysisSettings_GWAS <- function(analysisSettings) {
   analysisSettings |> checkmate::assertList()
-  c('casesFinngenids', 'controlsFinngenids', 'analysisType', 'phenotype', 'description', 'casesCohort', 'controlsCohort')  |> checkmate::assertSubset(names(analysisSettings))
+  c('analysisType', 'phenotype', 'description', 'casesCohort', 'controlsCohort')  |> checkmate::assertSubset(names(analysisSettings))
   analysisSettings$analysisType |> checkmate::assert_choice(choices = c("additive", "recessive", "dominant"))
   analysisSettings$casesCohort |> checkmate::assertNumeric()
   analysisSettings$controlsCohort |> checkmate::assertNumeric()
