@@ -328,10 +328,12 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
     }, ignoreInit = TRUE)
 
     #
-    # show the data as a table ####
+    # output "Table" tab ####
     #
     output$demographicsData <- DT::renderDataTable({
       shiny::req(r$gg_data)
+
+      # browser()
 
       df_all <- r$gg_data |>
         dplyr::mutate(cases_per = scales::percent(cases_per, accuracy = 0.01)) |>
@@ -340,29 +342,36 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
           code = round(code/1000),
           name = purrr::map2_chr(name, code, ~paste0('<a href="',atlasUrl,'/#/concept/', .y, '" target="_blank">', .x,'</a>'))
         ) |>
-        dplyr::select(name, analysisName, domain, upIn, nCasesYes, nControlsYes, cases_per, controls_per, GROUP, OR, p)
+        dplyr::select(
+          GROUP, name, analysisName, domain, upIn,
+          nCasesYes, nControlsYes, meanCases, meanControls, sdCases, sdControls,
+          OR, p, notes)
 
       # show table
       df_all |>
         DT::datatable(
           colnames = c(
+            'Time ID' = 'GROUP',
             'Covariate Name' = 'name',
             'Analysis Name' = 'analysisName',
             'Domain' = 'domain',
             'Type' = 'upIn',
             'N case' = 'nCasesYes',
             'N ctrl' = 'nControlsYes',
-            'Case %' = 'cases_per',
-            'Ctrl %' = 'controls_per',
-            'Group' = 'GROUP',
+            'Mean case' = 'meanCases',
+            'Mean ctrl' = 'meanControls',
+            'SE case' = 'sdCases',
+            'SE ctrl' = 'sdControls',
             'OR' = 'OR',
-            'p' = 'p'
+            'p' = 'p',
+            'Notes' = 'notes'
           ),
           options = list(
-            order = list(list(11, 'asc'), list(10, 'desc')) #
+            order = list(list(12, 'asc'), list(11, 'desc')) #
           ),
           escape = FALSE,
-          selection = 'none'
+          selection = 'none',
+          rownames = FALSE
         ) |>
         DT::formatSignif(columns = c('p', 'OR'), digits = 3) |>
         DT::formatStyle('Covariate Name', cursor = 'pointer' )
@@ -458,23 +467,37 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
 
   time_periods <- .get_time_periods(studyResult)
 
+  # browser()
+
   studyResult <- studyResult |>
     dplyr::transmute(
       code = covariateId,
       time_period = factor(timeRange, levels = time_periods, labels = time_periods),
       name = covariateName,
       analysisName = analysisName,
+      model = modelType,
+      notes = "", #runNnotes,
       OR=OR,
       p=p,
       upIn=upIn,
-      cases_per = nCasesYes/nCasesInWindow,
-      controls_per = nControlsYes/nCasesInWindow,
+      nCases = nCases,
+      nControls = nControls,
+      cases_per = nCasesYes/nCases,
+      meanCases = nCasesYes/nCases,
+      meanControls = nControlsYes/nControls,
+      controls_per = nControlsYes/nControls,
       nCasesYes = nCasesYes,
       nControlsYes = nControlsYes
     ) |>
     tidyr::separate(name, c("domain", "name"), sep = ":", extra = "merge") |>
     dplyr::mutate(name = stringr::str_remove(name, "^[:blank:]")) |>
-    dplyr::mutate(p = dplyr::if_else(p==0, 10^-323, p))
+    dplyr::mutate(p = dplyr::if_else(p==0, 10^-323, p)) |>
+    dplyr::group_by(time_period, upIn) |>
+    dplyr::mutate(
+      sdCases = sqrt(meanCases*(1-meanCases)/nCases),
+      sdControls = sqrt(meanControls*(1-meanControls)/nControls)
+    ) |>
+    dplyr::ungroup()
 
   gg_data <- studyResult |>
     # dplyr::filter(p<0.00001) |>
