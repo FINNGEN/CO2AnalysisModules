@@ -127,12 +127,14 @@ mod_analysisSettings_GWAS_server <- function(id, r_connectionHandler, r_workbenc
       shiny::req(!is.null(input$selectCaseCohort_pickerInput))
       shiny::req(!is.null(input$selectControlCohort_pickerInput))
 
+      cohortTableHandler <- r_connectionHandler$cohortTableHandler
+
       cohorts  <- cohortTableHandler$getCohortsSummary()
       casesCohort <- cohorts[cohorts$cohortId == input$selectCaseCohort_pickerInput, ] |> dplyr::pull(cohortName)
       controlsCohort <- cohorts[cohorts$cohortId == input$selectControlCohort_pickerInput, ] |> dplyr::pull(cohortName)
 
       defaultPhenotypeName <- paste0(.format_str(casesCohort),.format_str(controlsCohort))
-      dbName <- r_connectionHandler$cohortTableHandler$databaseName
+      dbName <- cohortTableHandler$databaseName
       defaultDescription <- paste0("Cases-cohort: ", casesCohort, "; Controls-cohort: ",
                                    controlsCohort, " (db: ", dbName, ")")
 
@@ -209,6 +211,8 @@ mod_analysisSettings_GWAS_server <- function(id, r_connectionHandler, r_workbenc
         is.null(input$selectAnalysisType_pickerInput_gwas)) {
         return(NULL)
       }
+
+      cohortTableHandler <- r_connectionHandler$cohortTableHandler
 
       databaseId <- cohortTableHandler$databaseId
       release <- paste0("Regenie", gsub("[A-Za-z]", "", cohortTableHandler$databaseId))
