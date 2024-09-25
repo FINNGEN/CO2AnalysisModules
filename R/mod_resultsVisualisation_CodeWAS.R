@@ -15,36 +15,45 @@
 mod_resultsVisualisation_CodeWAS_ui <- function(id) {
   ns <- shiny::NS(id)
 
-  shiny::tagList(
-    shiny::h4("Filters"),
-    shiny::div(
-      style = "margin-top: 10px; margin-bottom: 20px;"
-    ),
-    shiny::uiOutput(ns("codeWASFilter")),
-    htmltools::hr(style = "margin-top: 10px; margin-bottom: 10px;"),
-    shiny::tabsetPanel(
-      id = ns("tabset"),
-      shiny::tabPanel(
-        "Plot",
-        shiny::div(style = "height: 20px;"),
-        shiny::div(style = "height: 100%; width: 800px; margin-left:40px;",
-                   ggiraph::girafeOutput(ns("codeWASplot"))
-        ),
-        shiny::div(
-          style = "margin-top: 10px; margin-bottom: 10px;",
-          shiny::downloadButton(ns("downloadPlot"), "Download")
-        )
+  shiny::fluidPage(
+    title = "CodeWAS Results",
+    shiny::tagList(
+      shiny::h4("Filters"),
+      shiny::div(
+        style = "margin-top: 10px; margin-bottom: 20px;"
       ),
-      shiny::tabPanel(
-        "Table",
-        shiny::div(
-          style = "margin-top: 10px; margin-bottom: 10px;",
-          DT::dataTableOutput(ns("codeWAStable")),
+      shiny::uiOutput(ns("codeWASFilter")),
+      htmltools::hr(style = "margin-top: 10px; margin-bottom: 10px;"),
+      shiny::tabsetPanel(
+        id = ns("tabset"),
+        shiny::tabPanel(
+          "Plot",
+          # shiny::div(style = "height: 20px;"),
+          shiny::column(
+            width = 2, align = "left",
+            shiny::div(style = "margin-top: 30px; ",
+                       shiny::checkboxInput(ns("top_10"), "Label top 10", value = TRUE),
+            ),
+          ), # column
+          shiny::div(style = "height: 100%; width: 800px; margin-left:40px;",
+                     ggiraph::girafeOutput(ns("codeWASplot"))
+          ),
+          shiny::div(
+            style = "margin-top: 10px; margin-bottom: 10px;",
+            shiny::downloadButton(ns("downloadPlot"), "Download")
+          )
         ),
-        shiny::div(
-          style = "margin-top: 10px; margin-bottom: 10px;",
-          shiny::downloadButton(ns("downloadCodeWASFiltered"), "Download filtered", icon = shiny::icon("download")),
-          shiny::downloadButton(ns("downloadCodeWASAll"), "Download all", icon = shiny::icon("download"))
+        shiny::tabPanel(
+          "Table",
+          shiny::div(
+            style = "margin-top: 10px; margin-bottom: 10px;",
+            DT::dataTableOutput(ns("codeWAStable")),
+          ),
+          shiny::div(
+            style = "margin-top: 10px; margin-bottom: 10px;",
+            shiny::downloadButton(ns("downloadCodeWASFiltered"), "Download filtered", icon = shiny::icon("download")),
+            shiny::downloadButton(ns("downloadCodeWASAll"), "Download all", icon = shiny::icon("download"))
+          )
         )
       )
     )
@@ -98,8 +107,8 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
         dplyr::left_join(analysisResults |> dplyr::tbl('covariateRef') , by = c('covariateId' = 'covariateId'))  |>
         dplyr::left_join(analysisResults |> dplyr::tbl('analysisRef') , by = c('analysisId' = 'analysisId')) |>
         dplyr::collect() |>
-        dplyr::mutate(oddsRatio = ifelse(is.na(oddsRatio) & modelType != 'linear', exp(beta), oddsRatio)) |>
-        dplyr:::select(-c('isBinary', 'missingMeansZero')) |>
+        dplyr::mutate(beta  = log(oddsRatio)) |>
+        dplyr::select(-c('isBinary', 'missingMeansZero')) |>
         dplyr::mutate(mplog = cut(-log10(pValue),
                                   breaks = c(0, 5, 100, Inf),
                                   labels = c('-log10(p) (0,5]', '-log10(p) (5,100]', '-log10(p) (100,Inf]'))
@@ -108,7 +117,6 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
         dplyr::mutate(covariateName = ifelse(is.na(name), domain, name)) |>
         dplyr::mutate(covariateName = stringr::str_remove(covariateName, "^[:blank:]")) |>
         dplyr::mutate(domain = stringr::str_remove(domain, "^[:blank:]"))
-
     })
 
     #
@@ -163,17 +171,17 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
             multiple = TRUE,
             options = list(`actions-box` = TRUE, `selected-text-format` = "count > 3", `count-selected-text` = "{0} model types selected")
           )),
-        shiny::column(
-          width = 2,
-          shinyWidgets::pickerInput(
-            ns("pValue"),
-            "p",
-            choices = c('-log10(p) (0,5]', '-log10(p) (5,100]', '-log10(p) (100,Inf]'),
-            selected = c('-log10(p) (0,5]', '-log10(p) (5,100]', '-log10(p) (100,Inf]'),
-            multiple = TRUE,
-            options = list(`actions-box` = TRUE, `selected-text-format` = "count > 1", `count-selected-text` = "{0} classes selected")
-          )
-        )
+        # shiny::column(
+        #   width = 2,
+        #   shinyWidgets::pickerInput(
+        #     ns("pValue"),
+        #     "p",
+        #     choices = c('-log10(p) (0,5]', '-log10(p) (5,100]', '-log10(p) (100,Inf]'),
+        #     selected = c('-log10(p) (0,5]', '-log10(p) (5,100]', '-log10(p) (100,Inf]'),
+        #     multiple = TRUE,
+        #     options = list(`actions-box` = TRUE, `selected-text-format` = "count > 1", `count-selected-text` = "{0} classes selected")
+        #   )
+        # ) # column
       ), # fluidRow
 
       shiny::hr(style = "margin-top: 10px; margin-bottom: 5px;"),
@@ -202,8 +210,8 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
         ), # column
         shiny::column(
           width = 2, align = "left",
-          shiny::div(style = "margin-top: 30px; ",
-                     shiny::checkboxInput(ns("top_10"), "Label top 10", value = TRUE),
+          shiny::div(style = "height: 85px; width: 100%; margin-top: 30px; margin-right: 20px;",
+                     shiny::checkboxInput(ns("filter_na"), "Filter out NA", value = TRUE),
           ),
         ) # column
       ) # fluidRow
@@ -223,6 +231,7 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
       shiny::req(input$p_value_threshold)
       shiny::req(input$or_range)
       shiny::req(input$n_cases)
+      shiny::req(input$filter_na)
 
       if(!is_valid_number(input$p_value_threshold)) {
         shinyFeedback::showFeedbackWarning(
@@ -240,12 +249,13 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
             if (!is.null(input$database)) databaseId %in% input$database else FALSE,
             if (!is.null(input$domain)) domainId %in% input$domain else FALSE,
             if (!is.null(input$analysis)) analysisName %in% input$analysis else FALSE,
-            if (!is.null(input$model)) modelType %in% input$model else FALSE,
-            if (!is.null(input$pValue)) mplog %in% input$pValue | is.na(mplog) else FALSE
+            if (!is.null(input$model)) modelType %in% input$model else FALSE
           )  |>
           dplyr::filter(pValue < as.numeric(input$p_value_threshold)) |>
           dplyr::filter(oddsRatio <= input$or_range[1] | oddsRatio >= input$or_range[2]) |>
-          dplyr::filter(nCasesYes >= input$n_cases)
+          dplyr::filter(nCasesYes >= input$n_cases) |>
+          dplyr::filter(!is.na(oddsRatio) | !input$filter_na) |>
+          dplyr::filter(!is.na(pValue) | !input$filter_na)
       }
     })
 
@@ -265,7 +275,6 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
           dplyr::mutate(pValue = as.numeric(formatC(pValue, format = "e", digits = 2))) |>
           dplyr::mutate(oddsRatio = as.numeric(formatC(oddsRatio, format = "e", digits = 2))) |>
           dplyr::mutate(beta = as.numeric(formatC(beta, format = "e", digits = 2))) |>
-          dplyr::mutate(standardError = as.numeric(formatC(standardError, format = "e", digits = 2))) |>
           dplyr::mutate(meanCases = as.numeric(formatC(meanCases, format = "e", digits = 2))) |>
           dplyr::mutate(sdCases = as.numeric(formatC(sdCases, format = "e", digits = 2))) |>
           dplyr::mutate(meanControls = as.numeric(formatC(meanControls, format = "e", digits = 2))) |>
@@ -281,7 +290,7 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
           dplyr::select(
             covariateName, analysisName, domainId,
             nCasesYes, nControlsYes, meanCases, sdCases, meanControls, sdControls,
-            oddsRatio, pValue, beta, standardError, modelType, runNotes
+            oddsRatio, pValue, beta, modelType, runNotes
           ),
         escape = FALSE,
         class = 'display nowrap compact',
@@ -295,16 +304,16 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
           # 'Concept ID' = 'conceptId',
           # 'Cov. ID' = 'covariateId',
           # 'N tot' = 'n_total',
+          # 'Type' = 'upIn',          # upIn MISSING from data
           'N case' = 'nCasesYes',
           'N ctrl' = 'nControlsYes',
           'Mean case' = 'meanCases',
-          'SD case' = 'sdCases',
           'Mean ctrl' = 'meanControls',
+          'SD case' = 'sdCases',
           'SD ctrl' = 'sdControls',
           'OR' = 'oddsRatio',
           'p' = 'pValue',
           'Beta' = 'beta',
-          'SE' = 'standardError',
           'Model' = 'modelType',
           # 'ID' = 'analysisId',
           'Notes' = 'runNotes'

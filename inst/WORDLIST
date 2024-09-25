@@ -7,6 +7,8 @@ CohortDemographics
 CohortOverlaps
 CohortsOverlaps
 DuckDB
+FinnGen
+GWAS
 Lifecycle
 TimeCodeWAS
 UI
@@ -16,13 +18,12 @@ YAML
 addFisherTestToCodeCounts
 addTestTotibbleWithValueSummary
 binaryTest
+continuousOddsRatio
 continuousPValue
-continuousStandardError
 continuousTest
-countsOddsRatio
-countsPValue
-countsTest
 duckdb
+meanValueCases
+meanValueControls
 schemas
 tibble
 tibbleWithValueSummary
