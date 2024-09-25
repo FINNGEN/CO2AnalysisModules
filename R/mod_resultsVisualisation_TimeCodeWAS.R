@@ -170,8 +170,17 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
           ), # column
           shiny::column(
             width = 2, align = "left",
-            shiny::div(style = "height: 85px; width: 100%; margin-top: 30px; margin-right: 20px;",
+            shiny::div(style = "width: 100%; margin-top: 10px; margin-right: 20px;",
                        shiny::checkboxInput(ns("filter_na"), "Filter out NA", value = TRUE),
+            ),
+          ), # column
+          shiny::column(
+            width = 2, align = "left",
+            shiny::div(style = "width: 100%; margin-top: 20px; margin-right: 20px;",
+                       shiny::checkboxInput(ns("allow_NA_OR"), "Allow NA in OR", value = FALSE),
+            ),
+            shiny::div(style = "width: 100%; margin-top: -10px; margin-right: 20px;",
+                       shiny::checkboxInput(ns("allow_NA_p"), "Allow NA in p", value = FALSE),
             ),
           ) # column
         )
