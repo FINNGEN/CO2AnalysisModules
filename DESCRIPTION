@@ -47,11 +47,9 @@ Imports:
     stringr,
     tidyr,
     shinyFeedback,
-    CohortGenerator,
-    FinnGenUtilsR
+    CohortGenerator
 Remotes: 
-    FINNGEN/HadesExtras,
-    FINNGEN/FinnGenUtilsR
+    FINNGEN/HadesExtras
 Suggests: 
     devtools,
     testthat (>= 3.0.0), 
