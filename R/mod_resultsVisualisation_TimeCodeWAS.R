@@ -191,11 +191,8 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
     #
     shiny::observe({
       shiny::req(input$selected_domains)
-      # shiny::req(input$selected_p_groups)
       shiny::req(input$or_range)
       shiny::req(input$n_cases)
-      # shiny::req(input$p_value_threshold)
-      shiny::req(input$filter_na)
 
       if(!is_valid_number(input$p_value_threshold)) {
         shinyFeedback::showFeedbackWarning(
