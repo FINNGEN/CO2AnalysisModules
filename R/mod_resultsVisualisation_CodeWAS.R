@@ -210,8 +210,11 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
         ), # column
         shiny::column(
           width = 2, align = "left",
-          shiny::div(style = "height: 85px; width: 100%; margin-top: 30px; margin-right: 20px;",
-                     shiny::checkboxInput(ns("filter_na"), "Filter out NA", value = TRUE),
+          shiny::div(style = "width: 100%; margin-top: 20px; margin-right: 20px;",
+                     shiny::checkboxInput(ns("allow_NA_OR"), "Allow NA in OR", value = FALSE),
+          ),
+          shiny::div(style = "width: 100%; margin-top: 2px; margin-right: 20px;",
+                     shiny::checkboxInput(ns("allow_NA_p"), "Allow NA in p", value = FALSE),
           ),
         ) # column
       ) # fluidRow
@@ -231,7 +234,6 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
       shiny::req(input$p_value_threshold)
       shiny::req(input$or_range)
       shiny::req(input$n_cases)
-      shiny::req(input$filter_na)
 
       if(!is_valid_number(input$p_value_threshold)) {
         shinyFeedback::showFeedbackWarning(
@@ -244,6 +246,9 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
           text = "Missing input: Please give a number (1e-5 is the default).")
       } else {
         shinyFeedback::hideFeedback("p_value_threshold")
+        cat("rows in full data: ", nrow(r$codeWASData), "\n")
+        cat("NA values in pValue: ", sum(is.na(r$codeWASData$pValue)), "\n")
+        cat("NA values in oddsRatio: ", sum(is.na(r$codeWASData$oddsRatio)), "\n")
         r$filteredCodeWASData <- r$codeWASData |>
           dplyr::filter(
             if (!is.null(input$database)) databaseId %in% input$database else FALSE,
@@ -254,8 +259,9 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
           dplyr::filter(pValue < as.numeric(input$p_value_threshold)) |>
           dplyr::filter(oddsRatio <= input$or_range[1] | oddsRatio >= input$or_range[2]) |>
           dplyr::filter(nCasesYes >= input$n_cases) |>
-          dplyr::filter(!is.na(oddsRatio) | !input$filter_na) |>
-          dplyr::filter(!is.na(pValue) | !input$filter_na)
+          dplyr::filter(!is.na(oddsRatio) | input$allow_NA_OR) |>
+          dplyr::filter(!is.na(pValue) | input$allow_NA_p)
+        cat("rows in filtered data: ", nrow(r$filteredCodeWASData), "\n")
       }
     })
 
