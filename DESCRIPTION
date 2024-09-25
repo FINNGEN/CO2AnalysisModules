@@ -47,9 +47,12 @@ Imports:
     speedglm,
     stringr,
     tidyr,
-    shinyFeedback
+    shinyFeedback,
+    CohortGenerator,
+    FinnGenUtilsR
 Remotes: 
-    FINNGEN/HadesExtras
+    FINNGEN/HadesExtras,
+    FINNGEN/FinnGenUtilsR
 Suggests: 
     devtools,
     testthat (>= 3.0.0), 
