@@ -50,7 +50,6 @@ execute_timeCodeWAS <- function(
   analysisIds <- analysisSettings$analysisIds
   temporalStartDays <- analysisSettings$temporalStartDays
   temporalEndDays <- analysisSettings$temporalEndDays
-  chunksSizeNOutcomes <- analysisSettings$chunksSizeNOutcomes
 
 
   #
@@ -76,97 +75,169 @@ execute_timeCodeWAS <- function(
     aggregated = T
   )
 
-  ParallelLogger::logInfo("calcualting number of subjects with observation case and controls in each time window")
+  # binary
+  timeCovariateCountsBinary <- tibble::tibble()
+  if (is.null(covariateCasesControls$covariates) == FALSE &&
+    covariateCasesControls$covariates |> dplyr::count()  |> dplyr::pull(n) != 0 ) {
 
-  cohortTbl <- dplyr::tbl(connection, HadesExtras::tmp_inDatabaseSchema(cohortDatabaseSchema, cohortTable))
-  observationPeriodTbl <- dplyr::tbl(connection,  HadesExtras::tmp_inDatabaseSchema(cdmDatabaseSchema, "observation_period"))
+    ParallelLogger::logInfo("Running statistical test for binary covariates")
 
-  # TEMP, when therea are more than one covariate settings, get the first (it should use timeWindow from server instead)
-  # if covariateSettings doent have the temporalStartDays, it means it is a list of settings
-  if (length(covariateSettings$temporalStartDays) == 0) {
-    covariateSettings <- covariateSettings[[1]]
+    ParallelLogger::logInfo("calcualting number of subjects with observation case and controls in each time window")
+
+    cohortTbl <- dplyr::tbl(connection, HadesExtras::tmp_inDatabaseSchema(cohortDatabaseSchema, cohortTable))
+    observationPeriodTbl <- dplyr::tbl(connection,  HadesExtras::tmp_inDatabaseSchema(cdmDatabaseSchema, "observation_period"))
+
+    timeWindows <- tibble::tibble(
+      id_window =  as.integer(1:length(temporalStartDays)),
+      start_day = as.integer(temporalStartDays),
+      end_day = as.integer(temporalEndDays)
+    )
+    timeWindowsTbl <- HadesExtras::tmp_dplyr_copy_to(connection, timeWindows, overwrite = TRUE)
+
+    windowCounts <- cohortTbl |>
+      dplyr::filter(cohort_definition_id %in% c(cohortIdCases, cohortIdControls)) |>
+      dplyr::left_join(
+        # at the moment take the first and last
+        observationPeriodTbl |>
+          dplyr::select(person_id, observation_period_start_date, observation_period_end_date) |>
+          dplyr::group_by(person_id) |>
+          dplyr::summarise(
+            observation_period_start_date = min(observation_period_start_date, na.rm = TRUE),
+            observation_period_end_date = max(observation_period_end_date, na.rm = TRUE)
+          ),
+        by = c("subject_id" = "person_id")) |>
+      dplyr::cross_join(timeWindowsTbl) |>
+      dplyr::filter(
+        # exclude if window is under the observation_period_start_date or over the observation_period_end_date
+        !(dateAdd("day", end_day, cohort_start_date) < observation_period_start_date |
+            dateAdd("day", start_day, cohort_start_date) > observation_period_end_date )
+      ) |>
+      dplyr::group_by(cohort_definition_id, id_window) |>
+      dplyr::count() |>
+      dplyr::collect()
+
+    windowCounts <-  windowCounts |>
+      dplyr::mutate(cohort_definition_id = dplyr::case_when(
+        cohort_definition_id == cohortIdCases ~ "nCasesInWindow",
+        cohort_definition_id == cohortIdControls ~ "nControlsInWindow",
+        TRUE ~ as.character(NA)
+      )) |>
+      tidyr::spread(key = cohort_definition_id, n)|>
+      dplyr::rename(timeId = id_window)
+
+
+    ParallelLogger::logInfo("Calculating time counts")
+
+    timeCovariateCountsBinary <-
+      dplyr::full_join(
+        covariateCasesControls$covariates |> tibble::as_tibble() |>
+          dplyr::filter(cohortDefinitionId == cohortIdCases) |>
+          dplyr::select(covariateId, timeId, nCasesYes=sumValue),
+        covariateCasesControls$covariates |> tibble::as_tibble() |>
+          dplyr::filter(cohortDefinitionId == cohortIdControls) |>
+          dplyr::select( covariateId, timeId, nControlsYes=sumValue),
+        by = c("covariateId", "timeId")
+      )  |>
+      dplyr::left_join(
+        windowCounts,
+        by="timeId"
+      ) |>
+      dplyr::transmute(
+        covariateId = covariateId,
+        timeId = timeId,
+        nCasesYes = dplyr::if_else(is.na(nCasesYes), 0, nCasesYes),
+        nControlsYes = dplyr::if_else(is.na(nControlsYes), 0, nControlsYes),
+        nCasesInWindow = dplyr::if_else(is.na(nCasesInWindow), 0, nCasesInWindow),
+        nControlsInWindow = dplyr::if_else(is.na(nControlsInWindow), 0, nControlsInWindow),
+        # force nCasesInWindow to be same or lower than nCasesYes, same for controls
+        nCasesInWindow = dplyr::if_else(nCasesInWindow < nCasesYes, nCasesYes, nCasesInWindow),
+        nControlsInWindow = dplyr::if_else(nControlsInWindow < nControlsYes, nControlsYes, nControlsInWindow),
+        #
+        nCasesNo = nCasesInWindow - nCasesYes,
+        nControlsNo = nControlsInWindow - nControlsYes
+      )
+
+    ParallelLogger::logInfo("Adding Fisher test output")
+    timeCovariateCountsBinary <- .addTestToCodeCounts(timeCovariateCountsBinary) |>
+      dplyr::transmute(
+        covariateId = covariateId,
+        timeId = timeId,
+        covariateType = "binary",
+        nCasesYes = nCasesYes,
+        nCasesInWindow = nCasesInWindow,
+        meanCases = nCasesYes / nCasesInWindow,
+        sdCases = sqrt(meanCases * (1 - meanCases)),
+        nControlsYes = nControlsYes,
+        nControlsInWindow = nControlsInWindow,
+        meanControls = nControlsYes / nControlsInWindow,
+        sdControls = sqrt(meanControls * (1 - meanControls)),
+        pValue = countsPValue,
+        oddsRatio = dplyr::if_else(is.infinite(countsOddsRatio), .Machine$double.xmax, countsOddsRatio),
+        modelType = countsTest,
+        runNotes =  ''
+      )
+
   }
 
-  timeWindows <- tibble::tibble(
-    id_window =  as.integer(1:length(covariateSettings$temporalStartDays)),
-    start_day = as.integer(covariateSettings$temporalStartDays),
-    end_day = as.integer(covariateSettings$temporalEndDays)
-  )
-  timeWindowsTbl <- HadesExtras::tmp_dplyr_copy_to(connection, timeWindows, overwrite = TRUE)
+  # continuous
+  timeCovariateCountsContinuous <- tibble::tibble()
+  if (is.null(covariateCasesControls$covariatesContinuous) == FALSE &&
+    covariateCasesControls$covariatesContinuous |> dplyr::count()  |> dplyr::pull(n) != 0) {
 
-  windowCounts <- cohortTbl |>
-    dplyr::filter(cohort_definition_id %in% c(cohortIdCases, cohortIdControls)) |>
-    dplyr::left_join(
-      # at the moment take the first and last
-      observationPeriodTbl |>
-        dplyr::select(person_id, observation_period_start_date, observation_period_end_date) |>
-        dplyr::group_by(person_id) |>
-        dplyr::summarise(
-          observation_period_start_date = min(observation_period_start_date, na.rm = TRUE),
-          observation_period_end_date = max(observation_period_end_date, na.rm = TRUE)
-        ),
-      by = c("subject_id" = "person_id")) |>
-    dplyr::cross_join(timeWindowsTbl) |>
-    dplyr::filter(
-      # exclude if window is under the observation_period_start_date or over the observation_period_end_date
-      !(dateAdd("day", end_day, cohort_start_date) < observation_period_start_date |
-          dateAdd("day", start_day, cohort_start_date) > observation_period_end_date )
-    ) |>
-    dplyr::group_by(cohort_definition_id, id_window) |>
-    dplyr::count() |>
-    dplyr::collect()
+    ParallelLogger::logInfo("Running statistical test for continuous covariates")
 
-  windowCounts <-  windowCounts |>
-    dplyr::mutate(cohort_definition_id = dplyr::case_when(
-      cohort_definition_id == cohortIdCases ~ "n_cases",
-      cohort_definition_id == cohortIdControls ~ "n_controls",
-      TRUE ~ as.character(NA)
-    )) |>
-    tidyr::spread(key = cohort_definition_id, n)|>
-    dplyr::rename(timeId = id_window)
-
-
-  ParallelLogger::logInfo("Calculating time counts")
-
-  timeCodeWASResults <-
-    dplyr::full_join(
-      covariateCasesControls$covariates |> tibble::as_tibble() |>
-        dplyr::filter(cohortDefinitionId == cohortIdCases) |>
-        dplyr::select(covariateId, timeId, n_cases_yes=sumValue),
-      covariateCasesControls$covariates |> tibble::as_tibble() |>
-        dplyr::filter(cohortDefinitionId == cohortIdControls) |>
-        dplyr::select( covariateId, timeId, n_controls_yes=sumValue),
+    timeCovariateCountsContinuous <- dplyr::full_join(
+      covariateCasesControls$covariatesContinuous |>
+        dplyr::filter(cohortDefinitionId == {{cohortIdCases}})  |>
+        dplyr::select(covariateId, timeId, nCasesYesWithValue = countValue, meanValueCases = averageValue, sdValueCases = standardDeviation),
+      covariateCasesControls$covariatesContinuous |>
+        dplyr::filter(cohortDefinitionId == {{cohortIdControls}})  |>
+        dplyr::select(covariateId, timeId, nControlsYesWithValue = countValue, meanValueControls = averageValue, sdValueControls = standardDeviation),
       by = c("covariateId", "timeId")
-    )  |>
-    dplyr::left_join(
-      windowCounts,
-      by="timeId"
-    ) |>
-    dplyr::transmute(
-      covariateId = covariateId,
-      timeId = timeId,
-      nCasesYes = dplyr::if_else(is.na(n_cases_yes), 0, n_cases_yes),
-      nControlsYes = dplyr::if_else(is.na(n_controls_yes), 0, n_controls_yes),
-      nCases = dplyr::if_else(is.na(n_cases), 0, n_cases),
-      nControls = dplyr::if_else(is.na(n_controls), 0, n_controls),
-      # force n_cases to be same or lower than n_cases_yes, same for controls
-      nCases = dplyr::if_else(nCases < nCasesYes, nCasesYes, nCases),
-      nControls = dplyr::if_else(nControls < nControlsYes, nControlsYes, nControls),
-      #
-      nCasesNo = nCases - nCasesYes,
-      nControlsNo = nControls - nControlsYes
-    )
+    )|>
+      dplyr::collect() |>
+      dplyr::left_join(
+        windowCounts,
+        by="timeId"
+      ) |>
+      dplyr::mutate(
+        nCasesYesWithValue = ifelse(is.na(nCasesYesWithValue), 0, nCasesYesWithValue),
+        nControlsYesWithValue = ifelse(is.na(nControlsYesWithValue), 0, nControlsYesWithValue),
+        meanValueCases = ifelse(is.na(meanValueCases), 0, meanValueCases),
+        nCasesInWindow = dplyr::if_else(is.na(nCasesInWindow), 0, nCasesInWindow),
+        nControlsInWindow = dplyr::if_else(is.na(nControlsInWindow), 0, nControlsInWindow),
+        # force nCasesInWindow to be same or lower than nCasesYes, same for controls
+        nCasesInWindow = dplyr::if_else(nCasesInWindow < nCasesYesWithValue, nCasesYesWithValue, nCasesInWindow),
+        nControlsInWindow = dplyr::if_else(nControlsInWindow < nControlsYesWithValue, nControlsYesWithValue, nControlsInWindow)
+      )
 
-  ParallelLogger::logInfo("Adding Fisher test output")
-  timeCodeWASResults <- .addTestToCodeCounts(timeCodeWASResults)
+    timeCovariateCountsContinuous <- .addTestTotibbleWithValueSummary(timeCovariateCountsContinuous) |>
+      dplyr::transmute(
+        covariateId = covariateId,
+        timeId = timeId,
+        covariateType = "continuous",
+        nCasesYes = nCasesYesWithValue,
+        nCasesInWindow = nCasesInWindow,
+        meanCases = meanValueCases,
+        sdCases = sdValueCases,
+        nControlsYes = nControlsYesWithValue,
+        nControlsInWindow = nControlsInWindow,
+        meanControls = meanValueControls,
+        sdControls = sdValueControls,
+        pValue = continuousPValue,
+        oddsRatio = dplyr::if_else(is.infinite(continuousOddsRatio), .Machine$double.xmax, continuousOddsRatio),
+        modelType = continuousTest,
+        runNotes = ""
+      )
+  }
+
+  timeCodeWASResults <- dplyr::bind_rows(timeCovariateCountsBinary, timeCovariateCountsContinuous)
 
   analysisRef  <-  covariateCasesControls$analysisRef  |> dplyr::collect()
 
   covariateRef  <- covariateCasesControls$covariateRef  |> dplyr::collect()
 
   ParallelLogger::logInfo("CohortDiagnostics_runTimeCodeWAS completed")
-
-
 
   analysisDuration <- Sys.time() - startAnalysisTime
 
@@ -192,14 +263,14 @@ execute_timeCodeWAS <- function(
   # Cohort data ------------------------------------------------
   cohortsInfo  <- cohortDefinitionSet |>
     dplyr::mutate(
-     cohortId = as.integer(cohortId),
-     cohortName = as.character(cohortName),
-     shortName = as.character(shortName),
-     sql = as.character(sql),
-     json = as.character(json),
-     subsetParent = as.integer(subsetParent),
-     isSubset = as.logical(isSubset),
-     subsetDefinitionId = as.integer(subsetDefinitionId)
+      cohortId = as.integer(cohortId),
+      cohortName = as.character(cohortName),
+      shortName = as.character(shortName),
+      sql = as.character(sql),
+      json = as.character(json),
+      subsetParent = as.integer(subsetParent),
+      isSubset = as.logical(isSubset),
+      subsetDefinitionId = as.integer(subsetDefinitionId)
     ) |>
     dplyr::left_join(
       cohortTableHandler$getCohortCounts() |>
@@ -225,14 +296,20 @@ execute_timeCodeWAS <- function(
     dplyr::transmute(
       databaseId = as.character({{databaseId}}),
       covariateId = as.double(covariateId),
-      timeId = as.double(timeId),
+      timeId = as.integer(timeId),
+      covariateType = as.character(covariateType),
       nCasesYes = as.integer(nCasesYes),
+      nCasesInWindow = as.integer(nCasesInWindow),
+      meanCases = as.double(meanCases),
+      sdCases = as.double(sdCases),
       nControlsYes = as.integer(nControlsYes),
-      nCasesNo = as.integer(nCasesNo),
-      nControlsNo = as.integer(nControlsNo),
-      pValue = as.double(countsPValue),
-      oddsRatio = as.double(countsOddsRatio),
-      modelType = as.character(countsTest)
+      nControlsInWindow = as.integer(nControlsInWindow),
+      meanControls = as.double(meanControls),
+      sdControls = as.double(sdControls),
+      pValue = as.double(pValue),
+      oddsRatio = as.double(oddsRatio),
+      modelType = as.character(modelType),
+      runNotes = as.character(runNotes)
     )
   duckdb::dbWriteTable(connection, "timeCodeWASResults", timeCodeWASResults, overwrite = TRUE)
 
@@ -351,8 +428,8 @@ checkResults_timeCodeWAS <- function(pathToResultsDatabase) {
       type = c("INTEGER", "VARCHAR", "VARCHAR", "VARCHAR", "VARCHAR", "INTEGER", "BOOLEAN", "INTEGER", "INTEGER", "INTEGER", "VARCHAR")
     ),
     timeCodeWASResults = tibble::tibble(
-      name = c("databaseId", "covariateId", "timeId", "nCasesYes", "nControlsYes", "nCasesNo", "nControlsNo", "pValue", "oddsRatio", "modelType"),
-      type = c("VARCHAR", "DOUBLE", "DOUBLE", "INTEGER", "INTEGER", "INTEGER", "INTEGER", "DOUBLE", "DOUBLE", "VARCHAR")
+      name = c("databaseId", "covariateId", "timeId", "covariateType", "nCasesYes", "nCasesInWindow", "meanCases", "sdCases", "nControlsYes", "nControlsInWindow", "meanControls", "sdControls", "pValue", "oddsRatio", "modelType", "runNotes"),
+      type = c("VARCHAR", "DOUBLE", "INTEGER", "VARCHAR", "INTEGER", "INTEGER", "DOUBLE", "DOUBLE", "INTEGER", "INTEGER", "DOUBLE", "DOUBLE", "DOUBLE", "DOUBLE", "VARCHAR", "VARCHAR")
     ),
     analysisRef = tibble::tibble(
       name = c("analysisId", "analysisName", "domainId", "isBinary", "missingMeansZero"),

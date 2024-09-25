@@ -1,11 +1,11 @@
 #
 # SELECT DATABASE and CO2 CONFIGURATION
 #
-testingDatabase <- "EunomiaGiBleed"
+testingDatabase <- "EunomiaFinnGen"
 testingCO2AnalysisModulesConfig <- "AtlasDemo"
 
 # check correct settings
-possibleDatabases <- c("EunomiaGiBleed", "EunomiaMIMIC", "AtlasDevelopment")
+possibleDatabases <- c("EunomiaGiBleed", "EunomiaMIMIC", "EunomiaFinnGen", "AtlasDevelopment")
 if( !(testingDatabase %in% possibleDatabases) ){
   message("Please select a valid database from: ", paste(possibleDatabases, collapse = ", "))
   stop()
@@ -46,6 +46,49 @@ if (testingDatabase %in% c("EunomiaGiBleed", "EunomiaMIMIC") ) {
   test_cohortTableHandlerConfig  <- test_databaseConfig$cohortTableHandler
 }
 
+#
+# FinnGen Eunomia database
+#
+if (testingDatabase %in% c("EunomiaFinnGen") ) {
+
+  if( Sys.getenv("EUNOMIA_DATA_FOLDER") == "" ){
+    message("EUNOMIA_DATA_FOLDER not set. Please set this environment variable to the path of the Eunomia data folder.")
+    stop()
+  }
+
+  urlToFinnGenEunomiaZip <- "https://raw.githubusercontent.com/FINNGEN/EunomiaDatasets/main/datasets/FinnGenR12/FinnGenR12_v5.4.zip"
+  eunomiaDataFolder <- Sys.getenv("EUNOMIA_DATA_FOLDER")
+
+  # Download the database if it doesn't exist
+  if (!file.exists(file.path(eunomiaDataFolder, "FinnGenR12_v5.4.sqlite"))){
+
+    result <- utils::download.file(
+      url = urlToFinnGenEunomiaZip,
+      destfile = file.path(eunomiaDataFolder, "FinnGenR12_v5.4.zip"),
+      mode = "wb"
+    )
+
+    Eunomia::extractLoadData(
+      from = file.path(eunomiaDataFolder, "FinnGenR12_v5.4.zip"),
+      to = file.path(eunomiaDataFolder, "FinnGenR12_v5.4.sqlite"),
+      cdmVersion = '5.4'
+    )
+  }
+
+  # copy to a temp folder
+  file.copy(
+    from = file.path(eunomiaDataFolder, "FinnGenR12_v5.4.sqlite"),
+    to = file.path(tempdir(), "FinnGenR12_v5.4.sqlite")
+  )
+
+  test_databaseConfig <- readAndParseYalm(
+    pathToYalmFile = testthat::test_path("config", "eunomia_cohortTableHandlerConfig.yml"),
+    eunomiaDataSetName =  "FinnGenR12",
+    pathToEunomiaSqlite = file.path(tempdir(), "FinnGenR12_v5.4.sqlite")
+  )
+
+  test_cohortTableHandlerConfig  <- test_databaseConfig$cohortTableHandler
+}
 
 #
 # AtlasDevelopmet Database

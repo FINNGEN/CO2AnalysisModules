@@ -13,26 +13,29 @@
 mod_resultsVisualisation_CohortsDemographics_ui <- function(id) {
   ns <- shiny::NS(id)
 
-  shiny::tagList(
-    shiny::tags$h4("Filters"),
-    shiny::uiOutput(ns("CDPlot_ui")),
-    shiny::tags$h4("Data"),
-    shiny::tabsetPanel(
-      id = ns("tabset"),
-      shiny::tabPanel(
-        "Plot",
-        shiny::plotOutput(ns("demographicsPlot"), height = "600px"),
-        shiny::div(
-          style = "margin-top: 10px; margin-bottom: 10px;",
-          shiny::downloadButton(ns("downloadPlotButton"), "Download")
-        )
-      ),
-      shiny::tabPanel(
-        "Table",
-        reactable::reactableOutput(ns("demographicsData")),
-        shiny::div(
-          style = "margin-top: 10px; margin-bottom: 10px;",
-          shiny::downloadButton(ns("downloadDataActionButton"), "Download")
+  shiny::fluidPage(
+    shiny::tags$head(HTML("<title>Cohort Demographics</title>")),
+    shiny::tagList(
+      shiny::tags$h4("Filters"),
+      shiny::uiOutput(ns("CDPlot_ui")),
+      shiny::tags$h4("Data"),
+      shiny::tabsetPanel(
+        id = ns("tabset"),
+        shiny::tabPanel(
+          "Plot",
+          shiny::plotOutput(ns("demographicsPlot"), height = "600px"),
+          shiny::div(
+            style = "margin-top: 10px; margin-bottom: 10px;",
+            shiny::downloadButton(ns("downloadPlotButton"), "Download")
+          )
+        ),
+        shiny::tabPanel(
+          "Table",
+          reactable::reactableOutput(ns("demographicsData")),
+          shiny::div(
+            style = "margin-top: 10px; margin-bottom: 10px;",
+            shiny::downloadButton(ns("downloadDataActionButton"), "Download")
+          )
         )
       )
     )
@@ -72,7 +75,7 @@ mod_resultsVisualisation_CohortsDemographics_server <- function(id, analysisResu
           dplyr::collect(),
         analysisResults |> dplyr::tbl('cohortsInfo') |>
           dplyr::collect() |>
-          dplyr::select(cohortId, cohortName)
+          dplyr::select(cohortId, shortName)
         , by = "cohortId")
     })
 
@@ -86,12 +89,12 @@ mod_resultsVisualisation_CohortsDemographics_server <- function(id, analysisResu
       shiny::req(cohortDemographicsData())
       shiny::req(input$stratifyBy)
       # shiny::req(input$databaseId)
-      shiny::req(input$cohortName)
+      shiny::req(input$shortName)
       shiny::req(input$gender)
       shiny::req(input$referenceYear)
 
-      # add cohortName to grouping_vars
-      grouping_vars <- c(input$stratifyBy, "cohortName")
+      # add shortName to grouping_vars
+      grouping_vars <- c(input$stratifyBy, "shortName")
 
       cohortDemographicsData() |>
         dplyr::mutate(
@@ -100,7 +103,7 @@ mod_resultsVisualisation_CohortsDemographics_server <- function(id, analysisResu
         ) |>
         # filters
         # dplyr::filter(databaseId %in% input$databaseId) |>
-        dplyr::filter(cohortName %in% input$cohortName) |>
+        dplyr::filter(shortName %in% input$shortName) |>
         dplyr::filter(gender %in% input$gender) |>
         dplyr::filter(referenceYear == input$referenceYear) |>
         dplyr::group_by(across(grouping_vars)) |>
@@ -117,21 +120,16 @@ mod_resultsVisualisation_CohortsDemographics_server <- function(id, analysisResu
       cdd <- cohortDemographicsData()
 
       cohorts_in_database <- cdd |>
-        dplyr::distinct(cohortName) |>
-        dplyr::pull(cohortName)
+        dplyr::distinct(shortName) |>
+        dplyr::pull(shortName)
 
 
       shiny::fluidPage(
         column(
           3,
           shiny::tagList(
-            # shinyWidgets::pickerInput(
-            #   ns("databaseId"), "Select database",
-            #   choices = unique(cdd$databaseId), unique(cdd$databaseId),
-            #   selected = dplyr::first(unique(cdd$databaseId)), multiple = FALSE
-            # ),
             shinyWidgets::pickerInput(
-              ns("cohortName"), "Select cohorts", choices = cohorts_in_database, selected = cohorts_in_database, multiple = TRUE),
+              ns("shortName"), "Select cohorts", choices = cohorts_in_database, selected = cohorts_in_database, multiple = TRUE),
             shinyWidgets::pickerInput(
               ns("referenceYear"), "Show patient counts for", choices = unique(cdd$referenceYear), selected = "cohort_start_date", multiple = FALSE),
           ),
@@ -210,37 +208,37 @@ mod_resultsVisualisation_CohortsDemographics_server <- function(id, analysisResu
       if(identical(c("ageGroup", "gender", "calendarYear"), input$stratifyBy)){
         gg_plot <- build_plot(
           x = "calendarYear", y = "count", fill = "gender",
-          rows = "cohortName", cols = "ageGroup",
+          rows = "shortName", cols = "ageGroup",
           title = "Cohort Demographics", x_label = "Calendar time by age group", y_label = "Count")
       } else if(identical(c("ageGroup", "gender"), input$stratifyBy)) {
         gg_plot <- build_plot(
           x = "ageGroup", y = "count", fill = "gender",
-          rows = "cohortName", cols = ".",
+          rows = "shortName", cols = ".",
           title = "Cohort Demographics", x_label = "Age group", y_label = "Count")
       } else if(identical(c("ageGroup", "calendarYear"), input$stratifyBy)) {
         gg_plot <- build_plot(
           x = "calendarYear", y = "count", fill = "",
-          rows = "cohortName", cols = "ageGroup",
+          rows = "shortName", cols = "ageGroup",
           title = "Cohort Demographics", x_label = "Calendar time by age group", y_label = "Count")
       } else if(identical(c("gender", "calendarYear"), input$stratifyBy)) {
         gg_plot <- build_plot(
           x = "calendarYear", y = "count", fill = "gender",
-          rows = "cohortName", cols = "gender",
+          rows = "shortName", cols = "gender",
           title = "Cohort Demographics", x_label = "Calendar time by gender", y_label = "Count")
       } else if(identical(c("ageGroup"), input$stratifyBy)) {
         gg_plot <- build_plot(
           x = "ageGroup", y = "count", fill = "",
-          rows = "cohortName", cols = ".",
+          rows = "shortName", cols = ".",
           title = "Cohort Demographics", x_label = "Age group", y_label = "Count")
       } else if(identical(c("gender"), input$stratifyBy)) {
         gg_plot <- build_plot(
           x = "gender", y = "count", fill = "gender",
-          rows = "cohortName", cols = ".",
+          rows = "shortName", cols = ".",
           title = "Cohort Demographics", x_label = "Gender", y_label = "Count")
       } else if(identical(c("calendarYear"), input$stratifyBy)) {
         gg_plot <- build_plot(
           x = "calendarYear", y = "count", fill = "",
-          rows = "cohortName", cols = ".",
+          rows = "shortName", cols = ".",
           title = "Cohort Demographics", x_label = "Calendar time", y_label = "Count")
       } else {
         return(NULL)
@@ -290,12 +288,9 @@ mod_resultsVisualisation_CohortsDemographics_server <- function(id, analysisResu
                              antialias = "default",
                              fallback_resolution = 300,
         )
-
         print(last_plot)
-
         grDevices::dev.off()
       },
-
       contentType = "application/pdf"
     )
 

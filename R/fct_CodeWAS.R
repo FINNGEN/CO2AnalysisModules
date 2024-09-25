@@ -167,8 +167,6 @@ execute_CodeWAS <- function(
           sdControls = sqrt(meanControls * (1 - meanControls)),
           pValue = countsPValue,
           oddsRatio = dplyr::if_else(is.infinite(countsOddsRatio), .Machine$double.xmax, countsOddsRatio),
-          beta = NA_real_,
-          standard_error = NA_real_,
           modelType = countsTest,
           runNotes =  ''
         )
@@ -207,9 +205,7 @@ execute_CodeWAS <- function(
           meanControls = meanValueControls,
           sdControls = sdValueControls,
           pValue = continuousPValue,
-          oddsRatio = NA_real_,
-          beta = NA_real_,
-          standard_error = continuousStandardError,
+          oddsRatio = dplyr::if_else(is.infinite(continuousOddsRatio), .Machine$double.xmax, continuousOddsRatio),
           modelType = continuousTest,
           runNotes = ""
         )
@@ -365,7 +361,7 @@ execute_CodeWAS <- function(
           })
 
           #If the models did not converge or error, report NA values instead.
-          or=NA; beta=NA; se=NA; p=NA; note=""
+          or=NA; p=NA; note=""
           if ( is.null(model) ){
             note = error
           } else {
@@ -373,8 +369,6 @@ execute_CodeWAS <- function(
             if(model$convergence) {
               gen_list=grep(predictors,row.names(modsum$coefficients))
               or=exp(modsum$coefficients[gen_list,1])
-              beta=modsum$coefficients[gen_list,1]
-              se=modsum$coefficients[gen_list,2]
               p=modsum$coefficients[gen_list,4]
             } else {
               note=paste(note,"[Error: The model did not converge]")
@@ -406,8 +400,6 @@ execute_CodeWAS <- function(
             sdControls = sd(data[[outcome]][data$caseControl == FALSE], na.rm = TRUE),
             pValue = p,
             oddsRatio = or,
-            beta = beta,
-            standard_error = se,
             modelType = modelType,
             runNotes = note
           ))
@@ -503,8 +495,6 @@ execute_CodeWAS <- function(
       sdControls = as.double(sdControls),
       pValue = as.double(pValue),
       oddsRatio = as.double(oddsRatio),
-      beta = as.double(beta),
-      standardError = as.double(standard_error),
       modelType = as.character(modelType),
       runNotes = as.character(runNotes)
     )
@@ -641,8 +631,8 @@ checkResults_CodeWAS <- function(pathToResultsDatabase) {
       type = c("INTEGER", "VARCHAR", "VARCHAR", "VARCHAR", "VARCHAR", "INTEGER", "BOOLEAN", "INTEGER", "INTEGER", "INTEGER", "VARCHAR")
     ),
     codewasResults = tibble::tibble(
-      name = c("databaseId", "covariateId", "covariateType", "nCasesYes", "meanCases", "sdCases", "nControlsYes", "meanControls", "sdControls", "pValue", "oddsRatio", "beta", "standardError", "modelType", "runNotes"),
-      type = c("VARCHAR", "DOUBLE", "VARCHAR", "INTEGER", "DOUBLE", "DOUBLE", "INTEGER", "DOUBLE", "DOUBLE", "DOUBLE", "DOUBLE", "DOUBLE", "DOUBLE", "VARCHAR", "VARCHAR")
+      name = c("databaseId", "covariateId", "covariateType", "nCasesYes", "meanCases", "sdCases", "nControlsYes", "meanControls", "sdControls", "pValue", "oddsRatio", "modelType", "runNotes"),
+      type = c("VARCHAR", "DOUBLE", "VARCHAR", "INTEGER", "DOUBLE", "DOUBLE", "INTEGER", "DOUBLE", "DOUBLE", "DOUBLE", "DOUBLE", "VARCHAR", "VARCHAR")
     ),
     analysisRef = tibble::tibble(
       name = c("analysisId", "analysisName", "domainId", "isBinary", "missingMeansZero"),
