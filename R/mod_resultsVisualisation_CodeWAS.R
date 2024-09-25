@@ -234,8 +234,8 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
       shiny::req(input$p_value_threshold)
       shiny::req(input$or_range)
       shiny::req(input$n_cases)
-      shiny::req(input$allow_NA_OR)
-      shiny::req(input$allow_NA_p)
+      # shiny::req(input$allow_NA_OR)
+      # shiny::req(input$allow_NA_p)
 
       if(!is_valid_number(input$p_value_threshold)) {
         shinyFeedback::showFeedbackWarning(
@@ -257,9 +257,10 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
           )  |>
           dplyr::filter(pValue < as.numeric(input$p_value_threshold)) |>
           dplyr::filter(oddsRatio <= input$or_range[1] | oddsRatio >= input$or_range[2]) |>
-          dplyr::filter(nCasesYes >= input$n_cases) |>
-          dplyr::filter(!is.na(oddsRatio) | input$allow_NA_OR) |>
-          dplyr::filter(!is.na(pValue) | input$allow_NA_p)
+          dplyr::filter(nCasesYes >= input$n_cases)
+
+          # dplyr::filter(!is.na(oddsRatio) | input$allow_NA_OR) |>
+          # dplyr::filter(!is.na(pValue) | input$allow_NA_p)
       }
     })
 
