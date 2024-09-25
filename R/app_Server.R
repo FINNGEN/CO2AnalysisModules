@@ -85,10 +85,6 @@ app_server <- function(input, output, session) {
     if(analysisType == "timeCodeWAS"){
       mod_resultsVisualisation_server("timeCodeWAS", mod_resultsVisualisation_TimeCodeWAS_server, analysisResults)
     }
-    if(analysisType == "GWAS"){
-      mod_resultsVisualisation_server("GWAS", mod_resultsVisualisation_GWAS_server, analysisResults)
-    }
-
 
   })
 
