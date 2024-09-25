@@ -246,9 +246,6 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
           text = "Missing input: Please give a number (1e-5 is the default).")
       } else {
         shinyFeedback::hideFeedback("p_value_threshold")
-        cat("rows in full data: ", nrow(r$codeWASData), "\n")
-        cat("NA values in pValue: ", sum(is.na(r$codeWASData$pValue)), "\n")
-        cat("NA values in oddsRatio: ", sum(is.na(r$codeWASData$oddsRatio)), "\n")
         r$filteredCodeWASData <- r$codeWASData |>
           dplyr::filter(
             if (!is.null(input$database)) databaseId %in% input$database else FALSE,
@@ -261,7 +258,6 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
           dplyr::filter(nCasesYes >= input$n_cases) |>
           dplyr::filter(!is.na(oddsRatio) | input$allow_NA_OR) |>
           dplyr::filter(!is.na(pValue) | input$allow_NA_p)
-        cat("rows in filtered data: ", nrow(r$filteredCodeWASData), "\n")
       }
     })
 

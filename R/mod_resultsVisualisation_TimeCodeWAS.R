@@ -170,12 +170,6 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
           ), # column
           shiny::column(
             width = 2, align = "left",
-            shiny::div(style = "width: 100%; margin-top: 10px; margin-right: 20px;",
-                       shiny::checkboxInput(ns("filter_na"), "Filter out NA", value = TRUE),
-            ),
-          ), # column
-          shiny::column(
-            width = 2, align = "left",
             shiny::div(style = "width: 100%; margin-top: 20px; margin-right: 20px;",
                        shiny::checkboxInput(ns("allow_NA_OR"), "Allow NA in OR", value = FALSE),
             ),
@@ -219,14 +213,11 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
         #
         gg_data <- gg_data_saved |>
           dplyr::filter(domain %in% input$selected_domains) |>
-          # dplyr::filter(p_group_size %in% input$selected_p_groups) |>
           dplyr::filter(p < as.numeric(input$p_value_threshold)) |>
           dplyr::filter(OR <= input$or_range[1] | OR >= input$or_range[2]) |>
-          dplyr::filter(nCasesYes >= input$n_cases)
-
-        if(input$filter_na){
-          gg_data <- na.omit(gg_data)
-        }
+          dplyr::filter(nCasesYes >= input$n_cases) |>
+          dplyr::filter(!is.na(oddsRatio) | input$allow_NA_OR) |>
+          dplyr::filter(!is.na(pValue) | input$allow_NA_p)
 
         # update gg_data
         r$gg_data <- gg_data
