@@ -215,9 +215,10 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
           dplyr::filter(domain %in% input$selected_domains) |>
           dplyr::filter(p < as.numeric(input$p_value_threshold)) |>
           dplyr::filter(OR <= input$or_range[1] | OR >= input$or_range[2]) |>
-          dplyr::filter(nCasesYes >= input$n_cases) |>
-          dplyr::filter(!is.na(oddsRatio) | input$allow_NA_OR) |>
-          dplyr::filter(!is.na(pValue) | input$allow_NA_p)
+          dplyr::filter(nCasesYes >= input$n_cases)
+
+          # dplyr::filter(!is.na(oddsRatio) | input$allow_NA_OR) |>
+          # dplyr::filter(!is.na(pValue) | input$allow_NA_p)
 
         # update gg_data
         r$gg_data <- gg_data
