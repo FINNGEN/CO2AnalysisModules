@@ -27,7 +27,7 @@
 a list with:
 \itemize{
 \item continuousPValue: the p-value of the test
-\item continuousStandardError: the standard error of the test
+\item continuousOddsRatio: odds ration calculated as meanValueCases/meanValueControls
 \item continuousTest: the type of test performed
 }
 }

@@ -13,7 +13,7 @@
 input table with appended columns:
 \itemize{
 \item continuousPValue: the p-value of the test
-\item continuousStandardError: the standard error of the test
+\item continuousOddsRatio: the standard error of the test
 \item continuousTest: the type of test performed
 }
 }

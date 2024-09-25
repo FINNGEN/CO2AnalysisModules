@@ -110,7 +110,7 @@ execute_GWAS <- function(
 #'   \item{controlsFinngenids}{A vector of strings containing controls FinnGen IDs.}
 #'   \item{analysisType}{String containing analysis type (additive, recessive, or dominant).}
 #'   \item{phenotype}{String containing phenotype name.}
-#'   \item{description}{String containing descripition for the custom GWAS analysis.}
+#'   \item{description}{String containing description for the custom GWAS analysis.}
 #'
 #' }
 #'
