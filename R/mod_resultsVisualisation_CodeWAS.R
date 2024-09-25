@@ -234,6 +234,8 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
       shiny::req(input$p_value_threshold)
       shiny::req(input$or_range)
       shiny::req(input$n_cases)
+      shiny::req(input$allow_NA_OR)
+      shiny::req(input$allow_NA_p)
 
       if(!is_valid_number(input$p_value_threshold)) {
         shinyFeedback::showFeedbackWarning(
