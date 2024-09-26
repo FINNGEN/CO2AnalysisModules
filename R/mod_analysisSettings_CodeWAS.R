@@ -119,6 +119,7 @@ mod_analysisSettings_codeWAS_server <- function(id, r_connectionHandler) {
       shiny::req(r_connectionHandler$hasChangeCounter)
 
       cohortIdAndNames <- r_connectionHandler$cohortTableHandler$getCohortIdAndNames()
+      cohortIdAndNamesList <- list()
       if(nrow(cohortIdAndNames) != 0){
         cohortIdAndNamesList <- as.list(setNames(cohortIdAndNames$cohortId, paste(cohortIdAndNames$shortName, "("  , cohortIdAndNames$cohortName, ")")))
       }
@@ -138,6 +139,7 @@ mod_analysisSettings_codeWAS_server <- function(id, r_connectionHandler) {
       shiny::req(input$selectCaseCohort_pickerInput)
 
       cohortIdAndNames <- r_connectionHandler$cohortTableHandler$getCohortIdAndNames()
+      cohortIdAndNamesList <- list()
       if(nrow(cohortIdAndNames) != 0){
         cohortIdAndNamesList <- as.list(setNames(cohortIdAndNames$cohortId, paste(cohortIdAndNames$shortName, "("  , cohortIdAndNames$cohortName, ")")))
       }

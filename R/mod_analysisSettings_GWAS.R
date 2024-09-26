@@ -66,6 +66,7 @@ mod_analysisSettings_GWAS_server <- function(id, r_connectionHandler, r_workbenc
       shiny::req(r_connectionHandler$hasChangeCounter)
 
       cohortIdAndNames <- r_connectionHandler$cohortTableHandler$getCohortIdAndNames()
+      cohortIdAndNamesList <- list()
       if(nrow(cohortIdAndNames) != 0){
         cohortIdAndNamesList <- as.list(setNames(cohortIdAndNames$cohortId, paste(cohortIdAndNames$shortName, "("  , cohortIdAndNames$cohortName, ")")))
       }
@@ -86,6 +87,7 @@ mod_analysisSettings_GWAS_server <- function(id, r_connectionHandler, r_workbenc
       shiny::req(input$selectCaseCohort_pickerInput)
 
       cohortIdAndNames <- r_connectionHandler$cohortTableHandler$getCohortIdAndNames()
+      cohortIdAndNamesList <- list()
       if(nrow(cohortIdAndNames) != 0){
         cohortIdAndNamesList <- as.list(setNames(cohortIdAndNames$cohortId, paste(cohortIdAndNames$shortName, "("  , cohortIdAndNames$cohortName, ")")))
       }
