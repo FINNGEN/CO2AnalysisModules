@@ -126,95 +126,98 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
       req(r$codeWASData)
 
       shiny::tagList(
-      shiny::fluidRow(
-        shiny::column(
-          width = 2,
-          shinyWidgets::pickerInput(
-            ns("database"),
-            "Database",
-            choices = unique(r$codeWASData$databaseId),
-            selected = unique(r$codeWASData$databaseId),
-            multiple = FALSE,
-            options = list(`actions-box` = TRUE, `selected-text-format` = "count > 3", `count-selected-text` = "{0} databases selected")
-          )),
-        shiny::column(
-          width = 2,
-          shinyWidgets::pickerInput(
-            ns("domain"),
-            "Domain",
-            choices = unique(r$codeWASData$domainId),
-            selected = unique(r$codeWASData$domainId),
-            multiple = TRUE,
-            options = list(
-              `actions-box` = TRUE,
-              `selected-text-format` = "count > 3",
-              `count-selected-text` = "{0} domains selected"
-            )
-          )),
-        shiny::column(
-          width = 2,
-          shinyWidgets::pickerInput(
-            ns("analysis"),
-            "Analysis",
-            choices = unique(r$codeWASData$analysisName),
-            selected = unique(r$codeWASData$analysisName),
-            multiple = TRUE,
-            options = list(`actions-box` = TRUE, `selected-text-format` = "count > 3", `count-selected-text` = "{0} analyses selected")
-          )),
-        shiny::column(
-          width = 2,
-          shinyWidgets::pickerInput(
-            ns("model"),
-            "Model",
-            choices = unique(r$codeWASData$modelType),
-            selected = unique(r$codeWASData$modelType),
-            multiple = TRUE,
-            options = list(`actions-box` = TRUE, `selected-text-format` = "count > 3", `count-selected-text` = "{0} model types selected")
-          )),
-        # shiny::column(
-        #   width = 2,
-        #   shinyWidgets::pickerInput(
-        #     ns("pValue"),
-        #     "p",
-        #     choices = c('-log10(p) (0,5]', '-log10(p) (5,100]', '-log10(p) (100,Inf]'),
-        #     selected = c('-log10(p) (0,5]', '-log10(p) (5,100]', '-log10(p) (100,Inf]'),
-        #     multiple = TRUE,
-        #     options = list(`actions-box` = TRUE, `selected-text-format` = "count > 1", `count-selected-text` = "{0} classes selected")
-        #   )
-        # ) # column
-      ), # fluidRow
+        shiny::fluidRow(
+          shiny::column(
+            width = 2,
+            shinyWidgets::pickerInput(
+              ns("database"),
+              "Database",
+              choices = unique(r$codeWASData$databaseId),
+              selected = unique(r$codeWASData$databaseId),
+              multiple = FALSE,
+              options = list(`actions-box` = TRUE, `selected-text-format` = "count > 3", `count-selected-text` = "{0} databases selected")
+            )),
+          shiny::column(
+            width = 2,
+            shinyWidgets::pickerInput(
+              ns("domain"),
+              "Domain",
+              choices = unique(r$codeWASData$domainId),
+              selected = unique(r$codeWASData$domainId),
+              multiple = TRUE,
+              options = list(
+                `actions-box` = TRUE,
+                `selected-text-format` = "count > 3",
+                `count-selected-text` = "{0} domains selected"
+              )
+            )),
+          shiny::column(
+            width = 2,
+            shinyWidgets::pickerInput(
+              ns("analysis"),
+              "Analysis",
+              choices = unique(r$codeWASData$analysisName),
+              selected = unique(r$codeWASData$analysisName),
+              multiple = TRUE,
+              options = list(`actions-box` = TRUE, `selected-text-format` = "count > 3", `count-selected-text` = "{0} analyses selected")
+            )),
+          shiny::column(
+            width = 2,
+            shinyWidgets::pickerInput(
+              ns("model"),
+              "Model",
+              choices = unique(r$codeWASData$modelType),
+              selected = unique(r$codeWASData$modelType),
+              multiple = TRUE,
+              options = list(`actions-box` = TRUE, `selected-text-format` = "count > 3", `count-selected-text` = "{0} model types selected")
+            )),
+          # shiny::column(
+          #   width = 2,
+          #   shinyWidgets::pickerInput(
+          #     ns("pValue"),
+          #     "p",
+          #     choices = c('-log10(p) (0,5]', '-log10(p) (5,100]', '-log10(p) (100,Inf]'),
+          #     selected = c('-log10(p) (0,5]', '-log10(p) (5,100]', '-log10(p) (100,Inf]'),
+          #     multiple = TRUE,
+          #     options = list(`actions-box` = TRUE, `selected-text-format` = "count > 1", `count-selected-text` = "{0} classes selected")
+          #   )
+          # ) # column
+        ), # fluidRow
 
-      shiny::hr(style = "margin-top: 10px; margin-bottom: 5px;"),
-      shiny::fluidRow(
-        shiny::column(
-          2,
-          shiny::textInput(
-            inputId = ns("p_value_threshold"),
-            label =  "p-value threshold",
-            value = "1e-5",
-            width = "100%"
+        shiny::hr(style = "margin-top: 10px; margin-bottom: 5px;"),
+        shiny::fluidRow(
+          shiny::column(
+            2,
+            shiny::textInput(
+              inputId = ns("p_value_threshold"),
+              label =  "p-value threshold",
+              value = "1e-5",
+              width = "100%"
+            ),
+          ), # column
+          shinyWidgets::chooseSliderSkin("Flat"),
+          shiny::column(
+            width = 2, align = "left",
+            shiny::div(style = "height: 85px; width: 100%; margin-top: -15px;",
+                       shiny::sliderInput(ns("or_range"), "OR range filtered out", min = 0.0, max = 2, value = c(0.8,1.2), step = 0.1),
+            )
           ),
-        ), # column
-        shinyWidgets::chooseSliderSkin("Flat"),
-        shiny::column(
-          width = 2, align = "left",
-          shiny::div(style = "height: 85px; width: 100%; margin-top: -15px;",
-                     shiny::sliderInput(ns("or_range"), "OR range filtered out", min = 0.0, max = 2, value = c(0.8,1.2), step = 0.1),
-          )
-        ),
-        shiny::column(
-          width = 2, align = "left",
-          shiny::div(style = "height: 85px; width: 100%; margin-top: -15px; margin-right: 20px;",
-                     shiny::sliderInput(ns("n_cases"), "Minimum # of cases", min = 0, max = 1000, value = 0, step = 1),
-          ),
-        ), # column
-        shiny::column(
-          width = 2, align = "left",
-          shiny::div(style = "height: 85px; width: 100%; margin-top: 30px; margin-right: 20px;",
-                     shiny::checkboxInput(ns("filter_na"), "Filter out NA", value = TRUE),
-          ),
-        ) # column
-      ) # fluidRow
+          shiny::column(
+            width = 2, align = "left",
+            shiny::div(style = "height: 85px; width: 100%; margin-top: -15px; margin-right: 20px;",
+                       shiny::sliderInput(ns("n_cases"), "Minimum # of cases", min = 0, max = 1000, value = 0, step = 1),
+            ),
+          ), # column
+          shiny::column(
+            width = 2, align = "left",
+            shiny::div(style = "width: 100%; margin-top: 20px; margin-right: 20px;",
+                       shiny::checkboxInput(ns("allow_NA_OR"), "Allow NA in OR", value = FALSE),
+            ),
+            shiny::div(style = "width: 100%; margin-top: -10px; margin-right: 20px;",
+                       shiny::checkboxInput(ns("allow_NA_p"), "Allow NA in p", value = FALSE),
+            ),
+          ) # column
+        ) # fluidRow
       ) # tagList
     })
 
@@ -231,7 +234,8 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
       shiny::req(input$p_value_threshold)
       shiny::req(input$or_range)
       shiny::req(input$n_cases)
-      shiny::req(input$filter_na)
+      # shiny::req(input$allow_NA_OR)
+      # shiny::req(input$allow_NA_p)
 
       if(!is_valid_number(input$p_value_threshold)) {
         shinyFeedback::showFeedbackWarning(
@@ -253,9 +257,10 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
           )  |>
           dplyr::filter(pValue < as.numeric(input$p_value_threshold)) |>
           dplyr::filter(oddsRatio <= input$or_range[1] | oddsRatio >= input$or_range[2]) |>
-          dplyr::filter(nCasesYes >= input$n_cases) |>
-          dplyr::filter(!is.na(oddsRatio) | !input$filter_na) |>
-          dplyr::filter(!is.na(pValue) | !input$filter_na)
+          dplyr::filter(nCasesYes >= input$n_cases)
+
+          # dplyr::filter(!is.na(oddsRatio) | input$allow_NA_OR) |>
+          # dplyr::filter(!is.na(pValue) | input$allow_NA_p)
       }
     })
 
@@ -322,7 +327,7 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
           # 'covariateNameFull' = 'covariateNameFull'
         ),
         options = list(
-            order = list(list(10, 'asc'), list(9, 'desc')), # pValue, OR
+          order = list(list(10, 'asc'), list(9, 'desc')), # pValue, OR
           # rowCallback to show the full covariate name as a tooltip
           # rowCallback = htmlwidgets::JS(
           #   "function(row, data) {",
