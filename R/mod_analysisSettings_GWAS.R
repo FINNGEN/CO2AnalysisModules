@@ -262,7 +262,7 @@ mod_analysisSettings_GWAS_server <- function(id, r_connectionHandler, r_workbenc
   base_url <- "https://internal-api.app.finngen.fi/internal-api/"
 
   # get token from env variable
-  token <- readLines(Sys.getenv('SANDBOX_TOKEN'))
+  token <- Sys.getenv('SANDBOX_TOKEN')
 
   # refresh the token
   authorization <- paste("Bearer", token)
