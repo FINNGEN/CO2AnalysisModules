@@ -220,7 +220,7 @@ mod_analysisSettings_GWAS_server <- function(id, r_connectionHandler, r_workbenc
       # get connection sandbox API configured for running GWAS
       connectionSandboxAPI <- NULL
       tryCatch({
-        connectionSandboxAPI <- configGWAS()
+        connectionSandboxAPI <- .configGWAS()
       }, error=function(e) {
         ParallelLogger::logError("[configGWAS]: ", e$message)
       }, warning=function(w) {
