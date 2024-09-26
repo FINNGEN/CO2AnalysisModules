@@ -329,21 +329,21 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
           OR, p, beta, notes) |>
         DT::datatable(
           colnames = c(
-            'Time ID', # code
-            'Covariate Name', # name
-            'Analysis Name', # analysisName
-            'Domain', # domain
-            'Type', # upIn
-            'N case', # nCasesYes
-            'N ctrl', # nControlsYes
-            'Mean case', # meanCases
-            'Mean ctrl', # meanControls
-            'SD case', # sdCases
-            'SD ctrl', # sdControls
-            'OR', # OR
-            'p', # p
-            'Beta', # beta
-            'Notes' # notes
+            'Time ID' = 'GROUP',
+            'Covariate Name' = 'name',
+            'Analysis Name' = 'analysisName',
+            'Domain' = 'domain',
+            'Type' = 'upIn',
+            'N case' = 'nCasesYes',
+            'N ctrl' = 'nControlsYes',
+            'Mean case' = 'meanCases',
+            'Mean ctrl' = 'meanControls',
+            'SD case' = 'sdCases',
+            'SD ctrl' = 'sdControls',
+            'OR' = 'OR',
+            'p' = 'p',
+            'Beta' = 'beta',
+            'Notes' = 'notes'
           ),
           options = list(
             order = list(list(12, 'asc'), list(11, 'desc')), # order by p-value, then OR
