@@ -217,6 +217,16 @@ mod_analysisSettings_GWAS_server <- function(id, r_connectionHandler, r_workbenc
       databaseId <- cohortTableHandler$databaseId
       release <- paste0("Regenie", gsub("[A-Za-z]", "", cohortTableHandler$databaseId))
 
+      # get connection sandbox API configured for running GWAS
+      connectionSandboxAPI <- NULL
+      tryCatch({
+        connectionSandboxAPI <- configGWAS()
+      }, error=function(e) {
+        ParallelLogger::logError("[configGWAS]: ", e$message)
+      }, warning=function(w) {
+        ParallelLogger::logWarn("[configGWAS]: ", w$message)
+      })
+
       analysisSettings <- list(
         casesCohort = input$selectCaseCohort_pickerInput |> as.integer(),
         controlsCohort = input$selectControlCohort_pickerInput |> as.integer(),
@@ -224,7 +234,7 @@ mod_analysisSettings_GWAS_server <- function(id, r_connectionHandler, r_workbenc
         description = input$description,
         analysisType = input$selectAnalysisType_pickerInput_gwas,
         release = release,
-        connectionSandboxAPI = r_connectionHandler$connection_sandboxAPI
+        connectionSandboxAPI = connectionSandboxAPI
       )
 
       return(analysisSettings)
@@ -241,3 +251,27 @@ mod_analysisSettings_GWAS_server <- function(id, r_connectionHandler, r_workbenc
 .format_str <- function(x){
   toupper(stringr::str_replace_all(x, "[[:punct:]]|[^[:alnum:]]|[:blank:]", ""))
 }
+
+
+.configGWAS <- function() {
+
+  # deactivate https request to work with Atlas in https
+  httr::set_config(httr::config(ssl_verifypeer = FALSE))
+
+  url <- "https://internal-api.app.finngen.fi/internal-api/"
+
+  path <- Sys.getenv('SANDBOX_TOKEN')
+
+  ParallelLogger::logInfo("[configGWAS]: sandbox token file:", path)
+
+  sandboxToken <- system(paste("cat", path), intern = TRUE)
+  connectionSandboxAPI <- FinnGenUtilsR::createSandboxAPIConnection(
+    url, sandboxToken
+  )
+
+  ParallelLogger::logInfo("[configGWAS]: user email:",
+                          connectionSandboxAPI$notification_email)
+
+  return(connectionSandboxAPI)
+}
+
