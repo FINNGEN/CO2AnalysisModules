@@ -83,7 +83,9 @@ mod_analysisSettings_cohortDemographics_server <- function(id, r_connectionHandl
       shiny::req(r_connectionHandler$hasChangeCounter)
 
       cohortIdAndNames <- r_connectionHandler$cohortTableHandler$getCohortIdAndNames()
-      cohortIdAndNamesList <- as.list(setNames(cohortIdAndNames$cohortId, cohortIdAndNames$cohortName))
+      if(nrow(cohortIdAndNames) != 0){
+        cohortIdAndNamesList <- as.list(setNames(cohortIdAndNames$cohortId, paste(cohortIdAndNames$shortName, "("  , cohortIdAndNames$cohortName, ")")))
+      }
 
       shinyWidgets::updatePickerInput(
         inputId = "selectCohorts_pickerInput",
