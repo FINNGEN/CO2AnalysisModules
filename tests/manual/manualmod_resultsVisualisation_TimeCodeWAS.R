@@ -15,7 +15,14 @@ on.exit({unlink(exportFolder, recursive = TRUE)})
 analysisSettings <- list(
   cohortIdCases = 1,
   cohortIdControls = 2,
-  analysisIds = c(101, 102, 141, 204, 601, 641, 301, 341, 404, 906, 701, 741, 801, 841, 501, 541),
+  analysisIds = c(
+    101, 102, 141, 204,
+    601, 641,
+    301, 341, 404,
+    701, 702, 703, 741,
+    801, 841,
+    501, 541,
+    910, 911 ),
   temporalStartDays = c(   -365*2, -365*1, 0,     1,   365+1 ),
   temporalEndDays =   c( -365*1-1,     -1, 0, 365*1,   365*2)
 )
