@@ -260,12 +260,9 @@ mod_analysisSettings_GWAS_server <- function(id, r_connectionHandler, r_workbenc
 
   url <- "https://internal-api.app.finngen.fi/internal-api/"
 
-  path <- Sys.getenv('SANDBOX_TOKEN')
+  sandboxToken <- Sys.getenv('SANDBOX_TOKEN')
 
-  ParallelLogger::logInfo("[configGWAS]: sandbox token file:", path)
-
-  sandboxToken <- system(paste("cat", path), intern = TRUE)
-  connectionSandboxAPI <- FinnGenUtilsR::createSandboxAPIConnection(
+    connectionSandboxAPI <- FinnGenUtilsR::createSandboxAPIConnection(
     url, sandboxToken
   )
 
