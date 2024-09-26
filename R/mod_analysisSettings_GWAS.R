@@ -272,10 +272,9 @@ mod_analysisSettings_GWAS_server <- function(id, r_connectionHandler, r_workbenc
   ParallelLogger::logInfo("[configGWAS] Refreshing the token for submitting GWAS run")
 
   # fetch refreshed token
-  e <- tryCatch({
+  tryCatch({
     res <- httr::GET(url, config = headers)
-  },
-  error <- function(e) {
+  }, error = function(e){
     ParallelLogger::logError("[configGWAS] error when refreshing the token", e$message)
   })
 
