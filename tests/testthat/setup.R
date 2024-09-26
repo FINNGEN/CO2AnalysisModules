@@ -71,7 +71,8 @@ if (testingDatabase %in% c("EunomiaFinnGen") ) {
     Eunomia::extractLoadData(
       from = file.path(eunomiaDataFolder, "FinnGenR12_v5.4.zip"),
       to = file.path(eunomiaDataFolder, "FinnGenR12_v5.4.sqlite"),
-      cdmVersion = '5.4'
+      cdmVersion = '5.4',
+      verbose = TRUE
     )
   }
 
