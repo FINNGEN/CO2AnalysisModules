@@ -346,7 +346,15 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
             'Notes' = 'notes'
           ),
           options = list(
-            order = list(list(12, 'asc'), list(11, 'desc')) #
+            order = list(list(12, 'asc'), list(11, 'desc')), # order by p-value, then OR
+            columnDefs = list(
+              list(width = '70px', targets = c(2, 15)), # name, notes
+              list(width = '80px', targets = c(3)), # analysisName
+              list(width = '80px', targets = c(4)), # domain
+              list(width = '40px', targets = c(5)), # upIn
+              list(width = '40px', targets = c(1,6,7,8, 9, 10,11)), # GROUP, nCasesYes, nControlsYes, meanCases, meanControls, sdCases, sdControls
+              list(width = '50px', targets = c(12, 13)) # pValue, OR
+            )
           ),
           escape = FALSE,
           selection = 'none',
