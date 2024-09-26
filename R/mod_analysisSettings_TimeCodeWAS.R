@@ -36,8 +36,15 @@ mod_analysisSettings_timeCodeWAS_ui <- function(id) {
     mod_fct_covariateSelector_ui(
       inputId = ns("features_pickerInput"),
       label = "Select features to compare between cases and controls:",
-      analysisIdsToShow = c(101, 102, 141, 204, 601, 641, 301, 341, 404, 906, 701, 741, 801, 841, 501, 541),
-      analysisIdsSelected = c(101, 102, 204, 601, 301, 404, 701, 801, 501 )
+      analysisIdsToShow = c(
+        101, 102, 141, 204,
+        601, 641,
+        301, 341, 404, 906,
+        701, 702, 703, 741, 908,
+        801, 841, 909,
+        501, 541, 907,
+        910, 911 ),
+      analysisIdsSelected = c(141, 641, 341, 404, 701, 702, 841, 541)
     ),
     shiny::tags$h5("Minimum cell count:"),
     shiny::numericInput(

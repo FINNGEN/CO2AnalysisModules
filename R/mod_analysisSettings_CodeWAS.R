@@ -36,8 +36,16 @@ mod_analysisSettings_codeWAS_ui <- function(id) {
     mod_fct_covariateSelector_ui(
       inputId = ns("features_pickerInput"),
       label = "Select features to compare between cases and controls:",
-      analysisIdsToShow = c(101, 102, 141, 204, 1, 2, 3, 6, 8, 9, 10, 41, 601, 641, 301, 341, 404, 906, 701, 702, 703, 741, 908, 801, 841, 909,501, 541, 907, 910   ),
-      analysisIdsSelected = c(141, 1, 2, 8, 10, 41, 641, 341, 404, 741, 841, 541 )
+      analysisIdsToShow = c(
+        101, 102, 141, 204,
+        1, 2, 3, 6, 8, 9, 10, 41,
+        601, 641,
+        301, 341, 404, 906,
+        701, 702, 703, 741, 908,
+        801, 841, 909,
+        501, 541, 907,
+        910, 911 ),
+      analysisIdsSelected = c(141, 1, 2, 8, 10, 41, 641, 341, 404, 701, 702, 841, 541 )
     ),
     shinyWidgets::radioGroupButtons(
       inputId = ns("statistics_type_option"),
