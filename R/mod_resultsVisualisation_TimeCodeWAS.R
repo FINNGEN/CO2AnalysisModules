@@ -170,11 +170,8 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
           ), # column
           shiny::column(
             width = 2, align = "left",
-            shiny::div(style = "width: 100%; margin-top: 20px; margin-right: 20px;",
-                       shiny::checkboxInput(ns("allow_NA_OR"), "Allow NA in OR", value = FALSE),
-            ),
-            shiny::div(style = "width: 100%; margin-top: -10px; margin-right: 20px;",
-                       shiny::checkboxInput(ns("allow_NA_p"), "Allow NA in p", value = FALSE),
+            shiny::div(style = "width: 100%; margin-top: 30px; margin-right: 20px;",
+                       shiny::checkboxInput(ns("na_anywhere"), "Allow NA", value = FALSE),
             ),
           ) # column
         )
@@ -193,6 +190,7 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
       shiny::req(input$selected_domains)
       shiny::req(input$or_range)
       shiny::req(input$n_cases)
+      shiny::isTruthy(input$na_anywhere)
 
       if(!is_valid_number(input$p_value_threshold)) {
         shinyFeedback::showFeedbackWarning(
@@ -210,12 +208,10 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
         #
         gg_data <- gg_data_saved |>
           dplyr::filter(domain %in% input$selected_domains) |>
-          dplyr::filter(p < as.numeric(input$p_value_threshold)) |>
-          dplyr::filter(OR <= input$or_range[1] | OR >= input$or_range[2]) |>
-          dplyr::filter(nCasesYes >= input$n_cases)
-
-          # dplyr::filter(!is.na(oddsRatio) | input$allow_NA_OR) |>
-          # dplyr::filter(!is.na(pValue) | input$allow_NA_p)
+          dplyr::filter(p < as.numeric(input$p_value_threshold) | is.na(p)) |>
+          dplyr::filter(OR <= input$or_range[1] | OR >= input$or_range[2] | is.na(OR)) |>
+          dplyr::filter(nCasesYes >= input$n_cases) |>
+          dplyr::filter(!dplyr::if_any(dplyr::everything(), is.na) | input$na_anywhere)
 
         # update gg_data
         r$gg_data <- gg_data
@@ -252,7 +248,6 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
     shiny::observeEvent(input$codeWASplot_selected, {
       shiny::req(input$codeWASplot_selected)
       shiny::req(input$codeWASplot_selected != "NA")
-
 
       # clean selection value take only last selected
       selected_rows <- input$codeWASplot_selected
@@ -313,7 +308,7 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
     # render the table ####
     #
     .renderTable <- function(df){
-      df |>
+      df <- df |>
         dplyr::mutate(meanCases = round(meanCases, 3)) |>
         dplyr::mutate(meanControls = round(meanControls, 3))|>
         dplyr::mutate(sdCases = round(sdCases, 3)) |>
@@ -326,8 +321,10 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
         dplyr::select(
           GROUP, name, analysisName, domain, upIn,
           nCasesYes, nControlsYes, meanCases, meanControls, sdCases, sdControls,
-          OR, p, beta, notes) |>
+          OR, p, beta, notes)
+
         DT::datatable(
+          df,
           colnames = c(
             'Time ID' = 'GROUP',
             'Covariate Name' = 'name',
@@ -346,15 +343,15 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
             'Notes' = 'notes'
           ),
           options = list(
-            order = list(list(12, 'asc'), list(11, 'desc')), # order by p-value, then OR
-            columnDefs = list(
-              list(width = '70px', targets = c(2, 15)), # name, notes
-              list(width = '80px', targets = c(3)), # analysisName
-              list(width = '80px', targets = c(4)), # domain
-              list(width = '40px', targets = c(5)), # upIn
-              list(width = '40px', targets = c(1,6,7,8, 9, 10,11)), # GROUP, nCasesYes, nControlsYes, meanCases, meanControls, sdCases, sdControls
-              list(width = '50px', targets = c(12, 13)) # pValue, OR
-            )
+            order = list(list(12, 'asc'), list(11, 'desc')) # order by p-value, then OR
+            # columnDefs = list(
+            #   list(width = '70px', targets = c(2, 3, 15)), # name, notes
+            #   list(width = '80px', targets = c(1)), # analysisName
+            #   list(width = '80px', targets = c(4)), # domain
+            #   list(width = '30px', targets = c(4)), # upIn
+            #   list(width = '40px', targets = c(6,7,8, 9, 10,11)), # GROUP, nCasesYes, nControlsYes, meanCases, meanControls, sdCases, sdControls
+            #   list(width = '50px', targets = c(12, 13)) # pValue, OR
+            # )
           ),
           escape = FALSE,
           selection = 'none',
@@ -461,8 +458,6 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
 .studyResults_to_gg_data <- function(studyResult){
 
   time_periods <- .get_time_periods(studyResult)
-
-  # browser()
 
   studyResult <- studyResult |>
     dplyr::transmute(
@@ -587,6 +582,8 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
         max.overlaps = Inf,
         size = 3,
         hjust = 0.1,
+        force = 0.5,
+        force_pull = 0.5,
         xlim = c(facet_max_x / 4, NA),
         box.padding = 0.8
       )} +
@@ -600,6 +597,8 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
         max.overlaps = Inf,
         size = 3,
         hjust = 0.1,
+        force = 0.5,
+        force_pull = 0.5,
         xlim = c(facet_max_x / 4, NA),
         box.padding = 0.8
       )} +
@@ -620,8 +619,10 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
     )+
     ggplot2::theme_minimal()+
     ggplot2::theme(
-      legend.key.height = grid::unit(5, "mm"),
-      legend.key.width = grid::unit(10, "mm"),
+      legend.key.height = grid::unit(3, "mm"),
+      legend.key.width = grid::unit(7, "mm"),
+      legend.title = ggplot2::element_text(size = 8),
+      legend.text = ggplot2::element_text(size = 8),
       legend.position = "bottom",
       legend.direction = "vertical",
       strip.text.x = ggplot2::element_text(size = 10)
@@ -647,7 +648,7 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
     #     "procedure_occurrence" = "Procedure occurrence"
     #   )
     # ) +
-    ggplot2::guides(color = "none", fill = ggplot2::guide_legend(override.aes = list(size = 5))) +
+    ggplot2::guides(color = "none", fill = ggplot2::guide_legend(override.aes = list(size = 5), nrow=2, byrow=TRUE)) +
     ggplot2::labs(size = "p value group", fill = "Domain", x = "\nControls %", y = "Cases %")
 
   r$gg_plot <- gg_fig

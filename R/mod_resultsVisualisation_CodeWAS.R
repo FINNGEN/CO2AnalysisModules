@@ -171,17 +171,6 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
               multiple = TRUE,
               options = list(`actions-box` = TRUE, `selected-text-format` = "count > 3", `count-selected-text` = "{0} model types selected")
             )),
-          # shiny::column(
-          #   width = 2,
-          #   shinyWidgets::pickerInput(
-          #     ns("pValue"),
-          #     "p",
-          #     choices = c('-log10(p) (0,5]', '-log10(p) (5,100]', '-log10(p) (100,Inf]'),
-          #     selected = c('-log10(p) (0,5]', '-log10(p) (5,100]', '-log10(p) (100,Inf]'),
-          #     multiple = TRUE,
-          #     options = list(`actions-box` = TRUE, `selected-text-format` = "count > 1", `count-selected-text` = "{0} classes selected")
-          #   )
-          # ) # column
         ), # fluidRow
 
         shiny::hr(style = "margin-top: 10px; margin-bottom: 5px;"),
@@ -210,11 +199,8 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
           ), # column
           shiny::column(
             width = 2, align = "left",
-            shiny::div(style = "width: 100%; margin-top: 20px; margin-right: 20px;",
-                       shiny::checkboxInput(ns("allow_NA_OR"), "Allow NA in OR", value = FALSE),
-            ),
-            shiny::div(style = "width: 100%; margin-top: -10px; margin-right: 20px;",
-                       shiny::checkboxInput(ns("allow_NA_p"), "Allow NA in p", value = FALSE),
+            shiny::div(style = "width: 100%; margin-top: 30px; margin-right: 20px;",
+                       shiny::checkboxInput(ns("na_anywhere"), "Allow NA", value = FALSE),
             ),
           ) # column
         ) # fluidRow
@@ -234,8 +220,7 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
       shiny::req(input$p_value_threshold)
       shiny::req(input$or_range)
       shiny::req(input$n_cases)
-      # shiny::req(input$allow_NA_OR)
-      # shiny::req(input$allow_NA_p)
+      shiny::isTruthy(input$na_anywhere)
 
       if(!is_valid_number(input$p_value_threshold)) {
         shinyFeedback::showFeedbackWarning(
@@ -248,19 +233,22 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
           text = "Missing input: Please give a number (1e-5 is the default).")
       } else {
         shinyFeedback::hideFeedback("p_value_threshold")
+        # filter the data
         r$filteredCodeWASData <- r$codeWASData |>
+          dplyr::select(
+            databaseId, domainId, analysisName, covariateId, covariateName, nCasesYes, nControlsYes,
+            meanCases, sdCases, meanControls, sdControls, oddsRatio, pValue, beta, modelType, runNotes
+          ) |>
           dplyr::filter(
             if (!is.null(input$database)) databaseId %in% input$database else FALSE,
             if (!is.null(input$domain)) domainId %in% input$domain else FALSE,
             if (!is.null(input$analysis)) analysisName %in% input$analysis else FALSE,
             if (!is.null(input$model)) modelType %in% input$model else FALSE
           )  |>
-          dplyr::filter(pValue < as.numeric(input$p_value_threshold)) |>
-          dplyr::filter(oddsRatio <= input$or_range[1] | oddsRatio >= input$or_range[2]) |>
-          dplyr::filter(nCasesYes >= input$n_cases)
-
-          # dplyr::filter(!is.na(oddsRatio) | input$allow_NA_OR) |>
-          # dplyr::filter(!is.na(pValue) | input$allow_NA_p)
+          dplyr::filter(pValue < as.numeric(input$p_value_threshold) | is.na(pValue)) |>
+          dplyr::filter(oddsRatio <= input$or_range[1] | oddsRatio >= input$or_range[2] | is.na(oddsRatio)) |>
+          dplyr::filter(nCasesYes >= input$n_cases)  |>
+          dplyr::filter(!dplyr::if_any(dplyr::everything(), is.na) | input$na_anywhere)
       }
     })
 
@@ -277,13 +265,13 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
 
       DT::datatable(
         r$filteredCodeWASData |>
-          dplyr::mutate(pValue = as.numeric(formatC(pValue, format = "e", digits = 2))) |>
-          dplyr::mutate(oddsRatio = as.numeric(formatC(oddsRatio, format = "e", digits = 2))) |>
-          dplyr::mutate(beta = as.numeric(formatC(beta, format = "e", digits = 2))) |>
-          dplyr::mutate(meanCases = as.numeric(formatC(meanCases, format = "e", digits = 2))) |>
-          dplyr::mutate(sdCases = as.numeric(formatC(sdCases, format = "e", digits = 2))) |>
-          dplyr::mutate(meanControls = as.numeric(formatC(meanControls, format = "e", digits = 2))) |>
-          dplyr::mutate(sdControls = as.numeric(formatC(sdControls, format = "e", digits = 2))) |>
+          dplyr::mutate(pValue = round(pValue, 3)) |>
+          dplyr::mutate(oddsRatio = round(oddsRatio, 3)) |>
+          dplyr::mutate(beta = round(beta, 3)) |>
+          dplyr::mutate(meanCases = round(meanCases, 3)) |>
+          dplyr::mutate(sdCases = round(sdCases, 3)) |>
+          dplyr::mutate(meanControls = round(meanControls, 3)) |>
+          dplyr::mutate(sdControls = round(sdControls, 3)) |>
           dplyr::mutate(covariateNameFull = as.character(covariateName)) |>
           dplyr::mutate(covariateName = stringr::str_trunc(covariateName, 50)) |>
           dplyr::mutate(analysisName = stringr::str_trunc(analysisName, 20)) |>
@@ -291,7 +279,7 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
             covariateId = round(covariateId/1000),
             covariateName = purrr::map2_chr(covariateName, covariateId, ~paste0('<a href="',atlasUrl,'/#/concept/', .y, '" target="_blank">', .x,'</a>'))
           ) |>
-          dplyr::filter(pValue < as.numeric(input$p_value_threshold)) |>
+          dplyr::filter(pValue < as.numeric(input$p_value_threshold) | is.na(pValue)) |>
           dplyr::select(
             covariateName, analysisName, domainId,
             nCasesYes, nControlsYes, meanCases, sdCases, meanControls, sdControls,
@@ -349,19 +337,21 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
           # autoWidth = TRUE,
           # arrange the table by pValue
           # scrollX = TRUE,
-          columnDefs = list(
-            list(width = '70px', targets = c(3, 13)), # covariateName, runNotes
-            list(width = '80px', targets = c(2)), # analysisName
-            list(width = '120px', targets = c(1)), # domainId
-            list(width = '50px', targets = c(4)), # conceptId
-            list(width = '40px', targets = c(0,5,6,7, 10, 11)),
-            list(width = '50px', targets = c(8, 9)) # pValue, OR
-            # list(visible = FALSE, targets = c(13)) # covariateNameFull
-          ),
+          # columnDefs = list(
+          #   list(width = '70px', targets = c(3, 13)), # covariateName, runNotes
+          #   list(width = '80px', targets = c(2)), # analysisName
+          #   list(width = '120px', targets = c(1)), # domainId
+          #   list(width = '50px', targets = c(4)), # conceptId
+          #   list(width = '40px', targets = c(0,5,6,7, 10, 11)),
+          #   list(width = '50px', targets = c(8, 9)) # pValue, OR
+          #   # list(visible = FALSE, targets = c(13)) # covariateNameFull
+          # ),
           pageLength = 20,
           lengthMenu = c(10, 15, 20, 25, 30)
         )
-      ) |> DT::formatStyle('Covariate Name', cursor = 'pointer' )
+      ) |>
+        DT::formatStyle('Covariate Name', cursor = 'pointer' ) |>
+        DT::formatSignif(columns = c('p', 'OR'), digits = 3)
     })
 
     #
