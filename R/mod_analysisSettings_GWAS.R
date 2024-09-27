@@ -52,7 +52,28 @@ mod_analysisSettings_GWAS_ui <- function(id) {
   )
 }
 
-
+#' @title Analysis Settings for GWAS Module Server
+#'
+#' @description
+#' A Shiny module server function that sets up the analysis settings for a GWAS (Genome-Wide Association Study).
+#' It manages the user inputs for selecting case and control cohorts, setting a phenotype name, and description,
+#' and provides reactive outputs for the analysis settings.
+#'
+#' @param id A string representing the module's ID.
+#' @param r_connectionHandler A reactive object containing database and cohort connection handlers.
+#' @param r_workbench A reactive object representing the user's workbench.
+#'
+#' @return A reactive expression that provides the analysis settings for the GWAS.
+#'
+#' @importFrom shiny moduleServer observe req updateTextInput updatePickerInput renderText reactive observeEvent
+#' @importFrom shinyWidgets updatePickerInput
+#' @importFrom shinyFeedback feedbackWarning
+#' @importFrom stringr str_detect
+#' @importFrom purrr discard
+#' @importFrom dplyr filter pull
+#' @importFrom ParallelLogger logError logWarn logInfo
+#'
+#' @export
 mod_analysisSettings_GWAS_server <- function(id, r_connectionHandler, r_workbench) {
 
   shiny::moduleServer(id, function(input, output, session) {
@@ -258,12 +279,38 @@ mod_analysisSettings_GWAS_server <- function(id, r_connectionHandler, r_workbenc
 
 }
 
-
+#' @title Format String by Removing Special Characters
+#'
+#' @description
+#' This function takes a string and formats it by converting it to uppercase and removing all
+#' punctuation, non-alphanumeric characters, and spaces.
+#'
+#' @param x A character string to be formatted.
+#'
+#' @return A character string in uppercase with special characters and spaces removed.
+#'
+#' @importFrom stringr str_replace_al
 .format_str <- function(x){
   toupper(stringr::str_replace_all(x, "[[:punct:]]|[^[:alnum:]]|[:blank:]", ""))
 }
 
-
+#' @title Configure GWAS Sandbox API Connection
+#'
+#' @description
+#' This function configures and retrieves a connection to the internal GWAS sandbox API. It refreshes the authorization token
+#' and handles errors related to SSL verification and token refreshment.
+#'
+#' @details
+#' The function refreshes the token by making an API call, updates the token in the environment variable `SANDBOX_TOKEN`,
+#' and returns the API connection object.
+#'
+#' @return An object representing the connection to the sandbox API.
+#'
+#' @importFrom httr set_config config add_headers GET
+#' @importFrom ParallelLogger logError
+#' @importFrom jsonlite fromJSON
+#' @importFrom FinnGenUtilsR createSandboxAPIConnection
+#'
 .configGWAS <- function() {
 
   # if different version of openssl package is used in docker and URL host

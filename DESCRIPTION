@@ -49,7 +49,9 @@ Imports:
     tidyr,
     shinyFeedback,
     CohortGenerator,
-    FinnGenUtilsR
+    FinnGenUtilsR,
+    httr,
+    jsonlite
 Remotes: 
     FINNGEN/HadesExtras,
     FINNGEN/FinnGenUtilsR
