@@ -227,6 +227,10 @@ mod_analysisSettings_GWAS_server <- function(id, r_connectionHandler, r_workbenc
         ParallelLogger::logWarn("[configGWAS]: ", w$message)
       })
 
+      ParallelLogger::logInfo(
+        "[configGWAS] Fetched user email:", connectionSandboxAPI$notification_email
+      )
+
       analysisSettings <- list(
         casesCohort = input$selectCaseCohort_pickerInput |> as.integer(),
         controlsCohort = input$selectControlCohort_pickerInput |> as.integer(),
@@ -269,8 +273,6 @@ mod_analysisSettings_GWAS_server <- function(id, r_connectionHandler, r_workbenc
   headers <- httr::add_headers(c('Authorization' = authorization))
   url <- paste0(base_url, "v2/user/refresh-token")
 
-  ParallelLogger::logInfo("[configGWAS] Refreshing the token for submitting GWAS run")
-
   # fetch refreshed token
   tryCatch({
     res <- httr::GET(url, config = headers)
@@ -281,19 +283,10 @@ mod_analysisSettings_GWAS_server <- function(id, r_connectionHandler, r_workbenc
   # update token in the environment variable
   if(res$status_code == 200){
     token <- jsonlite::fromJSON(rawToChar(res$content))$token
-
     Sys.setenv(SANDBOX_TOKEN = token)
-
-    ParallelLogger::logInfo("[configGWAS] token refreshed successfully.",
-                            "Updated token in the environment.")
   }
 
   connectionSandboxAPI <- FinnGenUtilsR::createSandboxAPIConnection(base_url, token)
-
-  ParallelLogger::logInfo(
-    "[configGWAS] Fetched user email from the internal API:",
-    connectionSandboxAPI$notification_email
-  )
 
   return(connectionSandboxAPI)
 }
