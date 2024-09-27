@@ -68,7 +68,7 @@ mod_analysisSettings_GWAS_server <- function(id, r_connectionHandler, r_workbenc
       cohortIdAndNames <- r_connectionHandler$cohortTableHandler$getCohortIdAndNames()
       cohortIdAndNamesList <- list()
       if(nrow(cohortIdAndNames) != 0){
-        cohortIdAndNamesList <- as.list(setNames(cohortIdAndNames$cohortId, paste(cohortIdAndNames$shortName, "("  , cohortIdAndNames$cohortName, ")")))
+        cohortIdAndNamesList <- as.list(setNames(cohortIdAndNames$cohortId, paste(cohortIdAndNames$shortName, "(", cohortIdAndNames$cohortName, ")")))
       }
 
       shinyWidgets::updatePickerInput(
@@ -89,7 +89,7 @@ mod_analysisSettings_GWAS_server <- function(id, r_connectionHandler, r_workbenc
       cohortIdAndNames <- r_connectionHandler$cohortTableHandler$getCohortIdAndNames()
       cohortIdAndNamesList <- list()
       if(nrow(cohortIdAndNames) != 0){
-        cohortIdAndNamesList <- as.list(setNames(cohortIdAndNames$cohortId, paste(cohortIdAndNames$shortName, "("  , cohortIdAndNames$cohortName, ")")))
+        cohortIdAndNamesList <- as.list(setNames(cohortIdAndNames$cohortId, paste(cohortIdAndNames$shortName, "(", cohortIdAndNames$cohortName, ")")))
       }
 
       cohortIdAndNamesList <- cohortIdAndNamesList |>
@@ -110,13 +110,14 @@ mod_analysisSettings_GWAS_server <- function(id, r_connectionHandler, r_workbenc
       shiny::req(input$selectDatabases_pickerInput)
       shiny::req(input$selectCaseCohort_pickerInput)
 
-      if(input$selectCaseCohort_pickerInput != "NA"){
-        cohortIdAndNames <- r_connectionHandlers$cohortTableHandler$getCohortIdAndNames() |>
-          dplyr::filter(!(cohortId %in% input$selectCaseCohort_pickerInput))
-        cohortIdAndNamesList <- as.list(setNames(cohortIdAndNames$cohortId, paste(cohortIdAndNames$shortName, "➖"  , cohortIdAndNames$cohortName)))
-      }else{
-        cohortIdAndNamesList <- list()
+      cohortIdAndNames <- r_connectionHandler$cohortTableHandler$getCohortIdAndNames()
+      cohortIdAndNamesList <- list()
+      if(nrow(cohortIdAndNames) != 0){
+        cohortIdAndNamesList <- as.list(setNames(cohortIdAndNames$cohortId, paste(cohortIdAndNames$shortName, "("  , cohortIdAndNames$cohortName, ")")))
       }
+
+      cohortIdAndNamesList <- cohortIdAndNamesList |>
+        purrr::discard(~.x %in% input$selectCaseCohort_pickerInput)
 
       shinyWidgets::updatePickerInput(
         inputId = "selectControlCohort_pickerInput",
@@ -187,17 +188,17 @@ mod_analysisSettings_GWAS_server <- function(id, r_connectionHandler, r_workbenc
 
       # counts
       if( nSubjectsCase > nSubjectsControl ){
-        message <- paste0(message, "❌ There are more subjects in  ase cohort (", nSubjectsCase,") that in control cohort (", nSubjectsControl,"). Are you sure they are correct?\n")
+        message <- paste0(message, "\u274C There are more subjects in  ase cohort (", nSubjectsCase,") that in control cohort (", nSubjectsControl,"). Are you sure they are correct?\n")
       }
 
       # overlap
       if(nSubjectsOverlap==0){
-        message <- paste0(message, "✅ No subjects overlap between case and control cohorts\n")
+        message <- paste0(message, "\u2705 No subjects overlap between case and control cohorts\n")
       }else{
         if(nSubjectsOverlap > nSubjectsCase * .20){
-          message <- paste0(message, "❌ There are many subjects, ",nSubjectsOverlap, ", that overlap  berween case and control cohorts. Consider removing them in Operate Cohorts tab\n")
+          message <- paste0(message, "\u274C Thereare many subjects, ",nSubjectsOverlap, ", that overlap  berween case and control cohorts. Consider removing them in Operate Cohorts tab\n")
         }else{
-          message <- paste0(message, "⚠️ There are few subjects, ",nSubjectsOverlap, ", that overlap between case and control cohorts. \n")
+          message <- paste0(message, "\u26A0\uFE0F There are few subjects, ",nSubjectsOverlap, ", that overlap between case and control cohorts. \n")
         }
       }
 

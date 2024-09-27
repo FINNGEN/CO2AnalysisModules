@@ -41,7 +41,9 @@ readAndParseYalm <- function(pathToYalmFile, ...) {
 
 #' Set Up Logger
 #'
-#' Sets up a logger with console and file appenders for logging.
+#' Sets up a logger with console and file appender for logging.
+#'
+#' @param logsFolder A string representing the folder name for the logs.
 #'
 #' @return A logger object.
 #'
@@ -77,9 +79,9 @@ fcr_setUpLogger  <- function(logsFolder = "logs"){
 #'
 #' Creates a console appender for sandbox logging with a specified layout.
 #'
-#' @param layout A layout function for the logger. Defaults to ParallelLogger::layoutParallel.
+#' @param layout A layout function for the logger. Defaults to `ParallelLogger::layoutParallel`.
 #'
-#' @return An appender object for logging.
+#' @return An appended object for logging.
 #'
 .createConsoleAppenderForSandboxLogging <- function(layout = ParallelLogger::layoutParallel) {
   appendFunction <- function(this, level, message, echoToConsole) {
