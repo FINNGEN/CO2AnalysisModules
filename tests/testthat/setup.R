@@ -1,7 +1,7 @@
 #
 # SELECT DATABASE and CO2 CONFIGURATION
 #
-testingDatabase <- "EunomiaFinnGen"
+testingDatabase <- "EunomiaGiBleed"
 testingCO2AnalysisModulesConfig <- "AtlasDemo"
 
 # check correct settings
@@ -71,14 +71,16 @@ if (testingDatabase %in% c("EunomiaFinnGen") ) {
     Eunomia::extractLoadData(
       from = file.path(eunomiaDataFolder, "FinnGenR12_v5.4.zip"),
       to = file.path(eunomiaDataFolder, "FinnGenR12_v5.4.sqlite"),
-      cdmVersion = '5.4'
+      cdmVersion = '5.4',
+      verbose = TRUE
     )
   }
 
   # copy to a temp folder
   file.copy(
     from = file.path(eunomiaDataFolder, "FinnGenR12_v5.4.sqlite"),
-    to = file.path(tempdir(), "FinnGenR12_v5.4.sqlite")
+    to = file.path(tempdir(), "FinnGenR12_v5.4.sqlite"),
+    overwrite = TRUE
   )
 
   test_databaseConfig <- readAndParseYalm(

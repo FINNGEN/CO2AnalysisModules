@@ -1,4 +1,5 @@
 AnalysisModules
+Appender
 CMD
 CodeWAS
 CodeWASs
@@ -17,6 +18,7 @@ Welch
 YAML
 addFisherTestToCodeCounts
 addTestTotibbleWithValueSummary
+appender
 binaryTest
 continuousOddsRatio
 continuousPValue
