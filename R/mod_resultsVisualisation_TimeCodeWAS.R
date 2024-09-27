@@ -566,10 +566,10 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
       ggplot2::aes(size = p_group), show.legend=T, shape = 21) + #, position = position_dodge(width = 12))+
     ggplot2::scale_size_manual(
       values = c(
-        "-log10(p) [0,50]" = 1,
-        "-log10(p) (50,100]" = 1.5,
-        "-log10(p) (100,200]" = 2,
-        "-log10(p) (200,Inf]" = 3
+        "-log10(p) [0,50]" = 2,
+        "-log10(p) (50,100]" = 3,
+        "-log10(p) (100,200]" = 4,
+        "-log10(p) (200,Inf]" = 6
       )
     ) +
     {if(length(selection) > 1)
@@ -588,8 +588,10 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
       # label the top 10 values
       ggrepel::geom_text_repel(
         data =  gg_data |>
+          dplyr::group_by(GROUP) |>
           dplyr::arrange(p, OR) |>
-          dplyr::slice_head(n = 10),
+          dplyr::slice_head(n = 10) |>
+          dplyr::ungroup(),
         ggplot2::aes(label = stringr::str_wrap(stringr::str_trunc(name, 45), 30)),
         max.overlaps = Inf,
         size = 3,
@@ -605,7 +607,7 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
     ggplot2::scale_y_continuous(
       breaks = c(0, 0.05, seq(0.1, 0.8, 0.1)),
       labels = c(0, 5, seq(10, 80, 10)),
-      limits = c(-0.02 * facet_max_y, facet_max_y)
+      limits = c(-0.02 * facet_max_y, facet_max_y + 0.1 * facet_max_y)
     ) +
     # ggplot2::coord_fixed() +
     ggplot2::facet_grid(
