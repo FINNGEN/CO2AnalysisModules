@@ -15,7 +15,7 @@
 #'
 #' @export
 #'
-mod_resultsVisualisation_ui <- function(id, resultsVisualisationModuleUi, pathToAboutMd, title) {
+mod_resultsVisualisation_ui <- function(id, resultsVisualisationModuleUi, pathToAboutMd, title, logshref) {
   ns <- shiny::NS(id)
 
   headerContent <- shiny::tags$li(
@@ -32,6 +32,7 @@ mod_resultsVisualisation_ui <- function(id, resultsVisualisationModuleUi, pathTo
       shinydashboard::menuItem(text = title, tabName = "module", icon = shiny::icon("table")),
       shinydashboard::menuItem(text = "About", tabName = "about"),
       shinydashboard::menuItem(text = "Study details", tabName = "cohortsInfo"),
+      shinydashboard::menuItem("App Logs", icon = shiny::icon("info-circle"), href = logshref),
       selected = "module"
     )
 
