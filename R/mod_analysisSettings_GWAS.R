@@ -224,6 +224,20 @@ mod_analysisSettings_GWAS_server <- function(id, r_connectionHandler, r_workbenc
       databaseId <- cohortTableHandler$databaseId
       release <- paste0("Regenie", gsub("[A-Za-z]", "", cohortTableHandler$databaseId))
 
+      # get connection sandbox API configured for running GWAS
+      connectionSandboxAPI <- NULL
+      tryCatch({
+        connectionSandboxAPI <- .configGWAS()
+      }, error=function(e) {
+        ParallelLogger::logError("[configGWAS]: ", e$message)
+      }, warning=function(w) {
+        ParallelLogger::logWarn("[configGWAS]: ", w$message)
+      })
+
+      ParallelLogger::logInfo(
+        "[configGWAS] Fetched user email:", connectionSandboxAPI$notification_email
+      )
+
       analysisSettings <- list(
         casesCohort = input$selectCaseCohort_pickerInput |> as.integer(),
         controlsCohort = input$selectControlCohort_pickerInput |> as.integer(),
@@ -231,7 +245,7 @@ mod_analysisSettings_GWAS_server <- function(id, r_connectionHandler, r_workbenc
         description = input$description,
         analysisType = input$selectAnalysisType_pickerInput_gwas,
         release = release,
-        connectionSandboxAPI = r_connectionHandler$connection_sandboxAPI
+        connectionSandboxAPI = connectionSandboxAPI
       )
 
       return(analysisSettings)
@@ -248,3 +262,39 @@ mod_analysisSettings_GWAS_server <- function(id, r_connectionHandler, r_workbenc
 .format_str <- function(x){
   toupper(stringr::str_replace_all(x, "[[:punct:]]|[^[:alnum:]]|[:blank:]", ""))
 }
+
+
+.configGWAS <- function() {
+
+  # if different version of openssl package is used in docker and URL host
+  # there will be an error. To avoid the error set up the following configs
+  httr::set_config(httr::config(ssl_verifypeer = FALSE, ssl_verifyhost = FALSE))
+
+  base_url <- "https://internal-api.app.finngen.fi/internal-api/"
+
+  # get token from env variable
+  token <- Sys.getenv('SANDBOX_TOKEN')
+
+  # refresh the token
+  authorization <- paste("Bearer", token)
+  headers <- httr::add_headers(c('Authorization' = authorization))
+  url <- paste0(base_url, "v2/user/refresh-token")
+
+  # fetch refreshed token
+  tryCatch({
+    res <- httr::GET(url, config = headers)
+  }, error = function(e){
+    ParallelLogger::logError("[configGWAS] error when refreshing the token", e$message)
+  })
+
+  # update token in the environment variable
+  if(res$status_code == 200){
+    token <- jsonlite::fromJSON(rawToChar(res$content))$token
+    Sys.setenv(SANDBOX_TOKEN = token)
+  }
+
+  connectionSandboxAPI <- FinnGenUtilsR::createSandboxAPIConnection(base_url, token)
+
+  return(connectionSandboxAPI)
+}
+

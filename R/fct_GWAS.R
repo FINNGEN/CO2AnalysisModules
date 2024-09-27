@@ -63,7 +63,7 @@ execute_GWAS <- function(
     which(cohortData$cohort_name == controlsCohort$cohortName)
   ]
 
-  ParallelLogger::logInfo("Running FinnGenUtilsR::runGWASAnalysis using the following configs:",
+  ParallelLogger::logInfo("Running GWAS using:",
                            "\nnotification_email: ", connectionSandboxAPI$notification_email,
                            "\nname: ", connectionSandboxAPI$name,
                            "\nsubmitted cases: ", length(casesFinngenids),
