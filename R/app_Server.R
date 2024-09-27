@@ -30,6 +30,9 @@ app_server <- function(input, output, session) {
     timestamp  <- as.character(as.numeric(format(Sys.time(), "%d%m%Y%H%M%OS2"))*100)
     logsFolder <- paste0(analysisType, "_", timestamp)
     logshref  <- fcr_setUpLogger(logsFolder = logsFolder)
+    # log start
+    ParallelLogger::logInfo("[Start] Start logging")
+    ParallelLogger::logInfo("[Start] pathToResultsDatabase: ", rf_pathToResultsDatabase())
 
     # select module ui based on analysisType
     if (analysisType == "cohortOverlaps") {
@@ -56,6 +59,8 @@ app_server <- function(input, output, session) {
       where = "afterEnd",
       ui = ui
     )
+
+    ParallelLogger::logInfo("[Start] Loaded module UI for ", analysisType)
 
     # trigger button on flushed
     shiny::onFlushed(function (){
@@ -90,6 +95,8 @@ app_server <- function(input, output, session) {
     if(analysisType == "timeCodeWAS"){
       mod_resultsVisualisation_server("timeCodeWAS", mod_resultsVisualisation_TimeCodeWAS_server, analysisResults)
     }
+
+    ParallelLogger::logInfo("[Start] Loaded module server for ", analysisType)
 
   })
 
