@@ -7,7 +7,12 @@
 #' @param id Module ID
 #'
 #' @return A Shiny UI element
-#' @import shiny shinyjs shinyFeedback shinyWidgets
+#'
+#' @importFrom shiny NS tagList tags br fixedRow column textInput selectInput uiOutput tableOutput verbatimTextOutput actionButton
+#' @importFrom shinyjs useShinyjs hidden
+#' @importFrom shinyFeedback useShinyFeedback
+#' @importFrom shinyWidgets awesomeCheckbox
+#'
 #' @export
 mod_fct_formTimeWindows_ui <- function(id) {
   ns <- shiny::NS(id)
@@ -94,7 +99,16 @@ mod_fct_formTimeWindows_ui <- function(id) {
 #' @param session Shiny session object
 #'
 #' @return A reactive list containing the start and end days of the time windows
-#' @import shiny shinyjs shinyFeedback shinyWidgets
+#'
+#' @importFrom shiny moduleServer reactiveVal reactive req renderTable renderUI renderText observeEvent updateTextInput
+#' @importFrom shinyjs toggle
+#' @importFrom shinyFeedback showFeedbackWarning hideFeedback
+#' @importFrom shinyWidgets noUiSliderInput updateNoUiSliderInput wNumbFormat
+#' @importFrom dplyr mutate row_number starts_with
+#' @importFrom lubridate days weeks months years
+#' @importFrom tibble tibble
+#' @importFrom stringr str_detect
+#'
 #' @export
 mod_fct_formTimeWindows_server <- function(id, session) {
   shiny::moduleServer(id, function(input, output, session) {
