@@ -130,16 +130,6 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
           shiny::column(
             width = 2,
             shinyWidgets::pickerInput(
-              ns("database"),
-              "Database",
-              choices = unique(r$codeWASData$databaseId),
-              selected = unique(r$codeWASData$databaseId),
-              multiple = FALSE,
-              options = list(`actions-box` = TRUE, `selected-text-format` = "count > 3", `count-selected-text` = "{0} databases selected")
-            )),
-          shiny::column(
-            width = 2,
-            shinyWidgets::pickerInput(
               ns("domain"),
               "Domain",
               choices = unique(r$codeWASData$domainId),
@@ -240,7 +230,6 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
             meanCases, sdCases, meanControls, sdControls, oddsRatio, pValue, beta, modelType, runNotes
           ) |>
           dplyr::filter(
-            if (!is.null(input$database)) databaseId %in% input$database else FALSE,
             if (!is.null(input$domain)) domainId %in% input$domain else FALSE,
             if (!is.null(input$analysis)) analysisName %in% input$analysis else FALSE,
             if (!is.null(input$model)) modelType %in% input$model else FALSE
