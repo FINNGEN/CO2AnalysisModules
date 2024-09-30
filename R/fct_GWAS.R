@@ -129,6 +129,8 @@ execute_GWAS <- function(
     release = release
   )
 
+  ParallelLogger::logInfo("GWAS run completed: ", result)
+
   if (!result$status){
     stop("GWAS run failed", result$message)
   }
