@@ -135,7 +135,8 @@ execute_GWAS <- function(
     ParallelLogger::logError("GWAS run failed", result$message)
   }
 
-  return(result)
+  # there is not database to share
+  return(NULL)
 
 }
 
