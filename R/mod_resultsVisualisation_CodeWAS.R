@@ -17,6 +17,8 @@ mod_resultsVisualisation_CodeWAS_ui <- function(id) {
 
   shiny::fluidPage(
     title = "CodeWAS Results",
+    shinyFeedback::useShinyFeedback(),
+    shinyjs::useShinyjs(),
     shiny::tagList(
       shiny::h4("Filters"),
       shiny::div(
@@ -179,7 +181,7 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
             2,
             shiny::textInput(
               inputId = ns("p_value_threshold"),
-              label =  "p-value threshold",
+              label =  "p-value threshold (default 1e-5)",
               value = "1e-5",
               width = "100%"
             ),
@@ -199,8 +201,11 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
           ), # column
           shiny::column(
             width = 2, align = "left",
-            shiny::div(style = "width: 100%; margin-top: 30px; margin-right: 20px;",
+            shiny::div(style = "width: 100%; margin-top: 20px; margin-right: 20px;",
                        shiny::checkboxInput(ns("na_anywhere"), "Allow NA", value = FALSE),
+            ),
+            shiny::div(style = "width: 100%; margin-top: -5px; margin-right: 20px;",
+                       shiny::checkboxInput(ns("or_filter_disable"), "Disable OR filter", value = FALSE),
             ),
           ) # column
         ) # fluidRow
@@ -227,10 +232,16 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
           inputId = "p_value_threshold",
           text = "Invalid input: Please give a valid number."
         )
-      } else if(input$p_value_threshold == "") {
+      } else if(as.numeric(input$p_value_threshold) < 0) {
         shinyFeedback::showFeedbackWarning(
           inputId = "p_value_threshold",
-          text = "Missing input: Please give a number (1e-5 is the default).")
+          text = "Invalid input: Please give a number greater than 0."
+        )
+      } else if(as.numeric(input$p_value_threshold) > 1) {
+        shinyFeedback::showFeedbackWarning(
+          inputId = "p_value_threshold",
+          text = "Invalid input: Please give a number between 0 and 1."
+        )
       } else {
         shinyFeedback::hideFeedback("p_value_threshold")
         # filter the data
@@ -245,19 +256,41 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
             if (!is.null(input$analysis)) analysisName %in% input$analysis else FALSE,
             if (!is.null(input$model)) modelType %in% input$model else FALSE
           )  |>
-          dplyr::filter(pValue < as.numeric(input$p_value_threshold) | is.na(pValue)) |>
-          dplyr::filter(oddsRatio <= input$or_range[1] | oddsRatio >= input$or_range[2] | is.na(oddsRatio)) |>
+          dplyr::filter(
+            as.double(pValue) <= (as.double(input$p_value_threshold) + 2 * .Machine$double.eps)
+            | is.na(pValue)
+          ) |>
+          dplyr::filter(
+            as.double(oddsRatio) <= as.double(input$or_range[1])
+            | as.double(oddsRatio) >= as.double(input$or_range[2])
+            | input$or_filter_disable
+            | is.na(oddsRatio)
+          ) |>
           dplyr::filter(nCasesYes >= input$n_cases)  |>
-          dplyr::filter(!dplyr::if_any(dplyr::everything(), is.na) | input$na_anywhere)
+          dplyr::filter(!dplyr::if_any(c("pValue", "oddsRatio"), is.na) | input$na_anywhere)
       }
     })
+
+    #
+    # toggle the OR filter
+    #
+    shiny::observe({
+      shiny::isTruthy(input$or_filter_disable)
+      shiny::req(input$or_range)
+
+      if(input$or_filter_disable) {
+        shinyjs::disable("or_range")
+      } else {
+        shinyjs::enable("or_range")
+      }
+     })
 
     #
     # render the CodeWAS table
     #
     output$codeWAStable <- DT::renderDataTable({
-      req(r$filteredCodeWASData)
-      req(r$filteredCodeWASData  |>  nrow() > 0)
+      shiny::req(r$filteredCodeWASData)
+      shiny::req(r$filteredCodeWASData  |>  nrow() > 0)
 
       # https://github.com/rstudio/DT/issues/1127
       # the bug can be worked around by setting shiny.json.digits to a smaller value
@@ -279,7 +312,6 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
             covariateId = round(covariateId/1000),
             covariateName = purrr::map2_chr(covariateName, covariateId, ~paste0('<a href="',atlasUrl,'/#/concept/', .y, '" target="_blank">', .x,'</a>'))
           ) |>
-          dplyr::filter(pValue < as.numeric(input$p_value_threshold) | is.na(pValue)) |>
           dplyr::select(
             covariateName, analysisName, domainId,
             nCasesYes, nControlsYes, meanCases, sdCases, meanControls, sdControls,
@@ -316,36 +348,6 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
         ),
         options = list(
           order = list(list(10, 'asc'), list(9, 'desc')), # pValue, OR
-          # rowCallback to show the full covariate name as a tooltip
-          # rowCallback = htmlwidgets::JS(
-          #   "function(row, data) {",
-          #   "var full_text = data[13]", # covariateNameFull
-          #   "$('td', row).attr('title', full_text);",
-          #   "}"
-          # ),
-          # change the color of the cells with NA (except for the Notes column)
-          # createdRow = htmlwidgets::JS(
-          #   "function(row, data, dataIndex) {",
-          #   "  for(var i=0; i<data.length; i++){",
-          #   "    if(data[i] === null && ![5, 6, 12].includes(i)){", # skip Notes-column
-          #   "      $('td:eq('+i+')', row).html('NA')",
-          #   "        .css({'color': 'rgb(226,44,41)', 'font-style': 'italic'});",
-          #   "    }",
-          #   "  }",
-          #   "}"
-          # ),
-          # autoWidth = TRUE,
-          # arrange the table by pValue
-          # scrollX = TRUE,
-          # columnDefs = list(
-          #   list(width = '70px', targets = c(3, 13)), # covariateName, runNotes
-          #   list(width = '80px', targets = c(2)), # analysisName
-          #   list(width = '120px', targets = c(1)), # domainId
-          #   list(width = '50px', targets = c(4)), # conceptId
-          #   list(width = '40px', targets = c(0,5,6,7, 10, 11)),
-          #   list(width = '50px', targets = c(8, 9)) # pValue, OR
-          #   # list(visible = FALSE, targets = c(13)) # covariateNameFull
-          # ),
           pageLength = 20,
           lengthMenu = c(10, 15, 20, 25, 30)
         )
