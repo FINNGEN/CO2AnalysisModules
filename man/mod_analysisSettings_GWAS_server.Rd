@@ -4,14 +4,12 @@
 \alias{mod_analysisSettings_GWAS_server}
 \title{Analysis Settings for GWAS Module Server}
 \usage{
-mod_analysisSettings_GWAS_server(id, r_connectionHandler, r_workbench)
+mod_analysisSettings_GWAS_server(id, r_connectionHandler)
 }
 \arguments{
 \item{id}{A string representing the module's ID.}
 
 \item{r_connectionHandler}{A reactive object containing database and cohort connection handlers.}
-
-\item{r_workbench}{A reactive object representing the user's workbench.}
 }
 \value{
 A reactive expression that provides the analysis settings for the GWAS.

@@ -29,18 +29,62 @@ execute_GWAS <- function(
   analysisSettings <- analysisSettings |> assertAnalysisSettings_GWAS()
 
   # get parameters from analysisSettings
+  casesCohort <- analysisSettings$cohortIdCases
+  controlsCohort <- analysisSettings$cohortIdControls
   phenotype <- analysisSettings$phenotype
   description <- analysisSettings$description
   analysisType <- analysisSettings$analysisType
-  casesFinngenids <- analysisSettings$casesFinngenids
-  controlsFinngenids <- analysisSettings$controlsFinngenids
-  connectionSandboxAPI <- analysisSettings$connectionSandboxAPI
   release <- analysisSettings$release
-  casesCohort <- analysisSettings$casesCohort
-  controlsCohort <- analysisSettings$controlsCohort
 
-  ParallelLogger::logInfo("Attempting to submit GWAS analysis")
+  #
+  # get connectionSandboxAPI
+  #
+  ParallelLogger::logInfo("Get connectionSandboxAPI GWAS analysis")
 
+  # TEMP it may be that the token gets outdated
+  token <- Sys.getenv('SANDBOX_TOKEN')
+  if (is.null(token)  | token == ""){
+    stop("SANDBOX_TOKEN is not set")
+  }
+
+  # update token
+  # if different version of openssl package is used in docker and URL host
+  # there will be an error. To avoid the error set up the following configs
+  httr::set_config(httr::config(ssl_verifypeer = FALSE, ssl_verifyhost = FALSE))
+
+  base_url <- "https://internal-api.app.finngen.fi/internal-api/"
+  if(token != "test"){
+
+    # refresh the token
+    authorization <- paste("Bearer", token)
+    headers <- httr::add_headers(c('Authorization' = authorization))
+    url <- paste0(base_url, "v2/user/refresh-token")
+
+    # fetch refreshed token
+    error <- NULL
+    tryCatch({
+      res <- httr::GET(url, config = headers)
+      if(res$status_code == 200){
+        token <- jsonlite::fromJSON(rawToChar(res$content))$token
+        Sys.setenv(SANDBOX_TOKEN = token)
+      } else {
+        error <<- paste("status code ", res$status_code)
+      }
+    }, error = function(e){
+      error <<- e$message
+    })
+
+    # update token in the environment variable
+    if(!is.null(error)){
+      stop("Error refreshing token: ", error)
+    }
+  }
+
+  connectionSandboxAPI <- FinnGenUtilsR::createSandboxAPIConnection(base_url, token)
+
+  #
+  # Send the GWAS analysis
+  #
   cohorts  <- cohortTableHandler$getCohortsSummary()
   casesCohort <- cohorts[cohorts$cohortId == casesCohort, ]
   controlsCohort <- cohorts[cohorts$cohortId == controlsCohort, ]
@@ -57,50 +101,44 @@ execute_GWAS <- function(
 
   casesFinngenids <- cohortData$person_source_value[
     which(cohortData$cohort_name == casesCohort$cohortName)
-  ]
+  ] |> unique()
 
   controlsFinngenids <- cohortData$person_source_value[
     which(cohortData$cohort_name == controlsCohort$cohortName)
-  ]
+  ] |> unique()
 
   ParallelLogger::logInfo("Running GWAS using:",
-                           "\nnotification_email: ", connectionSandboxAPI$notification_email,
-                           "\nname: ", connectionSandboxAPI$name,
-                           "\nsubmitted cases: ", length(casesFinngenids),
-                           "\nsubmitted controls: ", length(controlsFinngenids),
-                           "\nphenotype: ", phenotype,
-                           "\ndescription: ", description,
-                           "\nanalysisType: ", analysisType,
-                           "\nrelease: ", release)
+                          "\nnotification_email: ", connectionSandboxAPI$notification_email,
+                          "\nname: ", connectionSandboxAPI$name,
+                          "\nsubmitted cases: ", length(casesFinngenids),
+                          "\nsubmitted controls: ", length(controlsFinngenids),
+                          "\nphenotype: ", phenotype,
+                          "\ndescription: ", description,
+                          "\nanalysisType: ", analysisType,
+                          "\nrelease: ", release)
 
-  result <- list( status = NULL, content = NULL )
-
-  tryCatch({
-    result <- FinnGenUtilsR::runGWASAnalysis(
-      connection_sandboxAPI = connectionSandboxAPI,
-      cases_finngenids = casesFinngenids,
-      controls_finngenids = controlsFinngenids,
-      phenotype_name = phenotype,
-      title = phenotype,
-      description = description,
-      notification_email = connectionSandboxAPI$notification_email,
-      analysis_type = analysisType,
-      release = release
-    )
-  }, error = function(e){
-    ParallelLogger::logError("Error in FinnGenUtilsR::runGWASAnalysis: ", e$message)
-    result$content <<- e$message
-  })
+  result <- FinnGenUtilsR::runGWASAnalysis(
+    connection_sandboxAPI = connectionSandboxAPI,
+    cases_finngenids = casesFinngenids,
+    controls_finngenids = controlsFinngenids,
+    phenotype_name = phenotype,
+    title = phenotype,
+    description = description,
+    notification_email = connectionSandboxAPI$notification_email,
+    analysis_type = analysisType,
+    release = release
+  )
 
   if (result$status){
     ParallelLogger::logInfo("GWAS run successfully submitted")
   } else {
-    ParallelLogger::logError("Error submitting GWAS run", result$content)
+    ParallelLogger::logError("GWAS run failed", result$message)
   }
 
   return(result)
 
 }
+
 
 #' @title Assert Analysis Settings for GWAS
 #' @description Validates the `analysisSettings` list to ensure it contains the required elements
@@ -122,12 +160,13 @@ execute_GWAS <- function(
 #'
 assertAnalysisSettings_GWAS <- function(analysisSettings) {
   analysisSettings |> checkmate::assertList()
-  c('analysisType', 'phenotype', 'description', 'casesCohort', 'controlsCohort', 'connectionSandboxAPI')  |> checkmate::assertSubset(names(analysisSettings))
-  analysisSettings$analysisType |> checkmate::assert_choice(choices = c("additive", "recessive", "dominant"))
-  analysisSettings$casesCohort |> checkmate::assertNumeric()
-  analysisSettings$controlsCohort |> checkmate::assertNumeric()
-  analysisSettings$connectionSandboxAPI$notification_email |> checkmate::assertCharacter(min.chars = 12)
-  analysisSettings$connectionSandboxAPI$name |> checkmate::assertCharacter(min.chars = 1)
+  c('cohortIdCases', 'cohortIdControls', 'phenotype', 'description', 'analysisType', 'release')  |> checkmate::assertSubset(names(analysisSettings))
+  analysisSettings$cohortIdCases |> checkmate::assertNumeric()
+  analysisSettings$cohortIdControls |> checkmate::assertNumeric()
+  analysisSettings$phenotype |> checkmate::assertString(min.chars = 1, pattern = "^[A-Z]+$")
+  analysisSettings$description |> checkmate::assertString(min.chars = 1)
+  analysisSettings$analysisType |> checkmate::assertChoice(choices = c("additive", "recessive", "dominant"))
+  analysisSettings$release |> checkmate::assertChoice(choices = c("Regenie"))
   return(analysisSettings)
 }
 
