@@ -181,7 +181,7 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
             2,
             shiny::textInput(
               inputId = ns("p_value_threshold"),
-              label =  "p-value threshold (default 1e-5)",
+              label =  "p-value threshold",
               value = "1e-5",
               width = "100%"
             ),
@@ -222,17 +222,21 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
     #
     shiny::observe({
       shiny::req(r$codeWASData)
-      shiny::req(input$p_value_threshold)
       shiny::req(input$or_range)
       shiny::req(input$n_cases)
       shiny::isTruthy(input$na_anywhere)
 
-      if(!is_valid_number(input$p_value_threshold)) {
+      if(input$p_value_threshold == "") {
         shinyFeedback::showFeedbackWarning(
           inputId = "p_value_threshold",
-          text = "Invalid input: Please give a valid number."
+          text = "Invalid input: Please give a valid number (default is 1e-5)."
         )
-      } else if(as.numeric(input$p_value_threshold) < 0) {
+        } else if(!is_valid_number(input$p_value_threshold)) {
+          shinyFeedback::showFeedbackWarning(
+            inputId = "p_value_threshold",
+            text = "Invalid input: Please give a valid number."
+          )
+        } else if(as.numeric(input$p_value_threshold) < 0) {
         shinyFeedback::showFeedbackWarning(
           inputId = "p_value_threshold",
           text = "Invalid input: Please give a number greater than 0."
