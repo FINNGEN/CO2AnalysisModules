@@ -6,18 +6,10 @@ source(testthat::test_path("helper.R"))
 
 cohortTableHandler <- helper_createNewCohortTableHandler(addCohorts = "HadesExtrasFractureCohorts")
 
-connection_sandboxAPI <- list(
-  base_url = "",
-  token = "",
-  name = "",
-  notification_email = "",
-  conn_status_tibble = HadesExtras::LogTibble$new()
-)
 
 r_connectionHandler <- shiny::reactiveValues(
   cohortTableHandler = cohortTableHandler,
-  hasChangeCounter = 0,
-  connection_sandboxAPI = connection_sandboxAPI
+  hasChangeCounter = 0
 )
 
 

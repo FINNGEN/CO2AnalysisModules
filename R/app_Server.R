@@ -2,7 +2,10 @@
 #'
 #' @param input,output,session Internal parameters for {shiny}.
 #'     DO NOT REMOVE.
-#' @import shiny
+#' @importFrom shiny reactive parseQueryString observe req insertUI onFlushed observeEvent
+#' @importFrom duckdb dbConnect duckdb
+#' @importFrom dplyr tbl collect pull
+#' @importFrom ParallelLogger logInfo
 #' @noRd
 app_server <- function(input, output, session) {
 
@@ -27,23 +30,31 @@ app_server <- function(input, output, session) {
     analysisResults <- duckdb::dbConnect(duckdb::duckdb(), rf_pathToResultsDatabase())
     analysisType <- analysisResults |> dplyr::tbl("analysisInfo") |> dplyr::collect() |> dplyr::pull("analysisType") |> unique()
 
+    timestamp  <- as.character(as.numeric(format(Sys.time(), "%d%m%Y%H%M%OS2"))*100)
+    logsFolder <- paste0(analysisType, "_", timestamp)
+    logshref  <- fcr_setUpLogger(logsFolder = logsFolder)
+    # log start
+    ParallelLogger::logInfo("[Start] Start logging")
+    ParallelLogger::logInfo("[Start] pathToResultsDatabase: ", rf_pathToResultsDatabase())
+
     # select module ui based on analysisType
     if (analysisType == "cohortOverlaps") {
       pathAboutModule <- system.file('modulesDocumentation/about_cohortOverlaps.md', package = "CO2AnalysisModules")
-      ui <- mod_resultsVisualisation_ui("cohortOverlaps", mod_resultsVisualisation_CohortsOverlaps_ui, pathAboutModule, "Cohort Overlaps")
+      ui <- mod_resultsVisualisation_ui("cohortOverlaps", mod_resultsVisualisation_CohortsOverlaps_ui, pathAboutModule, "Cohort Overlaps", logshref)
     }
     if (analysisType == "cohortDemographics") {
       pathAboutModule <- system.file('modulesDocumentation/about_cohortDemographics.md', package = "CO2AnalysisModules")
-      ui <- mod_resultsVisualisation_ui("cohortDemographics", mod_resultsVisualisation_CohortsDemographics_ui, pathAboutModule, "Cohort Demographics")
+      ui <- mod_resultsVisualisation_ui("cohortDemographics", mod_resultsVisualisation_CohortsDemographics_ui, pathAboutModule, "Cohort Demographics", logshref)
     }
     if (analysisType == "codeWAS") {
       pathAboutModule <- system.file('modulesDocumentation/about_codeWAS.md', package = "CO2AnalysisModules")
-      ui <- mod_resultsVisualisation_ui("codeWAS", mod_resultsVisualisation_CodeWAS_ui, pathAboutModule, "CodeWAS")
+      ui <- mod_resultsVisualisation_ui("codeWAS", mod_resultsVisualisation_CodeWAS_ui, pathAboutModule, "CodeWAS", logshref)
     }
     if (analysisType == "timeCodeWAS") {
       pathAboutModule <- system.file('modulesDocumentation/about_timeCodeWAS.md', package = "CO2AnalysisModules")
-      ui <- mod_resultsVisualisation_ui("timeCodeWAS", mod_resultsVisualisation_TimeCodeWAS_ui, pathAboutModule, "TimeCodeWAS")
+      ui <- mod_resultsVisualisation_ui("timeCodeWAS", mod_resultsVisualisation_TimeCodeWAS_ui, pathAboutModule, "TimeCodeWAS", logshref)
     }
+
 
     # load module ui
     shiny::insertUI(
@@ -51,6 +62,8 @@ app_server <- function(input, output, session) {
       where = "afterEnd",
       ui = ui
     )
+
+    ParallelLogger::logInfo("[Start] Loaded module UI for ", analysisType)
 
     # trigger button on flushed
     shiny::onFlushed(function (){
@@ -85,6 +98,8 @@ app_server <- function(input, output, session) {
     if(analysisType == "timeCodeWAS"){
       mod_resultsVisualisation_server("timeCodeWAS", mod_resultsVisualisation_TimeCodeWAS_server, analysisResults)
     }
+
+    ParallelLogger::logInfo("[Start] Loaded module server for ", analysisType)
 
   })
 

@@ -5,6 +5,7 @@
 #' @param resultsVisualisationModuleUi A UI function representing the specific visualization module to include in the main panel.
 #' @param pathToAboutMd A string representing the path to a markdown file with information about the application.
 #' @param title A string representing the title of the main tab in the sidebar.
+#' @param logshref A string representing the URL to the logs page.
 #'
 #' @return A Shiny UI element that can be included in a Shiny app.
 #'
@@ -15,7 +16,7 @@
 #'
 #' @export
 #'
-mod_resultsVisualisation_ui <- function(id, resultsVisualisationModuleUi, pathToAboutMd, title) {
+mod_resultsVisualisation_ui <- function(id, resultsVisualisationModuleUi, pathToAboutMd, title, logshref) {
   ns <- shiny::NS(id)
 
   headerContent <- shiny::tags$li(
@@ -32,6 +33,7 @@ mod_resultsVisualisation_ui <- function(id, resultsVisualisationModuleUi, pathTo
       shinydashboard::menuItem(text = title, tabName = "module", icon = shiny::icon("table")),
       shinydashboard::menuItem(text = "About", tabName = "about"),
       shinydashboard::menuItem(text = "Study details", tabName = "cohortsInfo"),
+      shinydashboard::menuItem("App Logs", icon = shiny::icon("info-circle"), href = logshref),
       selected = "module"
     )
 

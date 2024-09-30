@@ -8,7 +8,8 @@ mod_resultsVisualisation_ui(
   id,
   resultsVisualisationModuleUi,
   pathToAboutMd,
-  title
+  title,
+  logshref
 )
 }
 \arguments{
@@ -19,6 +20,8 @@ mod_resultsVisualisation_ui(
 \item{pathToAboutMd}{A string representing the path to a markdown file with information about the application.}
 
 \item{title}{A string representing the title of the main tab in the sidebar.}
+
+\item{logshref}{A string representing the URL to the logs page.}
 }
 \value{
 A Shiny UI element that can be included in a Shiny app.

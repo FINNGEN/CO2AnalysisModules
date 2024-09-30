@@ -108,44 +108,48 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
     # render the UI
     #
     output$outputUI <- shiny::renderUI({
+      shiny::req(gg_data_saved)
       shiny::tagList(
         shinyFeedback::useShinyFeedback(),
         shiny::fluidRow(
           shiny::column(
-            2,
+            width = 2,
             shinyWidgets::pickerInput(
-              ns("selected_domains"),
-              "Observation type",
+              ns("domain"),
+              "Domain",
               choices = unique(gg_data_saved$domain),
               selected = unique(gg_data_saved$domain),
-              options = shinyWidgets::pickerOptions(
-                actionsBox = TRUE,
-                selectedTextFormat = 'count',
-                countSelectedText = '{0} observation types'
-              ),
-              multiple = TRUE
+              multiple = TRUE,
+              options = list(
+                `actions-box` = TRUE,
+                `selected-text-format` = "count > 3",
+                `count-selected-text` = "{0} domains selected"
+              )
+            )),
+          shiny::column(
+            width = 2,
+            shinyWidgets::pickerInput(
+              ns("analysis"),
+              "Analysis",
+              choices = unique(gg_data_saved$analysisName),
+              selected = unique(gg_data_saved$analysisName),
+              multiple = TRUE,
+              options = list(`actions-box` = TRUE, `selected-text-format` = "count > 3", `count-selected-text` = "{0} analyses selected")
+            )),
+          shiny::column(
+            width = 2,
+            shinyWidgets::pickerInput(
+              ns("model"),
+              "Model",
+              choices = unique(gg_data_saved$model),
+              selected = unique(gg_data_saved$model),
+              multiple = TRUE,
+              options = list(`actions-box` = TRUE, `selected-text-format` = "count > 3", `count-selected-text` = "{0} model types selected")
             )
-          ),
-          # shiny::column(
-          #   2,
-          #   shinyWidgets::pickerInput(
-          #     ns("selected_p_groups"),
-          #     "p-value groups",
-          #     choices = c(
-          #       "-log10(p) [0,50]" = 1,
-          #       "-log10(p) (50,100]" = 5,
-          #       "-log10(p) (100,200]" = 10,
-          #       "-log10(p) (200,Inf]" = 20
-          #       ),
-          #     selected = c(1, 5, 10, 20),
-          #     options = shinyWidgets::pickerOptions(
-          #       actionsBox = TRUE,
-          #       selectedTextFormat = 'count',
-          #       countSelectedText = '{0} p-value groups'
-          #     ),
-          #     multiple = TRUE
-          #   ),
-          # ), # column
+          )
+        ), # fluidRow
+        shiny::div(style = "margin-top: 20px; margin-bottom: 10px;"),
+        shiny::fluidRow(
           shiny::column(
             2,
             shiny::textInput(
@@ -170,12 +174,15 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
           ), # column
           shiny::column(
             width = 2, align = "left",
-            shiny::div(style = "height: 85px; width: 100%; margin-top: 30px; margin-right: 20px;",
-                       shiny::checkboxInput(ns("filter_na"), "Filter out NA", value = TRUE),
+            shiny::div(style = "width: 100%; margin-top: 20px; margin-right: 20px;",
+                       shiny::checkboxInput(ns("na_anywhere"), "Allow NA", value = FALSE),
+            ),
+            shiny::div(style = "width: 100%; margin-top: -5px; margin-right: 20px;",
+                       shiny::checkboxInput(ns("or_filter_disable"), "Disable OR filter", value = FALSE),
             ),
           ) # column
-        )
-      ) # fluidRow
+        ) # fluidRow
+      ) # tagList
     })
 
     is_valid_number <- function(input_string) {
@@ -187,43 +194,74 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
     # observe the selected domains and p_groups
     #
     shiny::observe({
-      shiny::req(input$selected_domains)
-      # shiny::req(input$selected_p_groups)
+      shiny::req(input$domain)
       shiny::req(input$or_range)
       shiny::req(input$n_cases)
-      # shiny::req(input$p_value_threshold)
-      shiny::req(input$filter_na)
+      shiny::isTruthy(input$na_anywhere)
 
-      if(!is_valid_number(input$p_value_threshold)) {
+      if(input$p_value_threshold == "") {
+        shinyFeedback::showFeedbackWarning(
+          inputId = "p_value_threshold",
+          text = "Invalid input: Please give a valid number (default is 1e-5)."
+        )
+      } else if(!is_valid_number(input$p_value_threshold)) {
         shinyFeedback::showFeedbackWarning(
           inputId = "p_value_threshold",
           text = "Invalid input: Please give a valid number."
         )
-      } else if(input$p_value_threshold == "") {
+      } else if(as.numeric(input$p_value_threshold) < 0) {
         shinyFeedback::showFeedbackWarning(
           inputId = "p_value_threshold",
-          text = "Missing input: Please give a number (1e-5 is the default).")
+          text = "Invalid input: Please give a number greater than 0."
+        )
+      } else if(as.numeric(input$p_value_threshold) > 1) {
+        shinyFeedback::showFeedbackWarning(
+          inputId = "p_value_threshold",
+          text = "Invalid input: Please give a number between 0 and 1."
+        )
       } else {
         shinyFeedback::hideFeedback("p_value_threshold")
-        #
-        # filter data
-        #
-        gg_data <- gg_data_saved |>
-          dplyr::filter(domain %in% input$selected_domains) |>
-          # dplyr::filter(p_group_size %in% input$selected_p_groups) |>
-          dplyr::filter(p < as.numeric(input$p_value_threshold)) |>
-          dplyr::filter(OR <= input$or_range[1] | OR >= input$or_range[2]) |>
-          dplyr::filter(nCasesYes >= input$n_cases)
 
-        if(input$filter_na){
-          gg_data <- na.omit(gg_data)
-        }
+        # filter the data
+        gg_data <- gg_data_saved |>
+          dplyr::filter(
+            # if (!is.null(input$database)) databaseId %in% input$database else FALSE,
+            if (!is.null(input$domain)) domain %in% input$domain else FALSE,
+            if (!is.null(input$analysis)) analysisName %in% input$analysis else FALSE,
+            if (!is.null(input$model)) model %in% input$model else FALSE
+          ) |>
+          dplyr::filter(
+            as.double(p) <= (as.double(input$p_value_threshold) + 2 * .Machine$double.eps)
+            | is.na(p)
+          ) |>
+          dplyr::filter(
+            as.double(OR) <= as.double(input$or_range[1])
+            | as.double(OR) >= as.double(input$or_range[2])
+            | input$or_filter_disable
+            | is.na(OR)
+          ) |>
+          dplyr::filter(nCasesYes >= input$n_cases)  |>
+          dplyr::filter(!dplyr::if_any(c("p", "OR"), is.na) | input$na_anywhere)
 
         # update gg_data
         r$gg_data <- gg_data
       }
-
     })
+
+    #
+    # toggle the OR filter
+    #
+    shiny::observe({
+      shiny::isTruthy(input$or_filter_disable)
+      shiny::req(input$or_range)
+
+      if(input$or_filter_disable) {
+        shinyjs::disable("or_range")
+      } else {
+        shinyjs::enable("or_range")
+      }
+    })
+
 
     #
     # updates ggirafe plot when r$gg_data or r$show_labels or r$show_labels_cases_per changes
@@ -254,7 +292,6 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
     shiny::observeEvent(input$codeWASplot_selected, {
       shiny::req(input$codeWASplot_selected)
       shiny::req(input$codeWASplot_selected != "NA")
-
 
       # clean selection value take only last selected
       selected_rows <- input$codeWASplot_selected
@@ -315,7 +352,7 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
     # render the table ####
     #
     .renderTable <- function(df){
-      df |>
+      df <- df |>
         dplyr::mutate(meanCases = round(meanCases, 3)) |>
         dplyr::mutate(meanControls = round(meanControls, 3))|>
         dplyr::mutate(sdCases = round(sdCases, 3)) |>
@@ -328,8 +365,10 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
         dplyr::select(
           GROUP, name, analysisName, domain, upIn,
           nCasesYes, nControlsYes, meanCases, meanControls, sdCases, sdControls,
-          OR, p, beta, notes) |>
+          OR, p, beta, notes)
+
         DT::datatable(
+          df,
           colnames = c(
             'Time ID' = 'GROUP',
             'Covariate Name' = 'name',
@@ -348,7 +387,15 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
             'Notes' = 'notes'
           ),
           options = list(
-            order = list(list(12, 'asc'), list(11, 'desc')) #
+            order = list(list(12, 'asc'), list(11, 'desc')) # order by p-value, then OR
+            # columnDefs = list(
+            #   list(width = '70px', targets = c(2, 3, 15)), # name, notes
+            #   list(width = '80px', targets = c(1)), # analysisName
+            #   list(width = '80px', targets = c(4)), # domain
+            #   list(width = '30px', targets = c(4)), # upIn
+            #   list(width = '40px', targets = c(6,7,8, 9, 10,11)), # GROUP, nCasesYes, nControlsYes, meanCases, meanControls, sdCases, sdControls
+            #   list(width = '50px', targets = c(12, 13)) # pValue, OR
+            # )
           ),
           escape = FALSE,
           selection = 'none',
@@ -456,8 +503,6 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
 
   time_periods <- .get_time_periods(studyResult)
 
-  # browser()
-
   studyResult <- studyResult |>
     dplyr::transmute(
       code = covariateId,
@@ -518,7 +563,8 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
       ),
       data_id = paste0(code, "@", as.character(time_period)),
       data_id_class = code
-    )
+    ) |>
+    dplyr::filter(!is.na(time_period))
 
   return(gg_data)
 }
@@ -566,10 +612,10 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
       ggplot2::aes(size = p_group), show.legend=T, shape = 21) + #, position = position_dodge(width = 12))+
     ggplot2::scale_size_manual(
       values = c(
-        "-log10(p) [0,50]" = 1,
-        "-log10(p) (50,100]" = 1.5,
-        "-log10(p) (100,200]" = 2,
-        "-log10(p) (200,Inf]" = 3
+        "-log10(p) [0,50]" = 2,
+        "-log10(p) (50,100]" = 3,
+        "-log10(p) (100,200]" = 4,
+        "-log10(p) (200,Inf]" = 6
       )
     ) +
     {if(length(selection) > 1)
@@ -581,6 +627,8 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
         max.overlaps = Inf,
         size = 3,
         hjust = 0.1,
+        force = 0.5,
+        force_pull = 0.5,
         xlim = c(facet_max_x / 4, NA),
         box.padding = 0.8
       )} +
@@ -588,12 +636,16 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
       # label the top 10 values
       ggrepel::geom_text_repel(
         data =  gg_data |>
+          dplyr::group_by(GROUP) |>
           dplyr::arrange(p, OR) |>
-          dplyr::slice_head(n = 10),
+          dplyr::slice_head(n = 10) |>
+          dplyr::ungroup(),
         ggplot2::aes(label = stringr::str_wrap(stringr::str_trunc(name, 45), 30)),
         max.overlaps = Inf,
         size = 3,
         hjust = 0.1,
+        force = 0.5,
+        force_pull = 0.5,
         xlim = c(facet_max_x / 4, NA),
         box.padding = 0.8
       )} +
@@ -605,7 +657,7 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
     ggplot2::scale_y_continuous(
       breaks = c(0, 0.05, seq(0.1, 0.8, 0.1)),
       labels = c(0, 5, seq(10, 80, 10)),
-      limits = c(-0.02 * facet_max_y, facet_max_y)
+      limits = c(-0.02 * facet_max_y, facet_max_y + 0.1 * facet_max_y)
     ) +
     # ggplot2::coord_fixed() +
     ggplot2::facet_grid(
@@ -614,8 +666,10 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
     )+
     ggplot2::theme_minimal()+
     ggplot2::theme(
-      legend.key.height = grid::unit(5, "mm"),
-      legend.key.width = grid::unit(10, "mm"),
+      legend.key.height = grid::unit(3, "mm"),
+      legend.key.width = grid::unit(7, "mm"),
+      legend.title = ggplot2::element_text(size = 8),
+      legend.text = ggplot2::element_text(size = 8),
       legend.position = "bottom",
       legend.direction = "vertical",
       strip.text.x = ggplot2::element_text(size = 10)
@@ -641,7 +695,7 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
     #     "procedure_occurrence" = "Procedure occurrence"
     #   )
     # ) +
-    ggplot2::guides(color = "none", fill = ggplot2::guide_legend(override.aes = list(size = 5))) +
+    ggplot2::guides(color = "none", fill = ggplot2::guide_legend(override.aes = list(size = 5), nrow=2, byrow=TRUE)) +
     ggplot2::labs(size = "p value group", fill = "Domain", x = "\nControls %", y = "Cases %")
 
   r$gg_plot <- gg_fig
@@ -727,7 +781,7 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
     ),
     ggiraph::opts_toolbar(
       position = "topright",
-      hidden = c("zoom", "zoomReset", "lasso_deselect"),
+      hidden = c("zoom", "zoomReset", "lasso_deselect", "saveaspng"),
       delay_mouseout = 100000
     )
 

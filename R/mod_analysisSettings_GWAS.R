@@ -52,8 +52,28 @@ mod_analysisSettings_GWAS_ui <- function(id) {
   )
 }
 
-
-mod_analysisSettings_GWAS_server <- function(id, r_connectionHandler, r_workbench) {
+#' @title Analysis Settings for GWAS Module Server
+#'
+#' @description
+#' A Shiny module server function that sets up the analysis settings for a GWAS (Genome-Wide Association Study).
+#' It manages the user inputs for selecting case and control cohorts, setting a phenotype name, and description,
+#' and provides reactive outputs for the analysis settings.
+#'
+#' @param id A string representing the module's ID.
+#' @param r_connectionHandler A reactive object containing database and cohort connection handlers.
+#'
+#' @return A reactive expression that provides the analysis settings for the GWAS.
+#'
+#' @importFrom shiny moduleServer observe req updateTextInput updatePickerInput renderText reactive observeEvent
+#' @importFrom shinyWidgets updatePickerInput
+#' @importFrom shinyFeedback feedbackWarning
+#' @importFrom stringr str_detect
+#' @importFrom purrr discard
+#' @importFrom dplyr filter pull
+#' @importFrom ParallelLogger logError logWarn logInfo
+#'
+#' @export
+mod_analysisSettings_GWAS_server <- function(id, r_connectionHandler) {
 
   shiny::moduleServer(id, function(input, output, session) {
     ns <- session$ns
@@ -66,7 +86,10 @@ mod_analysisSettings_GWAS_server <- function(id, r_connectionHandler, r_workbenc
       shiny::req(r_connectionHandler$hasChangeCounter)
 
       cohortIdAndNames <- r_connectionHandler$cohortTableHandler$getCohortIdAndNames()
-      cohortIdAndNamesList <- as.list(setNames(cohortIdAndNames$cohortId, cohortIdAndNames$cohortName))
+      cohortIdAndNamesList <- list()
+      if(nrow(cohortIdAndNames) != 0){
+        cohortIdAndNamesList <- as.list(setNames(cohortIdAndNames$cohortId, paste(cohortIdAndNames$shortName, "(", cohortIdAndNames$cohortName, ")")))
+      }
 
       shinyWidgets::updatePickerInput(
         inputId = "selectCaseCohort_pickerInput",
@@ -84,33 +107,13 @@ mod_analysisSettings_GWAS_server <- function(id, r_connectionHandler, r_workbenc
       shiny::req(input$selectCaseCohort_pickerInput)
 
       cohortIdAndNames <- r_connectionHandler$cohortTableHandler$getCohortIdAndNames()
-      cohortIdAndNamesList <- as.list(setNames(cohortIdAndNames$cohortId, cohortIdAndNames$cohortName))
+      cohortIdAndNamesList <- list()
+      if(nrow(cohortIdAndNames) != 0){
+        cohortIdAndNamesList <- as.list(setNames(cohortIdAndNames$cohortId, paste(cohortIdAndNames$shortName, "(", cohortIdAndNames$cohortName, ")")))
+      }
 
       cohortIdAndNamesList <- cohortIdAndNamesList |>
         purrr::discard(~.x %in% input$selectCaseCohort_pickerInput)
-
-      shinyWidgets::updatePickerInput(
-        inputId = "selectControlCohort_pickerInput",
-        choices = cohortIdAndNamesList,
-        selected = character(0)
-      )
-    })
-
-
-    #
-    # update matchToCohortId_pickerInput with cohort names not in selectCaseCohort_pickerInput
-    #
-    shiny::observe({
-      shiny::req(input$selectDatabases_pickerInput)
-      shiny::req(input$selectCaseCohort_pickerInput)
-
-      if(input$selectCaseCohort_pickerInput != "NA"){
-        cohortIdAndNames <- r_connectionHandlers$cohortTableHandler$getCohortIdAndNames() |>
-          dplyr::filter(!(cohortId %in% input$selectCaseCohort_pickerInput))
-        cohortIdAndNamesList <- as.list(setNames(cohortIdAndNames$cohortId, paste(cohortIdAndNames$shortName, "➖"  , cohortIdAndNames$cohortName)))
-      }else{
-        cohortIdAndNamesList <- list()
-      }
 
       shinyWidgets::updatePickerInput(
         inputId = "selectControlCohort_pickerInput",
@@ -130,13 +133,16 @@ mod_analysisSettings_GWAS_server <- function(id, r_connectionHandler, r_workbenc
       cohortTableHandler <- r_connectionHandler$cohortTableHandler
 
       cohorts  <- cohortTableHandler$getCohortsSummary()
-      casesCohort <- cohorts[cohorts$cohortId == input$selectCaseCohort_pickerInput, ] |> dplyr::pull(cohortName)
-      controlsCohort <- cohorts[cohorts$cohortId == input$selectControlCohort_pickerInput, ] |> dplyr::pull(cohortName)
+      casesCohortName <- cohorts |> filter(cohortId == input$selectCaseCohort_pickerInput) |> dplyr::pull(cohortName)
+      controlsCohortName <- cohorts |> filter(cohortId == input$selectControlCohort_pickerInput) |> dplyr::pull(cohortName)
 
-      defaultPhenotypeName <- paste0(.format_str(casesCohort),.format_str(controlsCohort))
+      defaultPhenotypeName <- paste0(
+        casesCohortName |> stringr::str_replace_all("[[:punct:]]|[^[:alnum:]]|[:blank:]", "")  |> toupper(),
+        controlsCohortName |> stringr::str_replace_all("[[:punct:]]|[^[:alnum:]]|[:blank:]", "")  |> toupper()
+      )
       dbName <- cohortTableHandler$databaseName
-      defaultDescription <- paste0("Cases-cohort: ", casesCohort, "; Controls-cohort: ",
-                                   controlsCohort, " (db: ", dbName, ")")
+      defaultDescription <- paste0("Cases-cohort: ", casesCohortName, "; Controls-cohort: ",
+                                   controlsCohortName, " (db: ", dbName, ")")
 
       shiny::updateTextInput(session, "pheno", value = defaultPhenotypeName )
       shiny::updateTextInput(session, "description", value = defaultDescription )
@@ -156,6 +162,9 @@ mod_analysisSettings_GWAS_server <- function(id, r_connectionHandler, r_workbenc
     })
 
 
+    #
+    # render info text
+    #
     output$info_text <- shiny::renderText({
       shiny::req(input$selectCaseCohort_pickerInput)
       shiny::req(input$selectControlCohort_pickerInput)
@@ -170,29 +179,43 @@ mod_analysisSettings_GWAS_server <- function(id, r_connectionHandler, r_workbenc
         ) |>
         dplyr::pull(numberOfSubjects)  |>
         sum()
+
       nSubjectsCase <- cohortCounts |>
         dplyr::filter(cohortId == input$selectCaseCohort_pickerInput) |>
         dplyr::pull(cohortSubjects)
+
       nSubjectsControl <- cohortCounts |>
         dplyr::filter(cohortId == input$selectControlCohort_pickerInput) |>
         dplyr::pull(cohortSubjects)
+
+      nEntriesCase <- cohortCounts |>
+        dplyr::filter(cohortId == input$selectCaseCohort_pickerInput) |>
+        dplyr::pull(cohortEntries)
+
+      nEntriesControl <- cohortCounts |>
+        dplyr::filter(cohortId == input$selectControlCohort_pickerInput) |>
+        dplyr::pull(cohortEntries)
 
       message <- ""
 
       # counts
       if( nSubjectsCase > nSubjectsControl ){
-        message <- paste0(message, "❌ There are more subjects in  ase cohort (", nSubjectsCase,") that in control cohort (", nSubjectsControl,"). Are you sure they are correct?\n")
+        message <- paste0(message, "\u274C There are more subjects in  ase cohort (", nSubjectsCase,") that in control cohort (", nSubjectsControl,"). Are you sure they are correct?\n")
       }
 
       # overlap
       if(nSubjectsOverlap==0){
-        message <- paste0(message, "✅ No subjects overlap between case and control cohorts\n")
+        message <- paste0(message, "\u2705 No subjects overlap between case and control cohorts\n")
       }else{
-        if(nSubjectsOverlap > nSubjectsCase * .20){
-          message <- paste0(message, "❌ There are many subjects, ",nSubjectsOverlap, ", that overlap  berween case and control cohorts. Consider removing them in Operate Cohorts tab\n")
-        }else{
-          message <- paste0(message, "⚠️ There are few subjects, ",nSubjectsOverlap, ", that overlap between case and control cohorts. \n")
-        }
+        message <- paste0(message, "\u274C There are ", nSubjectsOverlap, " subjects that overlap  berween case and control cohorts. Consider removing them in Operate Cohorts tab\n")
+      }
+
+      # duplicates
+      if(nEntriesCase > nSubjectsCase){
+        message <- paste0(message, "\u274C There are more entries than subjects in case cohort (", nEntriesCase, " > ", nSubjectsCase, "). Duplicate subject will be ignored.\n")
+      }
+      if(nEntriesControl > nSubjectsControl){
+        message <- paste0(message, "\u274C There are more entries than subjects in control cohort (", nEntriesControl, " > ", nSubjectsControl, "). Duplicate subject will be ignored.\n")
       }
 
       return(message)
@@ -218,13 +241,12 @@ mod_analysisSettings_GWAS_server <- function(id, r_connectionHandler, r_workbenc
       release <- paste0("Regenie", gsub("[A-Za-z]", "", cohortTableHandler$databaseId))
 
       analysisSettings <- list(
-        casesCohort = input$selectCaseCohort_pickerInput |> as.integer(),
-        controlsCohort = input$selectControlCohort_pickerInput |> as.integer(),
+        cohortIdCases = input$selectCaseCohort_pickerInput |> as.integer(),
+        cohortIdControls = input$selectControlCohort_pickerInput |> as.integer(),
         phenotype = input$pheno,
         description = input$description,
         analysisType = input$selectAnalysisType_pickerInput_gwas,
-        release = release,
-        connectionSandboxAPI = r_connectionHandler$connection_sandboxAPI
+        release = release
       )
 
       return(analysisSettings)
@@ -237,7 +259,3 @@ mod_analysisSettings_GWAS_server <- function(id, r_connectionHandler, r_workbenc
 
 }
 
-
-.format_str <- function(x){
-  toupper(stringr::str_replace_all(x, "[[:punct:]]|[^[:alnum:]]|[:blank:]", ""))
-}
