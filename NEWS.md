@@ -1,6 +1,6 @@
 # CO2AnalysisModules 1.0.1
 
-- Minor hotfixes
+- Minor hot fixes
 
 # CO2AnalysisModules v1.0.0
 
