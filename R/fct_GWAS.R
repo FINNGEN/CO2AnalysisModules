@@ -162,10 +162,10 @@ assertAnalysisSettings_GWAS <- function(analysisSettings) {
   c('cohortIdCases', 'cohortIdControls', 'phenotype', 'description', 'analysisType', 'release')  |> checkmate::assertSubset(names(analysisSettings))
   analysisSettings$cohortIdCases |> checkmate::assertNumeric()
   analysisSettings$cohortIdControls |> checkmate::assertNumeric()
-  analysisSettings$phenotype |> checkmate::assertString(min.chars = 1, pattern = "^[A-Z]+$")
+  analysisSettings$phenotype |> checkmate::assertString(min.chars = 1, pattern = "^[A-Z0-9]+$")
   analysisSettings$description |> checkmate::assertString(min.chars = 1)
   analysisSettings$analysisType |> checkmate::assertChoice(choices = c("additive", "recessive", "dominant"))
-  analysisSettings$release |> checkmate::assertChoice(choices = c("Regenie"))
+  analysisSettings$release |> checkmate::assertChoice(choices = c("Regenie12"))
   return(analysisSettings)
 }
 
