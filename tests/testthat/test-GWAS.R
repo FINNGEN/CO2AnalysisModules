@@ -47,12 +47,13 @@ test_that("executeGWAS error if no token", {
   withr::with_envvar(
     new = c("SANDBOX_TOKEN" = "test"),
     code = {
+      expect_error({
         result <- execute_GWAS(
           exportFolder = exportFolder,
           cohortTableHandler = cohortTableHandler,
           analysisSettings = analysisSettings
-        )
-        result$status |> expect_equal(FALSE)
+        )},
+        "GWAS run failed")
     }
   )
 

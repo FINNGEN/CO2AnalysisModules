@@ -129,10 +129,8 @@ execute_GWAS <- function(
     release = release
   )
 
-  if (result$status){
-    ParallelLogger::logInfo("GWAS run successfully submitted")
-  } else {
-    ParallelLogger::logError("GWAS run failed", result$message)
+  if (!result$status){
+    stop("GWAS run failed", result$message)
   }
 
   # there is not database to share
