@@ -23,6 +23,20 @@ mod_resultsVisualisation_CohortsDemographics_ui <- function(id) {
         id = ns("tabset"),
         shiny::tabPanel(
           "Plot",
+          column(
+            3,
+            shiny::tagList(
+              shiny::div(
+                shiny::checkboxInput(ns("show_count"), "Show patient counts", value = FALSE),
+                style="margin-top: 22px; margin-bottom: 15px;"
+              ),
+              # shiny::div(
+              #   shiny::checkboxInput(ns("same_scale"), "Use same y-scale across cohorts", value = TRUE),
+              #   style="margin-top: -15px; margin-bottom: 15px;"
+              # ),
+            )
+          ), #
+
           shiny::plotOutput(ns("demographicsPlot"), height = "600px"),
           shiny::div(
             style = "margin-top: 10px; margin-bottom: 10px;",
@@ -144,20 +158,7 @@ mod_resultsVisualisation_CohortsDemographics_server <- function(id, analysisResu
             ns("stratifyBy"), "Stratify by",
             choices = c("ageGroup", "gender", "calendarYear"),
             selected = c("ageGroup", "gender", "calendarYear"), multiple = TRUE),
-        ),
-        column(
-          3,
-          shiny::tagList(
-            shiny::div(
-              shiny::checkboxInput(ns("show_count"), "Show patient counts", value = FALSE),
-              style="margin-top: 22px; margin-bottom: -15px;"
-            ),
-            shiny::div(
-              shiny::checkboxInput(ns("same_scale"), "Use same y-scale across cohorts", value = TRUE),
-              style="margin-top: -15px; margin-bottom: -15px;"
-            ),
-          )
-        ),
+        )
       )
 
     })
@@ -176,7 +177,7 @@ mod_resultsVisualisation_CohortsDemographics_server <- function(id, analysisResu
         {if(input$show_count)
           ggplot2::geom_text(ggplot2::aes(label = count), vjust = -0.7, position = ggplot2::position_dodge(width = .8))
         } +
-        ggplot2::facet_grid(eval(ggplot2::expr(!!ggplot2::ensym(rows) ~ !!ggplot2::ensym(cols))), scales = ifelse(input$same_scale, "fixed", "free_y")) +
+        ggplot2::facet_grid(eval(ggplot2::expr(!!ggplot2::ensym(rows) ~ !!ggplot2::ensym(cols))), scales = "fixed") +
         {if(x == "calendarYear")
           ggplot2::scale_x_continuous(breaks = function(x) unique(floor(pretty(seq(min(x), (max(x) + 1) * 1.1)))))
         } +
