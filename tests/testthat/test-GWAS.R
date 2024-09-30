@@ -19,7 +19,7 @@ test_that("executeGWAS error if no token", {
     phenotype = "FRACTUREFRACTURECONTROLS",
     description = "Cases-cohort: fracture; Controls-cohort: fracture-controls (db: Eunomia GiBleed)",
     analysisType = "additive",
-    release = "Regenie"
+    release = "Regenie12"
   )
 
   # function
