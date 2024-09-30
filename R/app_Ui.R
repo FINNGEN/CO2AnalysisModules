@@ -2,7 +2,8 @@
 #'
 #' @param request Internal parameter for `{shiny}`.
 #'     DO NOT REMOVE.
-#' @import shiny
+#' @importFrom shiny tagList actionButton
+#' @importFrom shinyjs useShinyjs hidden
 #' @noRd
 app_ui <- function(request) {
   shiny::tagList(
