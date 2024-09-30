@@ -108,44 +108,48 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
     # render the UI
     #
     output$outputUI <- shiny::renderUI({
+      shiny::req(gg_data_saved)
       shiny::tagList(
         shinyFeedback::useShinyFeedback(),
         shiny::fluidRow(
           shiny::column(
-            2,
+            width = 2,
             shinyWidgets::pickerInput(
-              ns("selected_domains"),
-              "Observation type",
+              ns("domain"),
+              "Domain",
               choices = unique(gg_data_saved$domain),
               selected = unique(gg_data_saved$domain),
-              options = shinyWidgets::pickerOptions(
-                actionsBox = TRUE,
-                selectedTextFormat = 'count',
-                countSelectedText = '{0} observation types'
-              ),
-              multiple = TRUE
+              multiple = TRUE,
+              options = list(
+                `actions-box` = TRUE,
+                `selected-text-format` = "count > 3",
+                `count-selected-text` = "{0} domains selected"
+              )
+            )),
+          shiny::column(
+            width = 2,
+            shinyWidgets::pickerInput(
+              ns("analysis"),
+              "Analysis",
+              choices = unique(gg_data_saved$analysisName),
+              selected = unique(gg_data_saved$analysisName),
+              multiple = TRUE,
+              options = list(`actions-box` = TRUE, `selected-text-format` = "count > 3", `count-selected-text` = "{0} analyses selected")
+            )),
+          shiny::column(
+            width = 2,
+            shinyWidgets::pickerInput(
+              ns("model"),
+              "Model",
+              choices = unique(gg_data_saved$model),
+              selected = unique(gg_data_saved$model),
+              multiple = TRUE,
+              options = list(`actions-box` = TRUE, `selected-text-format` = "count > 3", `count-selected-text` = "{0} model types selected")
             )
-          ),
-          # shiny::column(
-          #   2,
-          #   shinyWidgets::pickerInput(
-          #     ns("selected_p_groups"),
-          #     "p-value groups",
-          #     choices = c(
-          #       "-log10(p) [0,50]" = 1,
-          #       "-log10(p) (50,100]" = 5,
-          #       "-log10(p) (100,200]" = 10,
-          #       "-log10(p) (200,Inf]" = 20
-          #       ),
-          #     selected = c(1, 5, 10, 20),
-          #     options = shinyWidgets::pickerOptions(
-          #       actionsBox = TRUE,
-          #       selectedTextFormat = 'count',
-          #       countSelectedText = '{0} p-value groups'
-          #     ),
-          #     multiple = TRUE
-          #   ),
-          # ), # column
+          )
+        ), # fluidRow
+        shiny::div(style = "margin-top: 20px; margin-bottom: 10px;"),
+        shiny::fluidRow(
           shiny::column(
             2,
             shiny::textInput(
@@ -170,12 +174,15 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
           ), # column
           shiny::column(
             width = 2, align = "left",
-            shiny::div(style = "width: 100%; margin-top: 30px; margin-right: 20px;",
+            shiny::div(style = "width: 100%; margin-top: 20px; margin-right: 20px;",
                        shiny::checkboxInput(ns("na_anywhere"), "Allow NA", value = FALSE),
             ),
+            shiny::div(style = "width: 100%; margin-top: -5px; margin-right: 20px;",
+                       shiny::checkboxInput(ns("or_filter_disable"), "Disable OR filter", value = FALSE),
+            ),
           ) # column
-        )
-      ) # fluidRow
+        ) # fluidRow
+      ) # tagList
     })
 
     is_valid_number <- function(input_string) {
@@ -187,37 +194,74 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
     # observe the selected domains and p_groups
     #
     shiny::observe({
-      shiny::req(input$selected_domains)
+      shiny::req(input$domain)
       shiny::req(input$or_range)
       shiny::req(input$n_cases)
       shiny::isTruthy(input$na_anywhere)
 
-      if(!is_valid_number(input$p_value_threshold)) {
+      if(input$p_value_threshold == "") {
+        shinyFeedback::showFeedbackWarning(
+          inputId = "p_value_threshold",
+          text = "Invalid input: Please give a valid number (default is 1e-5)."
+        )
+      } else if(!is_valid_number(input$p_value_threshold)) {
         shinyFeedback::showFeedbackWarning(
           inputId = "p_value_threshold",
           text = "Invalid input: Please give a valid number."
         )
-      } else if(input$p_value_threshold == "") {
+      } else if(as.numeric(input$p_value_threshold) < 0) {
         shinyFeedback::showFeedbackWarning(
           inputId = "p_value_threshold",
-          text = "Missing input: Please give a number (1e-5 is the default).")
+          text = "Invalid input: Please give a number greater than 0."
+        )
+      } else if(as.numeric(input$p_value_threshold) > 1) {
+        shinyFeedback::showFeedbackWarning(
+          inputId = "p_value_threshold",
+          text = "Invalid input: Please give a number between 0 and 1."
+        )
       } else {
         shinyFeedback::hideFeedback("p_value_threshold")
-        #
-        # filter data
-        #
+
+        # filter the data
         gg_data <- gg_data_saved |>
-          dplyr::filter(domain %in% input$selected_domains) |>
-          dplyr::filter(p < as.numeric(input$p_value_threshold) | is.na(p)) |>
-          dplyr::filter(OR <= input$or_range[1] | OR >= input$or_range[2] | is.na(OR)) |>
-          dplyr::filter(nCasesYes >= input$n_cases) |>
-          dplyr::filter(!dplyr::if_any(dplyr::everything(), is.na) | input$na_anywhere)
+          dplyr::filter(
+            # if (!is.null(input$database)) databaseId %in% input$database else FALSE,
+            if (!is.null(input$domain)) domain %in% input$domain else FALSE,
+            if (!is.null(input$analysis)) analysisName %in% input$analysis else FALSE,
+            if (!is.null(input$model)) model %in% input$model else FALSE
+          ) |>
+          dplyr::filter(
+            as.double(p) <= (as.double(input$p_value_threshold) + 2 * .Machine$double.eps)
+            | is.na(p)
+          ) |>
+          dplyr::filter(
+            as.double(OR) <= as.double(input$or_range[1])
+            | as.double(OR) >= as.double(input$or_range[2])
+            | input$or_filter_disable
+            | is.na(OR)
+          ) |>
+          dplyr::filter(nCasesYes >= input$n_cases)  |>
+          dplyr::filter(!dplyr::if_any(c("p", "OR"), is.na) | input$na_anywhere)
 
         # update gg_data
         r$gg_data <- gg_data
       }
-
     })
+
+    #
+    # toggle the OR filter
+    #
+    shiny::observe({
+      shiny::isTruthy(input$or_filter_disable)
+      shiny::req(input$or_range)
+
+      if(input$or_filter_disable) {
+        shinyjs::disable("or_range")
+      } else {
+        shinyjs::enable("or_range")
+      }
+    })
+
 
     #
     # updates ggirafe plot when r$gg_data or r$show_labels or r$show_labels_cases_per changes
@@ -519,7 +563,8 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
       ),
       data_id = paste0(code, "@", as.character(time_period)),
       data_id_class = code
-    )
+    ) |>
+    dplyr::filter(!is.na(time_period))
 
   return(gg_data)
 }
@@ -736,7 +781,7 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
     ),
     ggiraph::opts_toolbar(
       position = "topright",
-      hidden = c("zoom", "zoomReset", "lasso_deselect"),
+      hidden = c("zoom", "zoomReset", "lasso_deselect", "saveaspng"),
       delay_mouseout = 100000
     )
 
