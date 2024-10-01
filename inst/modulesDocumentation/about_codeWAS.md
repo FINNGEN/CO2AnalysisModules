@@ -1,6 +1,6 @@
 ## CodeWAS
 
-Cohort Operations provides a PheWAS tool to explore medical codes and measurement value enrichment between cohorts with visualizations and p-values. 
+Cohort Operations provides a PheWAS tool to explore medical codes and measurement values enrichment between cohorts with visualizations and p-values. 
 
 ### Analysis Settings
 
