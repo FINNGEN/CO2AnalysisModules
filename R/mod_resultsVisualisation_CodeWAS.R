@@ -325,8 +325,8 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
           # 'Type' = 'upIn',          # upIn MISSING from data
           'N cases' = 'nCasesYes',
           'N ctrls' = 'nControlsYes',
-          'Ratio/Mean cases' = 'meanCases',
-          'Ratio/Mean ctrls' = 'meanControls',
+          'Ratio|Mean cases' = 'meanCases',
+          'Ratio|Mean ctrls' = 'meanControls',
           'SD cases' = 'sdCases',
           'SD ctrls' = 'sdControls',
           'OR' = 'oddsRatio',
