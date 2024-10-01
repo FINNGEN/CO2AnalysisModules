@@ -128,7 +128,7 @@ mod_resultsVisualisation_server <- function(id, resultsVisualisationModuleServer
     output$usedCohortsInfo <- reactable::renderReactable({
       countsTable <- analysisResults |> dplyr::tbl('cohortsInfo') |>
         dplyr::filter(!is.na(use) & use != "") |>
-        dplyr::select(shortName, cohortName, cohortSubjects, cohortEntries) |>
+        dplyr::select(use, shortName, cohortName, cohortSubjects, cohortEntries) |>
         dplyr::collect()
 
       reactable::reactable(countsTable)
