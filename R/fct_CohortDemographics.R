@@ -60,7 +60,7 @@ execute_CohortDemographics <- function(
   ParallelLogger::logInfo("Calculating cohort demographics")
   startAnalysisTime <- Sys.time()
 
-  demographicsCounts  <- HadesExtras::getCohortDemographicsCounts(
+  demographicsCounts  <- .getCohortDemographicsCounts(
     connection = connection,
     cdmDatabaseSchema = cdmDatabaseSchema,
     cohortDatabaseSchema = cohortDatabaseSchema,
@@ -246,5 +246,112 @@ checkResults_CohortDemographics <- function(pathToResultsDatabase) {
   return(errors)
 }
 
+#' Get Cohort Demographics Counts
+#'
+#' This function retrieves demographic counts (age and gender) for cohorts based on a reference year (cohort start date, cohort end date, or birth date). It queries the cohort table in the specified database and provides the demographic distribution by age group and gender.
+#'
+#' @param connectionDetails Database connection details, created using `DatabaseConnector::createConnectionDetails()`. Either this or `connection` must be provided.
+#' @param connection An existing database connection from `DatabaseConnector::connect()`. If `NULL`, a connection will be established using `connectionDetails`.
+#' @param cdmDatabaseSchema The schema of the CDM database where the patient data resides.
+#' @param vocabularyDatabaseSchema (Optional) The schema of the vocabulary tables. Defaults to the `cdmDatabaseSchema`.
+#' @param cohortDatabaseSchema The schema of the cohort tables where cohorts are stored.
+#' @param cohortTable The name of the cohort table. Default is "cohort".
+#' @param cohortIds A numeric vector of cohort IDs to filter on. If `NULL` or empty, all cohorts are included.
+#' @param referenceYears A character vector specifying the reference year(s) to use for demographic counts. Valid options are "cohort_start_date", "cohort_end_date", and "birth_datetime". Default is all three.
+#'
+#' @return A tibble containing demographic counts per cohort, grouped by age group and gender for each reference year. The columns include `referenceYear`, `cohortId`, `calendarYear`, `ageGroup`, `gender`, and `count`.
+#'
+#' @importFrom DatabaseConnector connect disconnect querySql
+#' @importFrom SqlRender readSql render translate
+#' @importFrom checkmate assertCharacter assertString assertNumeric assertSubset
+#' @importFrom tibble as_tibble
+#' @importFrom dplyr mutate select bind_rows case_when group_by summarize
+#'
+.getCohortDemographicsCounts <- function(
+    connectionDetails = NULL,
+    connection = NULL,
+    cdmDatabaseSchema,
+    vocabularyDatabaseSchema = cdmDatabaseSchema,
+    cohortDatabaseSchema,
+    cohortTable = "cohort",
+    cohortIds = c(),
+    referenceYears = c("cohort_start_date", "cohort_end_date", "birth_datetime")
+) {
+  #
+  # Validate parameters
+  #
+  validReferenceYears <- c("cohort_start_date", "cohort_end_date", "birth_datetime")
 
+  if (is.null(connection) && is.null(connectionDetails)) {
+    stop("You must provide either a database connection or the connection details.")
+  }
+
+  if (is.null(connection)) {
+    connection <- DatabaseConnector::connect(connectionDetails)
+    on.exit(DatabaseConnector::disconnect(connection))
+  }
+
+  checkmate::assertCharacter(cohortDatabaseSchema, len = 1)
+  checkmate::assertString(cohortTable)
+  checkmate::assertNumeric(cohortIds, null.ok = TRUE )
+  referenceYears |> checkmate::assertCharacter(min.len = 1)
+  referenceYears |> checkmate::assertSubset(validReferenceYears)
+
+
+  #
+  # Function
+  demographicsCounts <- tibble()
+  for (referenceYear in referenceYears) {
+    sql <- SqlRender::readSql(system.file("sql/sql_server/CalculateCohortDemographics.sql", package = "HadesExtras", mustWork = TRUE))
+
+    sql <- SqlRender::render(
+      sql = sql,
+      cdm_database_schema = cdmDatabaseSchema,
+      cohort_database_schema = cohortDatabaseSchema,
+      cohort_table = cohortTable,
+      cohort_ids = cohortIds,
+      reference_year = referenceYear,
+      warnOnMissingParameters = TRUE
+    )
+    sql <- SqlRender::translate(
+      sql = sql,
+      targetDialect = connection@dbms
+    )
+
+    demographicsCounts  <- DatabaseConnector::querySql(connection, sql, snakeCaseToCamelCase = TRUE) |>
+      tibble::as_tibble() |>
+      dplyr::mutate(referenceYear = referenceYear ) |>
+      dplyr::select(referenceYear, everything()) |>
+      dplyr::bind_rows(demographicsCounts)
+  }
+
+  demographicsCounts  <- demographicsCounts |>
+    tibble::as_tibble() |>
+    dplyr::mutate(
+      ageGroup = case_when(
+        ageGroup <= 0 ~ "0-9",
+        ageGroup <= 1 ~ "10-19",
+        ageGroup <= 2 ~ "20-29",
+        ageGroup <= 3 ~ "30-39",
+        ageGroup <= 4 ~ "40-49",
+        ageGroup <= 5 ~ "50-59",
+        ageGroup <= 6 ~ "60-69",
+        ageGroup <= 7 ~ "70-79",
+        ageGroup <= 8 ~ "80-89",
+        ageGroup <= 9 ~ "90-99",
+        TRUE ~ "100+"
+      ),
+      gender = dplyr::case_when(
+        genderConceptId == 8507 ~ "Male",
+        genderConceptId == 8532 ~ "Female",
+        TRUE ~ "Unknown"
+      )
+    ) |>
+    dplyr::select(-genderConceptId) |>
+    dplyr::group_by(referenceYear, cohortId, calendarYear, ageGroup, gender) |>
+    dplyr::summarize( count = sum(cohortCount) )
+
+
+  return(demographicsCounts)
+}
 

@@ -1,5 +1,6 @@
 AnalysisModules
 Appender
+CDM
 CMD
 CodeWAS
 CodeWASs
@@ -11,7 +12,6 @@ DuckDB
 FinnGen
 GWAS
 Lifecycle
-SSL
 TimeCodeWAS
 UI
 UpSet
@@ -24,6 +24,7 @@ binaryTest
 continuousOddsRatio
 continuousPValue
 continuousTest
+datetime
 duckdb
 meanValueCases
 meanValueControls
