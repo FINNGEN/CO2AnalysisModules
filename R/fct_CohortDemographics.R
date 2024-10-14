@@ -133,7 +133,7 @@ execute_CohortDemographics <- function(
         ),
       by = "cohortId"
     ) |>
-    dplyr::mutate(use = ifelse(cohortId == {cohortIds}, "Selected", ""))
+    dplyr::mutate(use = ifelse(cohortId %in% {cohortIds}, "Selected", ""))
 
   duckdb::dbWriteTable(connection, "cohortsInfo",cohortsInfo, overwrite = TRUE)
 
