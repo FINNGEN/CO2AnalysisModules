@@ -1,6 +1,7 @@
-# CO2AnalysisModules 1.0.1
+# CO2AnalysisModules 1.0.2
 
-- Minor hot fixes
+- Hot fix: wrong selected cohorts in CohortOverlaps and CohortDemographics
+- Other minor hot fixes
 
 # CO2AnalysisModules v1.0.0
 
