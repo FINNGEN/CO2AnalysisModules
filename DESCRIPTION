@@ -61,8 +61,7 @@ Suggests:
     Eunomia, 
     withr,
     spelling,
-    covr,
-    CohortGenerator
+    covr
 Config/testthat/edition: 3
 URL: https://github.com/javier-gracia-tabuenca-tuni/CO2AnalysisModules
 BugReports: https://github.com/javier-gracia-tabuenca-tuni/CO2AnalysisModules/issues
