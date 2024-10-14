@@ -1,11 +1,10 @@
 AnalysisModules
 Appender
 CDM
-CMD
 CodeWAS
 CodeWASs
-Codecov
 CohortDemographics
+CohortOperations
 CohortOverlaps
 CohortsOverlaps
 DuckDB
