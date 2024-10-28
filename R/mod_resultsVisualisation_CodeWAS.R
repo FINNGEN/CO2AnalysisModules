@@ -115,8 +115,9 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
                                   breaks = c(0, 5, 100, Inf),
                                   labels = c('-log10(p) (0,5]', '-log10(p) (5,100]', '-log10(p) (100,Inf]'))
         ) |>
-        tidyr::separate(covariateName, c("domain", "name"), sep = ":", extra = "merge") |>
+        tidyr::separate(covariateName, c("domain", "name"), sep = ":", extra = "merge", fill = "right") |>
         dplyr::mutate(covariateName = ifelse(is.na(name), domain, name)) |>
+        dplyr::mutate(name = ifelse(is.na(name), domain, name)) |>
         dplyr::mutate(covariateName = stringr::str_remove(covariateName, "^[:blank:]")) |>
         dplyr::mutate(domain = stringr::str_remove(domain, "^[:blank:]"))
     })
@@ -389,6 +390,7 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
       df <- r$filteredCodeWASData |>
         dplyr::mutate(oddsRatio = ifelse(is.na(oddsRatio), 1, oddsRatio)) |>
         dplyr::mutate(pLog10 = -log10(pValue)) |>
+        dplyr::mutate(pLog10 = ifelse(pLog10 < 1e-30, 1e-30, pLog10)) |>
         dplyr::mutate(beta = log(oddsRatio)) |>
         dplyr::mutate(beta = ifelse(beta > 5, 5, beta)) |>
         dplyr::mutate(beta = ifelse(beta < -5, -5, beta)) |>
@@ -396,7 +398,6 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
         dplyr::select(analysisName, covariateName, pValue, oddsRatio, direction, oddsRatio, pLog10, beta, meanCases, meanControls, modelType) |>
         dplyr::mutate(data_id = dplyr::row_number())
 
-      # browser()
       n_no_test <- sum(grepl("no test", df$modelType, ignore.case = TRUE))
       p_limit <- -log(0.05/(nrow(df) - n_no_test))
 
@@ -465,10 +466,6 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
           )
         )
       )
-
-      # gg_plot <- ggiraph::girafe(ggobj = p) |> ggiraph::girafe_options(ggiraph::opts_hover(css = "fill: red;"))
-
-      # gg_plot <- NULL
 
       return(gg_plot)
     })

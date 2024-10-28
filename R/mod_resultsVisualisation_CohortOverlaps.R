@@ -75,7 +75,7 @@ mod_resultsVisualisation_CohortsOverlaps_ui <- function(id) {
                 ), # fluidRow
                 shiny::fluidRow(
                   shiny::column(4, align = "left",
-                                shiny::sliderInput(ns("rm_intersection_size_n"), "Remove intersections with size less than", min = 2, max = 50, value = 50, step = 1),
+                                shiny::sliderInput(ns("rm_intersection_size_n"), "Remove intersections with size less than", min = 0, max = 50, value = 0, step = 1),
                   ), # column
                   shiny::column(3, align = "left",
                                 shiny::checkboxInput(ns("show_numbers"), "Show intersection sizes", value = TRUE),

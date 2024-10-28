@@ -1,3 +1,7 @@
+# CO2AnalysisModules 1.0.3
+
+- Hot fix: vocano plot and upset plot defaut intersection value to 0
+
 # CO2AnalysisModules 1.0.2
 
 - Hot fix: wrong selected cohorts in CohortOverlaps and CohortDemographics
