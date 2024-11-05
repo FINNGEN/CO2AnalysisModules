@@ -659,10 +659,11 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
         max.overlaps = Inf,
         size = 3,
         hjust = 0.1,
-        force = 0.5,
+        force = 1.5,
         force_pull = 0.5,
         xlim = c(facet_max_x / 4, NA),
-        box.padding = 0.8
+        box.padding = 0.8,
+        color = "black"
       )} +
     ggiraph::geom_point_interactive(
       ggplot2::aes(size = p_group), show.legend=T, shape = 21, stroke = 0.2, color = "black"
