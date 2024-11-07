@@ -1,6 +1,10 @@
+# CO2AnalysisModules 1.0.4
+
+- Improve TimeCodeWAS plot readability #80
+
 # CO2AnalysisModules 1.0.3
 
-- Hot fix: vocano plot and upset plot defaut intersection value to 0
+- Hot fix: volcano plot and upset plot default intersection value to 0
 
 # CO2AnalysisModules 1.0.2
 
