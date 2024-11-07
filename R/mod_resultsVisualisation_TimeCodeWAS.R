@@ -17,6 +17,7 @@ mod_resultsVisualisation_TimeCodeWAS_ui <- function(id) {
   shiny::fluidPage(
     title = "TimeCodeWAS",
     shiny::tagList(
+      shinyWidgets::chooseSliderSkin("Flat"),
       shiny::tags$h4("Filters"),
       shiny::uiOutput(ns("outputUI")),
       shiny::tags$h4("Data"),
@@ -25,7 +26,29 @@ mod_resultsVisualisation_TimeCodeWAS_ui <- function(id) {
         shiny::tabPanel(
           "Plot",
           shiny::div(style = "margin-top: 10px; ",
-                     shiny::checkboxInput(ns("top_10"), "Label top 10", value = TRUE),
+                     shiny::fluidRow(
+                       tags$style(HTML("
+                         .slider-animate-container,
+                          .irs-min, .irs-max, .irs-single {
+                              display: none !important;
+                          }
+                      ")),
+                       shiny::column(
+                         width = 2,
+                         shiny::checkboxInput(
+                           ns("top_10"), "Label top 10", value = TRUE)
+                       ),
+                       shiny::column(
+                         width = 2,
+                         div(style = "margin-top: -5px;",
+                             div(style = "margin-top: 2px; margin-right: 5px;", "Point size"),
+                             div(style = "margin-top: -20px;",
+                                 shiny::sliderInput(
+                                   ns("point_scale"), label = NULL, ticks = FALSE, min = 0.2, max = 2.2, value = 1, step = 0.1)
+                             )
+                         )
+                       )
+                     )
           ),
           ggiraph::girafeOutput(ns("codeWASplot"), width = "100%", height = "100%"),
           shiny::div(
@@ -276,7 +299,8 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
         gg_data = r$gg_data,
         selection = r$line_to_plot,
         r = r,
-        top_10 = input$top_10
+        top_10 = input$top_10,
+        point_scale = input$point_scale
       )
 
       return(gg_girafe)
@@ -577,7 +601,8 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
     # show_labels_cases_per,
     selection,
     r,
-    top_10
+    top_10,
+    point_scale
 ){
   # adjust the label area according to facet width
   facet_max_x <- max( gg_data$controls_per, 0.03, na.rm = TRUE)
@@ -608,16 +633,6 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
     ggplot2::geom_segment(
       ggplot2::aes(x = 0, y = 0, xend = 0, yend = facet_max_y),
       color = "black", alpha = 0.5, linewidth = 0.2, linetype = "dashed") +
-    ggiraph::geom_point_interactive(
-      ggplot2::aes(size = p_group), show.legend=T, shape = 21) + #, position = position_dodge(width = 12))+
-    ggplot2::scale_size_manual(
-      values = c(
-        "-log10(p) [0,50]" = 2,
-        "-log10(p) (50,100]" = 3,
-        "-log10(p) (100,200]" = 4,
-        "-log10(p) (200,Inf]" = 6
-      )
-    ) +
     {if(length(selection) > 1)
       # label the selected points
       ggrepel::geom_text_repel(
@@ -644,11 +659,23 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
         max.overlaps = Inf,
         size = 3,
         hjust = 0.1,
-        force = 0.5,
+        force = 1.5,
         force_pull = 0.5,
         xlim = c(facet_max_x / 4, NA),
-        box.padding = 0.8
+        box.padding = 0.8,
+        color = "black"
       )} +
+    ggiraph::geom_point_interactive(
+      ggplot2::aes(size = p_group), show.legend=T, shape = 21, stroke = 0.2, color = "black"
+    ) + #, position = position_dodge(width = 12))+
+    ggplot2::scale_size_manual(
+      values = c(
+        "-log10(p) [0,50]" = 2 * point_scale,
+        "-log10(p) (50,100]" = 3 * point_scale,
+        "-log10(p) (100,200]" = 4 * point_scale,
+        "-log10(p) (200,Inf]" = 6 * point_scale
+      )
+    ) +
     ggplot2::scale_x_continuous(
       breaks = c(0, 0.05, seq(0.1, 0.8, 0.1)),
       labels = c(0, 5, seq(10, 80, 10)),
@@ -676,25 +703,6 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
     ) +
     ggplot2::scale_color_manual(values = c("darkgray")) +
     ggplot2::scale_fill_discrete() +
-    # ggplot2::scale_fill_manual(values = c(
-    #   "drug_era_group" = "green",
-    #   "drug_exposure" = "lightblue2",
-    #   "condition_occurrence" = "khaki",
-    #   "condition_era_group" = "blue",
-    #   "observation" = "orange",
-    #   "measurement" = "palegreen",
-    #   "procedure_occurrence" = "plum1"
-    # ),
-    #   labels = c(
-    #     "drug_era_group" = "Drug era",
-    #     "drug_exposure" = "Drug exposure",
-    #     "condition_occurrence" = "Condition occurrence",
-    #     "condition_era_group" = "Condition era",
-    #     "observation" = "Observation",
-    #     "measurement" ="Measurement",
-    #     "procedure_occurrence" = "Procedure occurrence"
-    #   )
-    # ) +
     ggplot2::guides(color = "none", fill = ggplot2::guide_legend(override.aes = list(size = 5), nrow=2, byrow=TRUE)) +
     ggplot2::labs(size = "p value group", fill = "Domain", x = "\nControls %", y = "Cases %")
 
@@ -811,10 +819,6 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
       nCasesInWindow = nCasesInWindow,
       nControlsInWindow = nControlsInWindow
     ) |>
-    # dplyr::select(
-    #   covariateId, timeId, nCasesYes, nControlsYes, nCases, nControls, nCasesNo, nControlsNo, startDay,endDay,
-    #   covariateName, pValue, oddsRatio, upIn
-    # ) |>
     dplyr::collect()
 
   studyResults <- studyResults|>
