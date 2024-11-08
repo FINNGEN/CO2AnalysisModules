@@ -1,6 +1,7 @@
 # CO2AnalysisModules 1.0.4
 
 - Improve TimeCodeWAS plot readability #80
+- removed all source drugs from default in CodeWAS and TimeCodeWAS
 
 # CO2AnalysisModules 1.0.3
 
