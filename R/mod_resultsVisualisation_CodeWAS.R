@@ -390,7 +390,7 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
       df <- r$filteredCodeWASData |>
         dplyr::mutate(oddsRatio = ifelse(is.na(oddsRatio), 1, oddsRatio)) |>
         dplyr::mutate(pLog10 = -log10(pValue)) |>
-        dplyr::mutate(pLog10 = ifelse(pLog10 < 1e-30, 1e-30, pLog10)) |>
+        dplyr::mutate(pLog10 = ifelse(is.infinite(pLog10), log10(.Machine$double.xmax), pLog10)) |>
         dplyr::mutate(beta = log(oddsRatio)) |>
         dplyr::mutate(beta = ifelse(beta > 5, 5, beta)) |>
         dplyr::mutate(beta = ifelse(beta < -5, -5, beta)) |>
@@ -425,7 +425,7 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
               dplyr::slice_head(n = 10),
             ggplot2::aes(
               label = stringr::str_wrap(stringr::str_trunc(.removeDomain(covariateName), 45), 30),
-              color = "grey",
+              color = "black",
             ),
             max.overlaps = Inf,
             force = 1,
@@ -436,14 +436,13 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
         ggplot2::geom_vline(xintercept = 0, col = "red", linetype = 'dashed') +
         ggplot2::scale_x_continuous() +
         ggplot2::scale_y_continuous(transform = "log10", labels = function(x)round(x,1)) +
-        # ggplot2::coord_cartesian(xlim = range(df$beta), ylim = range(df$pLog10)) +
         ggplot2::coord_cartesian(xlim = c(-5, 5), ylim = range(df$pLog10)) +
         ggplot2::labs(
           x = "beta",
           y = "-log10(p-value)",
           color = "Enriched in",
-          title = "",
-          subtitle = paste("-log( 0.05 / (number of rows)) = ", round(p_limit, 1))
+          title = paste("Multiple testing significance >", round(p_limit, 1)),
+          subtitle = paste("-log( 0.05 / (number of rows))")
         ) +
         ggplot2::scale_color_manual(values = c("cases" = "#E41A1C", "controls" = "#377EB8", "n.s." = "lightgrey")) + #, guide = "none") +
         ggplot2::theme_minimal()
