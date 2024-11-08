@@ -44,7 +44,7 @@ mod_analysisSettings_timeCodeWAS_ui <- function(id) {
         801, 841,
         501, 541,
         910, 911 ),
-      analysisIdsSelected = c(141, 641, 341, 404, 701, 702, 841, 541)
+      analysisIdsSelected = c(141, 641, 404, 701, 702, 841, 541)
     ),
     shiny::tags$h5("Minimum cell count:"),
     shiny::numericInput(
