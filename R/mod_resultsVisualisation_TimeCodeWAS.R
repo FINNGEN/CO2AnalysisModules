@@ -34,6 +34,18 @@ mod_resultsVisualisation_TimeCodeWAS_ui <- function(id) {
           ),
         ),
         shiny::tabPanel(
+          "Simple",
+          shiny::div(style = "margin-top: 10px; ",
+                     shiny::checkboxInput(ns("top_10"), "Label top 10", value = TRUE),
+          ),
+          # ggiraph::girafeOutput(ns("SimpleCodeWASplot"), width = "100%", height = "100%"),
+          shiny::plotOutput(ns("SimpleCodeWASplot"), width = "100%", height = "400px"),
+          shiny::div(
+            style = "margin-top: 10px; margin-bottom: 10px;",
+            shiny::downloadButton(ns("downloadPlot"), "Download")
+          ),
+        ),
+        shiny::tabPanel(
           "Table",
           shiny::div(
             style = "margin-top: 20px; margin-bottom: 10px;",
@@ -463,6 +475,72 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
       },
       contentType = "application/pdf"
     )
+
+    #
+    # render the simple plot ####
+    #
+    output$SimpleCodeWASplot <- renderPlot({
+      shiny::req(r$gg_data)
+
+      # browser()
+
+      gg_data <- r$gg_data
+      gg_data <- gg_data |>
+        dplyr::filter(!is.na(p)) |>
+        dplyr::filter(!is.na(OR)) |>
+        dplyr::filter(nCasesYes >= input$n_cases) |>
+        dplyr::filter(as.double(p) <= (as.double(input$p_value_threshold) + 2 * .Machine$double.eps)) |>
+        dplyr::filter(as.double(OR) <= as.double(input$or_range[1]) | as.double(OR) >= as.double(input$or_range[2]) | input$or_filter_disable) |>
+        dplyr::filter(!dplyr::if_any(c("p", "OR"), is.na) | input$na_anywhere)
+
+      gg_data <- gg_data |>
+        dplyr::mutate(
+          label = stringr::str_c(domain, " : ", name,
+                                 "\n-log10(p)=", scales::number(-log10(p), accuracy = 0.1) ,
+                                 "\n log10(OR) = ", ifelse(is.na(OR), "", scales::number(log10(OR), accuracy = 0.1)),
+                                 "\n cases:", nCasesYes, " (", scales::percent(cases_per, accuracy = 0.01), ")",
+                                 "\n controls:", nControlsYes, " (", scales::percent(controls_per, accuracy = 0.01), ")"
+          ),
+          link = paste0("https://atlas.app.finngen.fi/#/concept/", stringr::str_sub(code, 1, -4)),
+          upIn = upIn,
+          id = dplyr::row_number(),
+          p_group = cut(-log10(p),
+                        breaks = c(-1, 50, 100, 200, Inf ),
+                        labels = c("-log10(p) [0,50]", "-log10(p) (50,100]", "-log10(p) (100,200]", "-log10(p) (200,Inf]"),
+                        ordered_result = TRUE
+          ),
+          p_group_size = dplyr::case_when(
+            as.integer(p_group)==1 ~ 1L,
+            as.integer(p_group)==2 ~ 5L,
+            as.integer(p_group)==3 ~ 10L,
+            as.integer(p_group)==4 ~ 20L
+          )
+        )
+
+      browser()
+
+      gg_plot <- ggplot2::ggplot(gg_data, ggplot2::aes(x = time_period, y = OR, color = name, group = name, size = p_group_size)) +
+        ggplot2::geom_point() +
+        ggplot2::geom_line() +
+        ggrepel::geom_text_repel(
+          ggplot2::aes(label = stringr::str_wrap(stringr::str_trunc(name, 30), 15)),
+          max.overlaps = Inf,
+          size = 3,
+          hjust = 0.1,
+          force = 0.5,
+          force_pull = 0.5,
+          # xlim = c(facet_max_x / 4, NA),
+          box.padding = 0.8
+        ) +
+        ggplot2::theme_minimal() +
+        ggplot2::scale_y_continuous(trans = "log10") +
+        guides(color = "none", size = "none")
+
+      return(gg_plot)
+
+    }) # renderPlot
+
+
   })
 } # mod_timeCodeWASPlot_server
 
@@ -676,25 +754,6 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
     ) +
     ggplot2::scale_color_manual(values = c("darkgray")) +
     ggplot2::scale_fill_discrete() +
-    # ggplot2::scale_fill_manual(values = c(
-    #   "drug_era_group" = "green",
-    #   "drug_exposure" = "lightblue2",
-    #   "condition_occurrence" = "khaki",
-    #   "condition_era_group" = "blue",
-    #   "observation" = "orange",
-    #   "measurement" = "palegreen",
-    #   "procedure_occurrence" = "plum1"
-    # ),
-    #   labels = c(
-    #     "drug_era_group" = "Drug era",
-    #     "drug_exposure" = "Drug exposure",
-    #     "condition_occurrence" = "Condition occurrence",
-    #     "condition_era_group" = "Condition era",
-    #     "observation" = "Observation",
-    #     "measurement" ="Measurement",
-    #     "procedure_occurrence" = "Procedure occurrence"
-    #   )
-    # ) +
     ggplot2::guides(color = "none", fill = ggplot2::guide_legend(override.aes = list(size = 5), nrow=2, byrow=TRUE)) +
     ggplot2::labs(size = "p value group", fill = "Domain", x = "\nControls %", y = "Cases %")
 
@@ -831,6 +890,7 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
 
   return(studyResults)
 }
+
 
 
 
