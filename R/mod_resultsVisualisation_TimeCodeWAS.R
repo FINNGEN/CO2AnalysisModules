@@ -34,12 +34,12 @@ mod_resultsVisualisation_TimeCodeWAS_ui <- function(id) {
           ),
         ),
         shiny::tabPanel(
-          "Simple",
+          "Flow",
           shiny::div(style = "margin-top: 10px; ",
                      shiny::checkboxInput(ns("top_10"), "Label top 10", value = TRUE),
           ),
           # ggiraph::girafeOutput(ns("SimpleCodeWASplot"), width = "100%", height = "100%"),
-          shiny::plotOutput(ns("SimpleCodeWASplot"), width = "100%", height = "400px"),
+          ggiraph::girafeOutput(ns("SimpleCodeWASplot"), width = "100%", height = "100%"),
           shiny::div(
             style = "margin-top: 10px; margin-bottom: 10px;",
             shiny::downloadButton(ns("downloadPlot"), "Download")
@@ -206,7 +206,6 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
     # observe the selected domains and p_groups
     #
     shiny::observe({
-      shiny::req(input$domain)
       shiny::req(input$or_range)
       shiny::req(input$n_cases)
       shiny::isTruthy(input$na_anywhere)
@@ -479,64 +478,78 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
     #
     # render the simple plot ####
     #
-    output$SimpleCodeWASplot <- renderPlot({
+    output$SimpleCodeWASplot <- ggiraph::renderGirafe({
       shiny::req(r$gg_data)
+
+      gg_data <- r$gg_data |>
+        dplyr::mutate(time_period = factor(time_period, levels = time_periods, labels = time_periods)) |>
+        dplyr::mutate(name = factor(name, levels = unique(name))) |>
+        dplyr::mutate(oddsRatio = ifelse(is.na(OR), 1, OR)) |>
+        dplyr::mutate(pLog10 = -log10(p)) |>
+        dplyr::mutate(pLog10 = ifelse(pLog10 < 1e-30, 1e-30, pLog10)) |>
+        dplyr::mutate(beta = log(oddsRatio)) |>
+        dplyr::mutate(beta = ifelse(beta > 5, 5, beta)) |>
+        dplyr::mutate(beta = ifelse(beta < -5, -5, beta)) |>
+        dplyr::mutate(direction = ifelse(beta > 0, "cases", "controls")) |>
+        dplyr::mutate(data_id = label) |>
+        dplyr::mutate(time_period_jittered = jitter(as.numeric(time_period), amount = 0.3)) |>
+        dplyr::mutate(pLog10_jittered = jitter(pLog10, amount = 5))
 
       # browser()
 
-      gg_data <- r$gg_data
-      gg_data <- gg_data |>
-        dplyr::filter(!is.na(p)) |>
-        dplyr::filter(!is.na(OR)) |>
-        dplyr::filter(nCasesYes >= input$n_cases) |>
-        dplyr::filter(as.double(p) <= (as.double(input$p_value_threshold) + 2 * .Machine$double.eps)) |>
-        dplyr::filter(as.double(OR) <= as.double(input$or_range[1]) | as.double(OR) >= as.double(input$or_range[2]) | input$or_filter_disable) |>
-        dplyr::filter(!dplyr::if_any(c("p", "OR"), is.na) | input$na_anywhere)
-
-      gg_data <- gg_data |>
-        dplyr::mutate(
-          label = stringr::str_c(domain, " : ", name,
-                                 "\n-log10(p)=", scales::number(-log10(p), accuracy = 0.1) ,
-                                 "\n log10(OR) = ", ifelse(is.na(OR), "", scales::number(log10(OR), accuracy = 0.1)),
-                                 "\n cases:", nCasesYes, " (", scales::percent(cases_per, accuracy = 0.01), ")",
-                                 "\n controls:", nControlsYes, " (", scales::percent(controls_per, accuracy = 0.01), ")"
-          ),
-          link = paste0("https://atlas.app.finngen.fi/#/concept/", stringr::str_sub(code, 1, -4)),
-          upIn = upIn,
-          id = dplyr::row_number(),
-          p_group = cut(-log10(p),
-                        breaks = c(-1, 50, 100, 200, Inf ),
-                        labels = c("-log10(p) [0,50]", "-log10(p) (50,100]", "-log10(p) (100,200]", "-log10(p) (200,Inf]"),
-                        ordered_result = TRUE
-          ),
-          p_group_size = dplyr::case_when(
-            as.integer(p_group)==1 ~ 1L,
-            as.integer(p_group)==2 ~ 5L,
-            as.integer(p_group)==3 ~ 10L,
-            as.integer(p_group)==4 ~ 20L
-          )
-        )
-
-      browser()
-
-      gg_plot <- ggplot2::ggplot(gg_data, ggplot2::aes(x = time_period, y = OR, color = name, group = name, size = p_group_size)) +
-        ggplot2::geom_point() +
-        ggplot2::geom_line() +
+      gg_plot <- ggplot2::ggplot(gg_data, ggplot2::aes(x = time_period_jittered, y = pLog10_jittered,  group = name, fill = name, color = name)) +
+        ggplot2::geom_smooth(method = "loess", span = 0.5, se = FALSE) +
         ggrepel::geom_text_repel(
-          ggplot2::aes(label = stringr::str_wrap(stringr::str_trunc(name, 30), 15)),
+          data = gg_data |> dplyr::slice_max(order_by = pLog10, n = 10),
+          ggplot2::aes(label = name),
+          color = "black",
+          segment.color = "black",
+          segment.size = 0.2,
+          segment.linetype = "dashed",
           max.overlaps = Inf,
-          size = 3,
+          size = 4,
           hjust = 0.1,
           force = 0.5,
           force_pull = 0.5,
-          # xlim = c(facet_max_x / 4, NA),
+          # xlim = c(0.5, NA),
           box.padding = 0.8
         ) +
+        ggiraph::geom_point_interactive(
+          aes(size = oddsRatio, data_id = data_id, tooltip = label),
+          color = "black", shape = 21
+        ) +
         ggplot2::theme_minimal() +
-        ggplot2::scale_y_continuous(trans = "log10") +
-        guides(color = "none", size = "none")
+        ggplot2::theme(legend.position = "bottom") +
+        ggplot2::scale_color_brewer(palette = "Spectral") +
+        ggplot2::scale_y_continuous(expand = ggplot2::expansion(mult = c(0.2, 0.3))) +
+        # ggplot2::scale_size_manual(
+        #   values = c(
+        #     "-log10(p) [0,50]" = 2,
+        #     "-log10(p) (50,100]" = 3,
+        #     "-log10(p) (100,200]" = 4,
+        #     "-log10(p) (200,Inf]" = 6
+        #   )
+        # ) +
+        labs(
+          x = "Time period",
+          y = "-log10(p)",
+          title = "TimeCodeWAS",
+          subtitle = "",
+          caption = lubridate::today()
+        ) +
+        guides(color = "none", fill = "none", size = "none")
 
-      return(gg_plot)
+      gg_girafe <- ggiraph::girafe(ggobj = gg_plot, height_svg = 6, width_svg = 14)
+      gg_girafe <- ggiraph::girafe_options(
+        gg_girafe,
+        ggiraph::opts_sizing(rescale = TRUE, width = 1.0),
+        ggiraph::opts_hover(
+          css = "fill-opacity:1;fill:red;stroke:black;",
+          reactive = FALSE
+        )
+      )
+
+      return(gg_girafe)
 
     }) # renderPlot
 
