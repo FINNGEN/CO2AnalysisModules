@@ -292,7 +292,7 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
 
       DT::datatable(
         r$filteredCodeWASData |>
-          dplyr::mutate(pValue = round(pValue, 3)) |>
+          dplyr::mutate(mLogP = -log10(pValue)) |>
           dplyr::mutate(oddsRatio = round(oddsRatio, 3)) |>
           dplyr::mutate(beta = round(beta, 3)) |>
           dplyr::mutate(meanCases = round(meanCases, 3)) |>
@@ -309,7 +309,7 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
           dplyr::select(
             covariateName, analysisName, domainId,
             nCasesYes, nControlsYes, meanCases, sdCases, meanControls, sdControls,
-            oddsRatio, pValue, beta, modelType, runNotes
+            oddsRatio, mLogP, beta, modelType, runNotes
           ),
         escape = FALSE,
         class = 'display nowrap compact',
@@ -331,7 +331,7 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
           'SD cases' = 'sdCases',
           'SD ctrls' = 'sdControls',
           'OR' = 'oddsRatio',
-          'p' = 'pValue',
+          'mlogp' = 'mLogP',
           'Beta' = 'beta',
           'Model' = 'modelType',
           # 'ID' = 'analysisId',
@@ -347,7 +347,7 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
         )
       ) |>
         DT::formatStyle('Covariate Name', cursor = 'pointer' ) |>
-        DT::formatSignif(columns = c('p', 'OR'), digits = 3)
+        DT::formatSignif(columns = c('mlogp', 'OR'), digits = 3)
     })
 
     #
