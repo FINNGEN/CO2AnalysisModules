@@ -92,7 +92,7 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
   shiny::moduleServer(id, function(input, output, session) {
     ns <- session$ns
 
-    atlasUrl <- "TEMP" #shiny::getShinyOption("cohortOperationsConfig")$atlasUrl
+    atlasUrl <- shiny::getShinyOption("cohortOperationsConfig")$atlasUrl
 
     # reactive values
     r <- shiny::reactiveValues(
@@ -292,7 +292,7 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
 
       DT::datatable(
         r$filteredCodeWASData |>
-          dplyr::mutate(pValue = round(pValue, 3)) |>
+          dplyr::mutate(mlogp = -log10(pValue)) |>
           dplyr::mutate(oddsRatio = round(oddsRatio, 3)) |>
           dplyr::mutate(beta = round(beta, 3)) |>
           dplyr::mutate(meanCases = round(meanCases, 3)) |>
@@ -309,7 +309,7 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
           dplyr::select(
             covariateName, analysisName, domainId,
             nCasesYes, nControlsYes, meanCases, sdCases, meanControls, sdControls,
-            oddsRatio, pValue, beta, modelType, runNotes
+            oddsRatio, mlogp, beta, modelType, runNotes
           ),
         escape = FALSE,
         class = 'display nowrap compact',
@@ -331,7 +331,7 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
           'SD cases' = 'sdCases',
           'SD ctrls' = 'sdControls',
           'OR' = 'oddsRatio',
-          'p' = 'pValue',
+          'mlogp' = 'mlogp',
           'Beta' = 'beta',
           'Model' = 'modelType',
           # 'ID' = 'analysisId',
@@ -347,7 +347,7 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
         )
       ) |>
         DT::formatStyle('Covariate Name', cursor = 'pointer' ) |>
-        DT::formatSignif(columns = c('p', 'OR'), digits = 3)
+        DT::formatSignif(columns = c('mlogp', 'OR'), digits = 3)
     })
 
     #
@@ -399,7 +399,7 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
         dplyr::mutate(data_id = dplyr::row_number())
 
       n_no_test <- sum(grepl("no test", df$modelType, ignore.case = TRUE))
-      p_limit <- -log(0.05/(nrow(df) - n_no_test))
+      p_limit <- -log(0.05/(nrow(r$codeWASData) - n_no_test))
 
       p <- ggplot2::ggplot(data = df, mapping = ggplot2::aes(x = beta, y = pLog10, color = direction)) +
         ggiraph::geom_point_interactive(
@@ -442,7 +442,7 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
           y = "-log10(p-value)",
           color = "Enriched in",
           title = paste("Multiple testing significance >", round(p_limit, 1)),
-          subtitle = paste("-log( 0.05 / (number of rows))")
+          subtitle = paste("-log( 0.05 / (number of covariates))")
         ) +
         ggplot2::scale_color_manual(values = c("cases" = "#E41A1C", "controls" = "#377EB8", "n.s." = "lightgrey")) + #, guide = "none") +
         ggplot2::theme_minimal()
