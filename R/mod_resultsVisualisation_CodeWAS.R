@@ -92,7 +92,7 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
   shiny::moduleServer(id, function(input, output, session) {
     ns <- session$ns
 
-    atlasUrl <- "TEMP" #shiny::getShinyOption("cohortOperationsConfig")$atlasUrl
+    atlasUrl <- shiny::getShinyOption("cohortOperationsConfig")$atlasUrl
 
     # reactive values
     r <- shiny::reactiveValues(
@@ -424,9 +424,9 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
               dplyr::arrange(pValue, oddsRatio) |>
               dplyr::slice_head(n = 10),
             ggplot2::aes(
-              label = stringr::str_wrap(stringr::str_trunc(.removeDomain(covariateName), 45), 30),
-              color = "black",
+              label = stringr::str_wrap(stringr::str_trunc(.removeDomain(covariateName), 45), 30)
             ),
+            color = "black",
             max.overlaps = Inf,
             force = 1,
             size = grid::unit(3, "mm"),
