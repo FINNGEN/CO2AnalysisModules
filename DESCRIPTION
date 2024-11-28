@@ -53,7 +53,7 @@ Imports:
     httr,
     jsonlite
 Remotes: 
-    FINNGEN/HadesExtras,
+    FINNGEN/HadesExtras@towards_v2,
     FINNGEN/FinnGenUtilsR
 Suggests: 
     devtools,
