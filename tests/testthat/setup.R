@@ -1,11 +1,16 @@
 #
 # SELECT DATABASE and CO2 CONFIGURATION
 #
-testingDatabase <- "EunomiaGiBleed"
+
+# Sys.setenv(HADESEXTAS_TESTING_ENVIRONMENT = "Eunomia-GiBleed")
+# Sys.setenv(HADESEXTAS_TESTING_ENVIRONMENT = "AtlasDevelopment-DBI")
+# Sys.setenv(HADESEXTAS_TESTING_ENVIRONMENT = "Eunomia-FinnGen")
+testingDatabase <- Sys.getenv("HADESEXTAS_TESTING_ENVIRONMENT")
+
 testingCO2AnalysisModulesConfig <- "AtlasDemo"
 
 # check correct settings
-possibleDatabases <- c("EunomiaGiBleed", "EunomiaMIMIC", "EunomiaFinnGen", "AtlasDevelopment")
+possibleDatabases <- c("Eunomia-GiBleed", "Eunomia-MIMIC", "Eunomia-FinnGen", "AtlasDevelopment", "AtlasDevelopment-DBI")
 if( !(testingDatabase %in% possibleDatabases) ){
   message("Please select a valid database from: ", paste(possibleDatabases, collapse = ", "))
   stop()
@@ -20,101 +25,86 @@ if( !(testingCO2AnalysisModulesConfig %in% possibleCO2AnalysisModulesConfig) ){
 #
 # Eunomia Databases
 #
-if (testingDatabase %in% c("EunomiaGiBleed", "EunomiaMIMIC") ) {
-
-  if( Sys.getenv("EUNOMIA_DATA_FOLDER") == "" ){
+if (testingDatabase |> stringr::str_starts("Eunomia")) {
+  if (Sys.getenv("EUNOMIA_DATA_FOLDER") == "") {
     message("EUNOMIA_DATA_FOLDER not set. Please set this environment variable to the path of the Eunomia data folder.")
     stop()
   }
 
-  if(testingDatabase == "EunomiaGiBleed"){
-    eunomiaDataSetName <- "GiBleed"
+  pathToGiBleedEunomiaSqlite <- ""
+  pathToMIMICEunomiaSqlite <- ""
+  pathToFinnGenEunomiaSqlite <- ""
+  if (testingDatabase |> stringr::str_ends("GiBleed")) {
+    pathToGiBleedEunomiaSqlite <- Eunomia::getDatabaseFile("GiBleed", overwrite = FALSE)
+  }
+  if (testingDatabase |> stringr::str_ends("MIMIC")) {
+    pathToMIMICEunomiaSqlite <- Eunomia::getDatabaseFile("MIMIC", overwrite = FALSE)
+  }
+  if (testingDatabase |> stringr::str_ends("FinnGen")) {
+    pathToFinnGenEunomiaSqlite <- helper_FinnGen_getDatabaseFile()
   }
 
-  if(testingDatabase == "EunomiaMIMIC"){
-    eunomiaDataSetName <- "MIMIC"
-  }
-
-  eunomiaDatabaseFile  <- Eunomia::getDatabaseFile(eunomiaDataSetName, overwrite = FALSE)
-
-  test_databaseConfig <- readAndParseYalm(
-    pathToYalmFile = testthat::test_path("config", "eunomia_cohortTableHandlerConfig.yml"),
-    eunomiaDataSetName = eunomiaDataSetName,
-    pathToEunomiaSqlite = eunomiaDatabaseFile
+  test_databasesConfig <- HadesExtras::readAndParseYaml(
+    pathToYalmFile = testthat::test_path("config", "eunomia_databasesConfig.yml"),
+    pathToGiBleedEunomiaSqlite = pathToGiBleedEunomiaSqlite,
+    pathToMIMICEunomiaSqlite = pathToMIMICEunomiaSqlite,
+    pathToFinnGenEunomiaSqlite = pathToFinnGenEunomiaSqlite
   )
 
-  test_cohortTableHandlerConfig  <- test_databaseConfig$cohortTableHandler
+  if (testingDatabase |> stringr::str_ends("GiBleed")) {
+    test_cohortTableHandlerConfig <- test_databasesConfig[[1]]$cohortTableHandle
+  }
+  if (testingDatabase |> stringr::str_ends("MIMIC")) {
+    test_cohortTableHandlerConfig <- test_databasesConfig[[2]]$cohortTableHandle
+  }
+  if (testingDatabase |> stringr::str_ends("FinnGen")) {
+    test_cohortTableHandlerConfig <- test_databasesConfig[[4]]$cohortTableHandle
+  }
+
+  # add test cohorts and cohort definitions
+  helper_addCohortAndCohortDefinitionTables(cohortTableHandlerConfig = test_cohortTableHandlerConfig)
 }
 
-#
-# FinnGen Eunomia database
-#
-if (testingDatabase %in% c("EunomiaFinnGen") ) {
-
-  if( Sys.getenv("EUNOMIA_DATA_FOLDER") == "" ){
-    message("EUNOMIA_DATA_FOLDER not set. Please set this environment variable to the path of the Eunomia data folder.")
-    stop()
-  }
-
-  urlToFinnGenEunomiaZip <- "https://raw.githubusercontent.com/FINNGEN/EunomiaDatasets/main/datasets/FinnGenR12/FinnGenR12_v5.4.zip"
-  eunomiaDataFolder <- Sys.getenv("EUNOMIA_DATA_FOLDER")
-
-  # Download the database if it doesn't exist
-  if (!file.exists(file.path(eunomiaDataFolder, "FinnGenR12_v5.4.sqlite"))){
-
-    result <- utils::download.file(
-      url = urlToFinnGenEunomiaZip,
-      destfile = file.path(eunomiaDataFolder, "FinnGenR12_v5.4.zip"),
-      mode = "wb"
-    )
-
-    Eunomia::extractLoadData(
-      from = file.path(eunomiaDataFolder, "FinnGenR12_v5.4.zip"),
-      to = file.path(eunomiaDataFolder, "FinnGenR12_v5.4.sqlite"),
-      cdmVersion = '5.4',
-      verbose = TRUE
-    )
-  }
-
-  # copy to a temp folder
-  file.copy(
-    from = file.path(eunomiaDataFolder, "FinnGenR12_v5.4.sqlite"),
-    to = file.path(tempdir(), "FinnGenR12_v5.4.sqlite"),
-    overwrite = TRUE
-  )
-
-  test_databaseConfig <- readAndParseYalm(
-    pathToYalmFile = testthat::test_path("config", "eunomia_cohortTableHandlerConfig.yml"),
-    eunomiaDataSetName =  "FinnGenR12",
-    pathToEunomiaSqlite = file.path(tempdir(), "FinnGenR12_v5.4.sqlite")
-  )
-
-  test_cohortTableHandlerConfig  <- test_databaseConfig$cohortTableHandler
-}
 
 #
 # AtlasDevelopmet Database
 #
-if (testingDatabase %in% c("AtlasDevelopment") ) {
-
-  if( Sys.getenv("GCP_SERVICE_KEY") == "" ){
+if (testingDatabase %in% c("AtlasDevelopment")) {
+  if (Sys.getenv("GCP_SERVICE_KEY") == "") {
     message("GCP_SERVICE_KEY not set. Please set this environment variable to the path of the GCP service key.")
     stop()
   }
 
-  if( Sys.getenv("DATABASECONNECTOR_JAR_FOLDER") == "" ){
+  if (Sys.getenv("DATABASECONNECTOR_JAR_FOLDER") == "") {
     message("DATABASECONNECTOR_JAR_FOLDER not set. Please set this environment variable to the path of the database connector jar folder.")
     stop()
   }
 
-
-  test_databaseConfig <- readAndParseYalm(
-    pathToYalmFile = testthat::test_path("config", "atlasDevelopment_cohortTableHandlerConfig.yml"),
+  test_databasesConfig <- HadesExtras::readAndParseYaml(
+    pathToYalmFile = testthat::test_path("config", "atlasDev_databasesConfig.yml"),
     OAuthPvtKeyPath = Sys.getenv("GCP_SERVICE_KEY"),
     pathToDriver = Sys.getenv("DATABASECONNECTOR_JAR_FOLDER")
   )
 
-  test_test_cohortTableHandlerConfig  <- test_databaseConfig$cohortTableHandler
+  test_cohortTableHandlerConfig <- test_databasesConfig[[1]]$cohortTableHandler
+}
+
+#
+# AtlasDevelopmet-DBI Database
+#
+if (testingDatabase %in% c("AtlasDevelopment-DBI")) {
+  if (Sys.getenv("GCP_SERVICE_KEY") == "") {
+    message("GCP_SERVICE_KEY not set. Please set this environment variable to the path of the GCP service key.")
+    stop()
+  }
+
+  bigrquery::bq_auth(path = Sys.getenv("GCP_SERVICE_KEY"))
+
+  test_databasesConfig <- HadesExtras::readAndParseYaml(
+    pathToYalmFile = testthat::test_path("config", "atlasDev_DBI_databasesConfig.yml")
+  )
+
+  test_cohortTableHandlerConfig <- test_databasesConfig[[1]]$cohortTableHandler
 }
 
 #
