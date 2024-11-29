@@ -53,8 +53,9 @@ Imports:
     httr,
     jsonlite
 Remotes: 
-    FINNGEN/HadesExtras@towards_v2,
-    FINNGEN/FinnGenUtilsR
+    FINNGEN/HadesExtras,
+    FINNGEN/FinnGenUtilsR,
+    javier-gracia-tabuenca-tuni/DatabaseConnector@BQ-DBI
 Suggests: 
     devtools,
     testthat (>= 3.0.0), 

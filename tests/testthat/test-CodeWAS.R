@@ -256,7 +256,6 @@ test_that("executeCodeWAS works with no covariates", {
 })
 
 
-
 test_that("executeCodeWAS works when n multiple events per subject", {
   # set up
   cohortTableHandler <-
