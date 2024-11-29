@@ -180,7 +180,7 @@ helper_FinnGen_getDatabaseFile <- function(){
   eunomiaDataFolder <- Sys.getenv("EUNOMIA_DATA_FOLDER")
 
   # Download the database if it doesn't exist
-  if (!file.exists(file.path(eunomiaDataFolder, "FinnGenR12_v5.4.sqlite"))){
+  if (!file.exists(file.path(eunomiaDataFolder, "FinnGenR12_v5.4.zip")) | !file.exists(file.path(eunomiaDataFolder, "FinnGenR12_v5.4.sqlite"))){
 
     result <- utils::download.file(
       url = urlToFinnGenEunomiaZip,
@@ -202,6 +202,6 @@ helper_FinnGen_getDatabaseFile <- function(){
     to = file.path(tempdir(), "FinnGenR12_v5.4.sqlite"),
     overwrite = TRUE
   )
-  
+
   return(file.path(tempdir(), "FinnGenR12_v5.4.sqlite"))
 }
