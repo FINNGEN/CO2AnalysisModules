@@ -331,7 +331,7 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
           'SD cases' = 'sdCases',
           'SD ctrls' = 'sdControls',
           'OR' = 'oddsRatio',
-          'mlogp' = 'mlogp',
+          'mlogp' = 'mLogP',
           'Beta' = 'beta',
           'Model' = 'modelType',
           # 'ID' = 'analysisId',
