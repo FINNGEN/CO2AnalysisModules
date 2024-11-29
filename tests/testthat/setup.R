@@ -31,10 +31,15 @@ if (testingDatabase |> stringr::str_starts("Eunomia")) {
     stop()
   }
 
-  pathToGiBleedEunomiaSqlite <- Eunomia::getDatabaseFile("GiBleed", overwrite = FALSE)
-  pathToMIMICEunomiaSqlite <- Eunomia::getDatabaseFile("MIMIC", overwrite = FALSE)
-  pathToFinnGenEunomiaSqlite <- helper_FinnGen_getDatabaseFile()
-
+  if (testingDatabase |> stringr::str_ends("GiBleed")) {
+    pathToGiBleedEunomiaSqlite <- Eunomia::getDatabaseFile("GiBleed", overwrite = FALSE)
+  }
+  if (testingDatabase |> stringr::str_ends("MIMIC")) {
+    pathToMIMICEunomiaSqlite <- Eunomia::getDatabaseFile("MIMIC", overwrite = FALSE)
+  }
+  if (testingDatabase |> stringr::str_ends("FinnGen")) {
+    pathToFinnGenEunomiaSqlite <- helper_FinnGen_getDatabaseFile()
+  }
 
   test_databasesConfig <- HadesExtras::readAndParseYaml(
     pathToYalmFile = testthat::test_path("config", "eunomia_databasesConfig.yml"),
