@@ -31,6 +31,9 @@ if (testingDatabase |> stringr::str_starts("Eunomia")) {
     stop()
   }
 
+  pathToGiBleedEunomiaSqlite <- ""
+  pathToMIMICEunomiaSqlite <- ""
+  pathToFinnGenEunomiaSqlite <- ""
   if (testingDatabase |> stringr::str_ends("GiBleed")) {
     pathToGiBleedEunomiaSqlite <- Eunomia::getDatabaseFile("GiBleed", overwrite = FALSE)
   }
