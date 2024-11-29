@@ -127,7 +127,8 @@ execute_CodeWAS <- function(
       cdmDatabaseSchema = cdmDatabaseSchema,
       covariateSettings = covariateSettings,
       cohortIds = c(cohortIdCases, cohortIdControls),
-      aggregated = T
+      aggregated = T,
+      tempEmulationSchema = getOption("sqlRenderTempEmulationSchema")
     )
 
     # binary
@@ -233,7 +234,8 @@ execute_CodeWAS <- function(
       cdmDatabaseSchema = cdmDatabaseSchema,
       covariateSettings = covariateSettings,
       cohortIds = cohortIdCases,
-      aggregated = F
+      aggregated = F,
+      tempEmulationSchema = getOption("sqlRenderTempEmulationSchema")
     )
     ParallelLogger::logInfo("Getting FeatureExtraction for controls")
     covariate_control <- FeatureExtraction::getDbCovariateData(
@@ -243,7 +245,8 @@ execute_CodeWAS <- function(
       cdmDatabaseSchema = cdmDatabaseSchema,
       covariateSettings = covariateSettings,
       cohortIds = cohortIdControls,
-      aggregated = F
+      aggregated = F,
+      tempEmulationSchema = getOption("sqlRenderTempEmulationSchema")
     )
 
     # case control covariates
@@ -452,7 +455,7 @@ execute_CodeWAS <- function(
 
   # Cohort data ------------------------------------------------
   cohortsInfo  <- cohortDefinitionSet |>
-    dplyr::mutate(
+    dplyr::transmute(
      cohortId = as.integer(cohortId),
      cohortName = as.character(cohortName),
      shortName = as.character(shortName),

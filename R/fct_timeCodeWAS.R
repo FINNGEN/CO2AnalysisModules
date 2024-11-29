@@ -1,4 +1,3 @@
-
 #' @title execute_timeCodeWAS
 #' @description This function calculates cohort overlaps based on the provided cohort table and analysis settings, and exports the results to a DuckDB database.
 #'
@@ -21,8 +20,7 @@
 execute_timeCodeWAS <- function(
     exportFolder,
     cohortTableHandler,
-    analysisSettings
-) {
+    analysisSettings) {
   #
   # Check parameters
   #
@@ -58,7 +56,7 @@ execute_timeCodeWAS <- function(
   ParallelLogger::logInfo("Calculating timeCodeWAS")
   startAnalysisTime <- Sys.time()
 
-  covariateSettings  <- HadesExtras::FeatureExtraction_createTemporalCovariateSettingsFromList(
+  covariateSettings <- HadesExtras::FeatureExtraction_createTemporalCovariateSettingsFromList(
     analysisIds = analysisIds,
     temporalStartDays = temporalStartDays,
     temporalEndDays = temporalEndDays
@@ -72,57 +70,64 @@ execute_timeCodeWAS <- function(
     cdmDatabaseSchema = cdmDatabaseSchema,
     covariateSettings = covariateSettings,
     cohortIds = c(cohortIdCases, cohortIdControls),
-    aggregated = T
+    aggregated = T, 
+    tempEmulationSchema = getOption("sqlRenderTempEmulationSchema")
   )
 
   # binary
   timeCovariateCountsBinary <- tibble::tibble()
   if (is.null(covariateCasesControls$covariates) == FALSE &&
-    covariateCasesControls$covariates |> dplyr::count()  |> dplyr::pull(n) != 0 ) {
-
+    covariateCasesControls$covariates |>
+      dplyr::count() |>
+      dplyr::pull(n) != 0) {
     ParallelLogger::logInfo("Running statistical test for binary covariates")
 
     ParallelLogger::logInfo("calcualting number of subjects with observation case and controls in each time window")
 
-    cohortTbl <- dplyr::tbl(connection, HadesExtras::tmp_inDatabaseSchema(cohortDatabaseSchema, cohortTable))
-    observationPeriodTbl <- dplyr::tbl(connection,  HadesExtras::tmp_inDatabaseSchema(cdmDatabaseSchema, "observation_period"))
+    cohortTbl <- dplyr::tbl(connection, dbplyr::in_schema(cohortDatabaseSchema, cohortTable))
+    observationPeriodTbl <- dplyr::tbl(connection, dbplyr::in_schema(cdmDatabaseSchema, "observation_period"))
 
     timeWindows <- tibble::tibble(
-      id_window =  as.integer(1:length(temporalStartDays)),
+      id_window = as.integer(1:length(temporalStartDays)),
       start_day = as.integer(temporalStartDays),
       end_day = as.integer(temporalEndDays)
     )
-    timeWindowsTbl <- HadesExtras::tmp_dplyr_copy_to(connection, timeWindows, overwrite = TRUE)
-
-    windowCounts <- cohortTbl |>
-      dplyr::filter(cohort_definition_id %in% c(cohortIdCases, cohortIdControls)) |>
-      dplyr::left_join(
-        # at the moment take the first and last
-        observationPeriodTbl |>
-          dplyr::select(person_id, observation_period_start_date, observation_period_end_date) |>
-          dplyr::group_by(person_id) |>
-          dplyr::summarise(
-            observation_period_start_date = min(observation_period_start_date, na.rm = TRUE),
-            observation_period_end_date = max(observation_period_end_date, na.rm = TRUE)
-          ),
-        by = c("subject_id" = "person_id")) |>
-      dplyr::cross_join(timeWindowsTbl) |>
+    timeWindowsTbl <- dplyr::copy_to(connection, timeWindows, overwrite = TRUE)
+    
+    windowCounts <- dplyr::cross_join(
+      timeWindowsTbl,
+      cohortTbl |>
+        dplyr::filter(cohort_definition_id %in% c(cohortIdCases, cohortIdControls)) |>
+        dplyr::left_join(
+          # at the moment take the first and last
+          observationPeriodTbl |>
+            dplyr::select(person_id, observation_period_start_date, observation_period_end_date) |>
+            dplyr::group_by(person_id) |>
+            dplyr::summarise(
+              observation_period_start_date = min(observation_period_start_date, na.rm = TRUE),
+              observation_period_end_date = max(observation_period_end_date, na.rm = TRUE)
+            ),
+          by = c("subject_id" = "person_id")
+        )
+    ) |>
       dplyr::filter(
         # exclude if window is under the observation_period_start_date or over the observation_period_end_date
-        !(dateAdd("day", end_day, cohort_start_date) < observation_period_start_date |
-            dateAdd("day", start_day, cohort_start_date) > observation_period_end_date )
+        dbplyr::sql("NOT(
+          DATEADD('day', end_day, cohort_start_date) < observation_period_start_date OR 
+          DATEADD('day', start_day, cohort_start_date) > observation_period_end_date
+        )")
       ) |>
       dplyr::group_by(cohort_definition_id, id_window) |>
-      dplyr::count() |>
+    dplyr::count() |>
       dplyr::collect()
 
-    windowCounts <-  windowCounts |>
+    windowCounts <- windowCounts |>
       dplyr::mutate(cohort_definition_id = dplyr::case_when(
         cohort_definition_id == cohortIdCases ~ "nCasesInWindow",
         cohort_definition_id == cohortIdControls ~ "nControlsInWindow",
         TRUE ~ as.character(NA)
       )) |>
-      tidyr::spread(key = cohort_definition_id, n)|>
+      tidyr::spread(key = cohort_definition_id, n) |>
       dplyr::rename(timeId = id_window)
 
 
@@ -132,15 +137,15 @@ execute_timeCodeWAS <- function(
       dplyr::full_join(
         covariateCasesControls$covariates |> tibble::as_tibble() |>
           dplyr::filter(cohortDefinitionId == cohortIdCases) |>
-          dplyr::select(covariateId, timeId, nCasesYes=sumValue),
+          dplyr::select(covariateId, timeId, nCasesYes = sumValue),
         covariateCasesControls$covariates |> tibble::as_tibble() |>
           dplyr::filter(cohortDefinitionId == cohortIdControls) |>
-          dplyr::select( covariateId, timeId, nControlsYes=sumValue),
+          dplyr::select(covariateId, timeId, nControlsYes = sumValue),
         by = c("covariateId", "timeId")
-      )  |>
+      ) |>
       dplyr::left_join(
         windowCounts,
-        by="timeId"
+        by = "timeId"
       ) |>
       dplyr::transmute(
         covariateId = covariateId,
@@ -174,31 +179,31 @@ execute_timeCodeWAS <- function(
         pValue = countsPValue,
         oddsRatio = dplyr::if_else(is.infinite(countsOddsRatio), .Machine$double.xmax, countsOddsRatio),
         modelType = countsTest,
-        runNotes =  ''
+        runNotes = ""
       )
-
   }
 
   # continuous
   timeCovariateCountsContinuous <- tibble::tibble()
   if (is.null(covariateCasesControls$covariatesContinuous) == FALSE &&
-    covariateCasesControls$covariatesContinuous |> dplyr::count()  |> dplyr::pull(n) != 0) {
-
+    covariateCasesControls$covariatesContinuous |>
+      dplyr::count() |>
+      dplyr::pull(n) != 0) {
     ParallelLogger::logInfo("Running statistical test for continuous covariates")
 
     timeCovariateCountsContinuous <- dplyr::full_join(
       covariateCasesControls$covariatesContinuous |>
-        dplyr::filter(cohortDefinitionId == {{cohortIdCases}})  |>
+        dplyr::filter(cohortDefinitionId == {{ cohortIdCases }}) |>
         dplyr::select(covariateId, timeId, nCasesYesWithValue = countValue, meanValueCases = averageValue, sdValueCases = standardDeviation),
       covariateCasesControls$covariatesContinuous |>
-        dplyr::filter(cohortDefinitionId == {{cohortIdControls}})  |>
+        dplyr::filter(cohortDefinitionId == {{ cohortIdControls }}) |>
         dplyr::select(covariateId, timeId, nControlsYesWithValue = countValue, meanValueControls = averageValue, sdValueControls = standardDeviation),
       by = c("covariateId", "timeId")
-    )|>
+    ) |>
       dplyr::collect() |>
       dplyr::left_join(
         windowCounts,
-        by="timeId"
+        by = "timeId"
       ) |>
       dplyr::mutate(
         nCasesYesWithValue = ifelse(is.na(nCasesYesWithValue), 0, nCasesYesWithValue),
@@ -233,9 +238,9 @@ execute_timeCodeWAS <- function(
 
   timeCodeWASResults <- dplyr::bind_rows(timeCovariateCountsBinary, timeCovariateCountsContinuous)
 
-  analysisRef  <-  covariateCasesControls$analysisRef  |> dplyr::collect()
+  analysisRef <- covariateCasesControls$analysisRef |> dplyr::collect()
 
-  covariateRef  <- covariateCasesControls$covariateRef  |> dplyr::collect()
+  covariateRef <- covariateCasesControls$covariateRef |> dplyr::collect()
 
   ParallelLogger::logInfo("CohortDiagnostics_runTimeCodeWAS completed")
 
@@ -251,18 +256,18 @@ execute_timeCodeWAS <- function(
   connection <- duckdb::dbConnect(duckdb::duckdb(), pathToResultsDatabase)
 
   # Database metadata ---------------------------------------------
-  databaseInfo  <- tibble::tibble(
+  databaseInfo <- tibble::tibble(
     databaseId = databaseId,
-    databaseName =  databaseName,
-    databaseDescription =  databaseDescription,
+    databaseName = databaseName,
+    databaseDescription = databaseDescription,
     vocabularyVersionCdm = vocabularyVersionCdm,
     vocabularyVersion = vocabularyVersion
   )
   duckdb::dbWriteTable(connection, "databaseInfo", databaseInfo, overwrite = TRUE)
 
   # Cohort data ------------------------------------------------
-  cohortsInfo  <- cohortDefinitionSet |>
-    dplyr::mutate(
+  cohortsInfo <- cohortDefinitionSet |>
+    dplyr::transmute(
       cohortId = as.integer(cohortId),
       cohortName = as.character(cohortName),
       shortName = as.character(shortName),
@@ -289,12 +294,12 @@ execute_timeCodeWAS <- function(
       )
     )
 
-  duckdb::dbWriteTable(connection, "cohortsInfo",cohortsInfo, overwrite = TRUE)
+  duckdb::dbWriteTable(connection, "cohortsInfo", cohortsInfo, overwrite = TRUE)
 
   # timeCodeWASCounts ------------------------------------------------
-  timeCodeWASResults  <-  timeCodeWASResults |>
+  timeCodeWASResults <- timeCodeWASResults |>
     dplyr::transmute(
-      databaseId = as.character({{databaseId}}),
+      databaseId = as.character({{ databaseId }}),
       covariateId = as.double(covariateId),
       timeId = as.integer(timeId),
       covariateType = as.character(covariateType),
@@ -360,7 +365,6 @@ execute_timeCodeWAS <- function(
   ParallelLogger::logInfo("Results exported")
 
   return(pathToResultsDatabase)
-
 }
 
 #' @title Assert Analysis Settings for Cohort Demographics Overlaps
@@ -380,23 +384,21 @@ execute_timeCodeWAS <- function(
 #'
 #' @export
 assertAnalysisSettings_timeCodeWAS <- function(analysisSettings) {
-
   analysisSettings |> checkmate::assertList()
-  c('cohortIdCases', 'cohortIdControls', 'analysisIds', 'temporalStartDays', 'temporalEndDays')  |> checkmate::assertSubset(names(analysisSettings))
+  c("cohortIdCases", "cohortIdControls", "analysisIds", "temporalStartDays", "temporalEndDays") |> checkmate::assertSubset(names(analysisSettings))
   analysisSettings$cohortIdCases |> checkmate::assertNumeric()
   analysisSettings$cohortIdControls |> checkmate::assertNumeric()
   analysisSettings$analysisIds |> checkmate::assertNumeric()
   analysisSettings$temporalStartDays |> checkmate::assertNumeric()
   analysisSettings$temporalEndDays |> checkmate::assertNumeric()
 
-  if(is.null(analysisSettings$minCellCount)){
+  if (is.null(analysisSettings$minCellCount)) {
     analysisSettings$minCellCount <- 1
   }
   analysisSettings$minCellCount |> checkmate::assertNumeric()
 
 
   return(analysisSettings)
-
 }
 
 
@@ -414,11 +416,10 @@ assertAnalysisSettings_timeCodeWAS <- function(analysisSettings) {
 #'
 #' @export
 checkResults_timeCodeWAS <- function(pathToResultsDatabase) {
-
   #
   # Checking rules
   #
-  expectedSchemas  <- list(
+  expectedSchemas <- list(
     databaseInfo = tibble::tibble(
       name = c("databaseId", "databaseName", "databaseDescription", "vocabularyVersionCdm", "vocabularyVersion"),
       type = c("VARCHAR", "VARCHAR", "VARCHAR", "VARCHAR", "VARCHAR")
@@ -452,9 +453,6 @@ checkResults_timeCodeWAS <- function(pathToResultsDatabase) {
   #
   # Check
   #
-  errors  <- .checkDatabase(pathToResultsDatabase, expectedSchemas)
+  errors <- .checkDatabase(pathToResultsDatabase, expectedSchemas)
   return(errors)
 }
-
-
-
