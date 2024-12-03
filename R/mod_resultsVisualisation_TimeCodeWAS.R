@@ -48,7 +48,7 @@ mod_resultsVisualisation_TimeCodeWAS_ui <- function(id) {
           ggiraph::girafeOutput(ns("SimpleCodeWASplot"), width = "100%", height = "100%"),
           shiny::div(
             style = "margin-top: 10px; margin-bottom: 10px;",
-            shiny::downloadButton(ns("downloadPlot"), "Download")
+            shiny::downloadButton(ns("downloadPlot2"), "Download")
           ),
         ),
         shiny::tabPanel(
@@ -117,6 +117,7 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
     r <- shiny::reactiveValues(
       gg_data = NULL,
       gg_plot = NULL,
+      gg_plot2 = NULL,
       #
       line_to_plot = NULL,
       force_update = FALSE,
@@ -469,13 +470,37 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
         grDevices::cairo_pdf(filename = fname,
                              width = 15,
                              height = 5,
-                             pointsize = 1.0,
+                             pointsize = 20,
                              family = "sans",
                              bg = "transparent",
                              antialias = "default",
                              fallback_resolution = 300,
         )
         print(r$gg_plot)
+        grDevices::dev.off()
+      },
+      contentType = "application/pdf"
+    )
+
+    #
+    # download data as a plot (Plot2) ####
+    #
+    output$downloadPlot2 <- shiny::downloadHandler(
+      filename = function(){
+        paste('timecodewas_', format(lubridate::now(), "%Y_%m_%d_%H%M"), '.pdf', sep='')
+      },
+      content = function(fname){
+
+        grDevices::cairo_pdf(filename = fname,
+                             width = 15,
+                             height = 6,
+                             pointsize = 20,
+                             family = "sans",
+                             bg = "transparent",
+                             antialias = "default",
+                             fallback_resolution = 300,
+        )
+        print(r$gg_plot2)
         grDevices::dev.off()
       },
       contentType = "application/pdf"
@@ -565,6 +590,7 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
         ggplot2::theme_minimal() +
         ggplot2::theme(
           legend.position = "bottom",
+          plot.title = ggplot2::element_text(size = 16, margin = ggplot2::margin(t = 10, b = 5)),
           axis.text.x = ggplot2::element_text(size = 12),
           axis.text.y = ggplot2::element_text(size = 12),
           axis.title.x = ggplot2::element_text(margin = ggplot2::margin(t = 10), size = 14),
@@ -588,6 +614,7 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
         )
 
       gg_plot <- ggplotify::as.ggplot(gg_plot)
+      r$gg_plot2 <- gg_plot
 
       gg_girafe <- ggiraph::girafe(ggobj = gg_plot, height_svg = 6, width_svg = 14)
       gg_girafe <- ggiraph::girafe_options(
@@ -596,6 +623,15 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
         ggiraph::opts_hover(
           css = "fill-opacity:1;fill:red;stroke:black;",
           reactive = FALSE
+        ),
+        ggiraph::opts_selection(
+          type = c("none"),
+          only_shiny = TRUE
+        ),
+        ggiraph::opts_toolbar(
+          position = "topright",
+          hidden = c("zoom", "zoomReset", "lasso_select", "lasso_deselect", "saveaspng"),
+          delay_mouseout = 100000
         )
       )
 
