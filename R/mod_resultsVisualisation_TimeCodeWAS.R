@@ -67,9 +67,21 @@ mod_resultsVisualisation_TimeCodeWAS_ui <- function(id) {
             shiny::downloadButton(ns("downloadDataFiltered"), "Download filtered"),
             shiny::downloadButton(ns("downloadDataAll"), "Download all"),
           )
-        )
-      )
-    )
+        ),
+        shiny::tabPanel(
+          "Reactable",
+          shiny::div(
+            style = "margin-top: 20px; margin-bottom: 10px;",
+            reactable::reactableOutput(ns("reactableData")),
+          ),
+          shiny::div(
+            style = "margin-top: 10px; margin-bottom: 10px;",
+            shiny::downloadButton(ns("downloadDataFiltered"), "Download filtered"),
+            shiny::downloadButton(ns("downloadDataAll"), "Download all"),
+          )
+        ) # tabPanel
+      ) # tabsetPanel
+    ) # tagList
   )
 
 }
@@ -436,6 +448,74 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
       shiny::req(r$gg_data)
 
       .renderTable(r$gg_data)
+    })
+
+    #
+    # output "Reactable" tab ####
+    #
+    output$reactableData <- reactable::renderReactable({
+      shiny::req(r$gg_data)
+
+      df <- r$gg_data |>
+        dplyr::mutate(GROUP = stringr::str_replace(GROUP, stringr::fixed("from "), "")) |>
+        dplyr::mutate(covariate = name) |>
+        dplyr::mutate(meanCases = round(meanCases, 3)) |>
+        dplyr::mutate(meanControls = round(meanControls, 3))|>
+        dplyr::mutate(sdCases = round(sdCases, 3)) |>
+        dplyr::mutate(sdControls = round(sdControls, 3))|>
+        dplyr::mutate(beta = round(log(OR), 3)) |>
+        dplyr::mutate(
+          code = round(code/1000),
+          name = purrr::map2_chr(name, code, ~paste0('<a href="',atlasUrl,'/#/concept/', .y, '" target="_blank">', .x,'</a>'))
+        ) |>
+        dplyr::select(
+          GROUP, name, covariate, analysisName, domain, upIn,
+          nCasesYes, nControlsYes, meanCases, meanControls, sdCases, sdControls,
+          OR, p, beta, notes)
+
+      reactable::reactable(
+        df,
+        defaultColDef = reactable::colDef(
+          resizable = TRUE
+        ),
+        defaultSorted = list(p = "asc", OR = "desc"),
+        columns = list(
+          GROUP = reactable::colDef(name = "Time ID", minWidth = 20, align = "right"),
+          name = reactable::colDef(
+            name = "Covariate",
+            cell = function(name, rowIndex) {
+            htmltools::tags$a(href = name, target = "_blank", df$covariate[rowIndex])},
+            minWidth = 50
+          ),
+          covariate = reactable::colDef(show = FALSE),
+          analysisName = reactable::colDef(name = "Analysis Name", minWidth = 50),
+          domain = reactable::colDef(name = "Domain", minWidth = 40),
+          upIn = reactable::colDef(name = "Type", minWidth = 15),
+          nCasesYes = reactable::colDef(name = "N cases", minWidth = 12),
+          nControlsYes = reactable::colDef(name = "N ctrls", minWidth = 12),
+          meanCases = reactable::colDef(name = "Ratio|Mean cases", minWidth = 13),
+          meanControls = reactable::colDef(name = "Ratio|Mean ctrls", minWidth = 13),
+          sdCases = reactable::colDef(name = "SD cases", minWidth = 15),
+          sdControls = reactable::colDef(name = "SD ctrls", minWidth = 15),
+          OR = reactable::colDef(
+            name = "OR",
+            minWidth = 25,
+            cell = function(value) {
+              formatC(value, format = "e", digits = 3)
+            }
+          ),
+          p = reactable::colDef(
+            name = "p",
+            minWidth = 25,
+            cell = function(value) {
+              formatC(value, format = "e", digits = 3)
+             }
+          ),
+          beta = reactable::colDef(name = "Beta", minWidth = 25),
+          notes = reactable::colDef(name = "Notes", minWidth = 30)
+        ),
+        searchable = TRUE, defaultPageSize = 10, showPageSizeOptions = TRUE
+      )
     })
 
     #
