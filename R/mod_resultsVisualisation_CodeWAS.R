@@ -331,7 +331,7 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
           'SD cases' = 'sdCases',
           'SD ctrls' = 'sdControls',
           'OR' = 'oddsRatio',
-          'mlogp' = 'mLogP',
+          'mLogP' = 'mlogp',
           'Beta' = 'beta',
           'Model' = 'modelType',
           # 'ID' = 'analysisId',
@@ -347,7 +347,7 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
         )
       ) |>
         DT::formatStyle('Covariate Name', cursor = 'pointer' ) |>
-        DT::formatSignif(columns = c('mlogp', 'OR'), digits = 3)
+        DT::formatSignif(columns = c('mLogP', 'OR'), digits = 3)
     })
 
     #
