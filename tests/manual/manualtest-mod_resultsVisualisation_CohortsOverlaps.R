@@ -48,7 +48,7 @@ pathToCO2AnalysisModulesConfigYalm  <-  testthat::test_path("config/atlasDemo_CO
 CO2AnalysisModulesConfig <- yaml::read_yaml(pathToCO2AnalysisModulesConfigYalm)
 options = list(launch.browser=FALSE, port = 5907)
 
-browseURL(paste0("http://localhost:5907/?pathToResultsDatabase=", pathToResultsDatabase))
+browseURL(paste0("http://localhost:5907/?analysisType=cohortOverlaps&pathToResultsDatabase=", pathToResultsDatabase))
 run_app(CO2AnalysisModulesConfig, options = options)
 
 

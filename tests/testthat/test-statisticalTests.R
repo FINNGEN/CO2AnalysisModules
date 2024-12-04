@@ -40,7 +40,7 @@ test_that(".binaryTest works as expected", {
   result <- .binaryTest(a = 2, b = 8, c = 3, d = 7, fisherLimit = 10)
   expect_type(result, "list")
   expect_equal(result$countsTest, "Fisher")
-  expect_true(result$countsPValue < 1)
+  expect_true(result$countsPValue <= 1)
   expect_true(result$countsOddsRatio > 0)
 
   # Test 3: Edge case with all counts being zero

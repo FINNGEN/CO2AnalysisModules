@@ -256,7 +256,6 @@ test_that("executeCodeWAS works with no covariates", {
 })
 
 
-
 test_that("executeCodeWAS works when n multiple events per subject", {
   # set up
   cohortTableHandler <-
@@ -327,7 +326,7 @@ test_that("executeCodeWAS works when n multiple events per subject", {
 
 
 test_that("executeCodeWAS works to get lab values", {
-  skip_if(testingDatabase != "EunomiaFinnGen",
+  skip_if(testingDatabase != "Eunomia-FinnGen",
           "Skip test, it is only for EunomiaFinnGen")
 
   # set up

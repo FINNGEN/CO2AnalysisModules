@@ -114,7 +114,7 @@ execute_CohortDemographics <- function(
 
   # Cohort data ------------------------------------------------
   cohortsInfo  <- cohortDefinitionSet |>
-    dplyr::mutate(
+    dplyr::transmute(
      cohortId = as.integer(cohortId),
      cohortName = as.character(cohortName),
      shortName = as.character(shortName),
