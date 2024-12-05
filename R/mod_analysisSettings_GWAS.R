@@ -216,13 +216,13 @@ mod_analysisSettings_GWAS_server <- function(id, r_connectionHandler) {
       # check token
       connectionSandboxAPI <- NULL
       if (!file.exists(".sandbox_token")) {
-        message <- paste0(message, "\u26A0\uFE0F Token not found.\n")
+        message <- paste0(message, "\u274C Token not found.\n")
       } else {
         token <- readLines(".sandbox_token")
         base_url <- "https://internal-api.app.finngen.fi/internal-api/"
         connectionSandboxAPI <- FinnGenUtilsR::createSandboxAPIConnection(base_url, token)
-        if (connectionSandboxAPI$conn_status$type == "ERROR") {
-          message <- paste0(message, "\u26A0\uFE0F Error connecting to the sandbox API. Error message: ", connectionSandboxAPI$conn_status$message, "\n")
+        if (connectionSandboxAPI$conn_status_tibble$logTibble$type == "ERROR") {
+          message <- paste0(message, "\u274C Error connecting to the sandbox API. Error message: ", connectionSandboxAPI$conn_status$message, "\n")
           connectionSandboxAPI <- NULL
         } else {
           message <- paste0(message, "\u2705 Token found and connection to the sandbox API successful\n")
@@ -239,7 +239,7 @@ mod_analysisSettings_GWAS_server <- function(id, r_connectionHandler) {
 
       # overlap
       if (nSubjectsOverlap == 0) {
-        message <- paste0(message, "\u2705 No subjects overlap between case and control cohorts\n")
+        message <- paste0(message, "\u26A0\uFE0F No subjects overlap between case and control cohorts\n")
       } else {
         message <- paste0(message, "\u274C There are ", nSubjectsOverlap, " subjects that overlap  berween case and control cohorts. Consider removing them in Operate Cohorts tab\n")
       }
