@@ -57,6 +57,24 @@ mod_resultsVisualisation_TimeCodeWAS_ui <- function(id) {
           ),
         ),
         shiny::tabPanel(
+          "Plot2",
+          shiny::div(style = "margin-top: 10px; ",
+                     shiny::fluidRow(
+                       shiny::column(width = 2,
+                         shiny::checkboxInput(ns("top_10"), "Label top 10", value = TRUE)
+                       ),
+                       shiny::column(width = 2,
+                         shiny::checkboxInput(ns("connect_top_10"), "Connect top 10", value = TRUE),
+                       )
+                     )
+          ),
+          ggiraph::girafeOutput(ns("SimpleCodeWASplot"), width = "100%", height = "100%"),
+          shiny::div(
+            style = "margin-top: 10px; margin-bottom: 10px;",
+            shiny::downloadButton(ns("downloadPlot2"), "Download")
+          ),
+        ),
+        shiny::tabPanel(
           "Table",
           shiny::div(
             style = "margin-top: 20px; margin-bottom: 10px;",
@@ -122,6 +140,7 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
     r <- shiny::reactiveValues(
       gg_data = NULL,
       gg_plot = NULL,
+      gg_plot2 = NULL,
       #
       line_to_plot = NULL,
       force_update = FALSE,
@@ -217,7 +236,6 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
     # observe the selected domains and p_groups
     #
     shiny::observe({
-      shiny::req(input$domain)
       shiny::req(input$or_range)
       shiny::req(input$n_cases)
       shiny::isTruthy(input$na_anywhere)
@@ -476,7 +494,7 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
         grDevices::cairo_pdf(filename = fname,
                              width = 15,
                              height = 5,
-                             pointsize = 1.0,
+                             pointsize = 20,
                              family = "sans",
                              bg = "transparent",
                              antialias = "default",
@@ -487,6 +505,165 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
       },
       contentType = "application/pdf"
     )
+
+    #
+    # download data as a plot (Plot2) ####
+    #
+    output$downloadPlot2 <- shiny::downloadHandler(
+      filename = function(){
+        paste('timecodewas_', format(lubridate::now(), "%Y_%m_%d_%H%M"), '.pdf', sep='')
+      },
+      content = function(fname){
+
+        grDevices::cairo_pdf(filename = fname,
+                             width = 15,
+                             height = 6,
+                             pointsize = 20,
+                             family = "sans",
+                             bg = "transparent",
+                             antialias = "default",
+                             fallback_resolution = 300,
+        )
+        print(r$gg_plot2)
+        grDevices::dev.off()
+      },
+      contentType = "application/pdf"
+    )
+
+    #
+    # render the simple plot ####
+    #
+    output$SimpleCodeWASplot <- ggiraph::renderGirafe({
+      shiny::req(r$gg_data)
+
+      top_colors <- c(
+        "1"= "blue",
+        "2" = "magenta",
+        "3" = "green",
+        "4" = "orange",
+        "5" = "turquoise",
+        "6" = "purple",
+        "7" = "darkgreen",
+        "8" = "cyan",
+        "9" = "brown",
+        "10" = "pink",
+        "11" = "lightgray"
+      )
+
+      gg_data <- r$gg_data |>
+        dplyr::mutate(time_period = factor(time_period, levels = time_periods, labels = time_periods)) |>
+        dplyr::mutate(name = factor(name, levels = unique(name))) |>
+        dplyr::mutate(name = stringr::str_remove_all(name, "'")) |>
+        dplyr::mutate(label = stringr::str_remove_all(label, "'")) |>
+        dplyr::mutate(oddsRatio = ifelse(is.na(OR), 1, OR)) |>
+        dplyr::mutate(pLog10 = -log10(p)) |>
+        dplyr::mutate(pLog10 = ifelse(pLog10 < 1e-30, 1e-30, pLog10)) |>
+        dplyr::mutate(beta = log(oddsRatio)) |>
+        dplyr::mutate(beta = ifelse(beta > 5, 5, beta)) |>
+        dplyr::mutate(beta = ifelse(beta < -5, -5, beta)) |>
+        dplyr::mutate(direction = ifelse(beta > 0, "cases", "controls")) |>
+        dplyr::mutate(data_id = paste0(name,analysisName)) |>
+        dplyr::mutate(time_period_jittered = jitter(as.numeric(time_period), amount = 0.3)) |>
+        dplyr::mutate(pLog10_jittered = jitter(pLog10, amount = 0.1 * max(pLog10)))
+
+      items <- gg_data |>
+        dplyr::select(name, analysisName, pLog10) |>
+        dplyr::arrange(desc(pLog10)) |>
+        dplyr::mutate(rank = row_number()) |>
+        dplyr::group_by(name) |>
+        dplyr::mutate(rank = min(rank, na.rm = TRUE)) |>
+        dplyr::ungroup() |>
+        dplyr::distinct(name, analysisName, rank) |>
+        dplyr::arrange(rank) |>
+        dplyr::mutate(rank = seq_along(rank)) |>
+        dplyr::mutate(color_group = ifelse(rank <= 10, as.character(rank), "11")) |>
+        dplyr::select(name, analysisName, color_group, rank)
+
+      if(nrow(gg_data) == 0){
+        return(NULL)
+      }
+
+      gg_data <- gg_data |>
+        left_join(items, by = c("name", "analysisName"))
+
+      gg_plot <- ggplot2::ggplot(gg_data, ggplot2::aes(x = time_period_jittered, y = pLog10_jittered,  group = data_id, fill = color_group, color = color_group)) +
+        {if(input$connect_top_10)
+          ggplot2::geom_line(data = gg_data |> dplyr::filter(color_group != "11"), linewidth = 1)
+        } +
+        {if(input$top_10)
+          ggrepel::geom_text_repel(
+            data = gg_data |> dplyr::filter(color_group != "11"),
+            ggplot2::aes(label = name),
+            color = "black",
+            segment.color = "black",
+            segment.size = 0.2,
+            segment.linetype = "dashed",
+            max.overlaps = Inf,
+            size = 4,
+            hjust = 0.1,
+            force = 0.5,
+            force_pull = 0.5,
+            # xlim = c(0.5, NA),
+            box.padding = 0.8
+          )
+        } +
+        ggiraph::geom_point_interactive(
+          aes(size = pLog10, data_id = data_id, tooltip = label),
+          color = "black", shape = 21, alpha = ifelse(gg_data$color_group == "11", 0.5, 1)
+        ) +
+        ggplot2::theme_minimal() +
+        ggplot2::theme(
+          legend.position = "bottom",
+          plot.title = ggplot2::element_text(size = 16, margin = ggplot2::margin(t = 10, b = 5)),
+          axis.text.x = ggplot2::element_text(size = 12),
+          axis.text.y = ggplot2::element_text(size = 12),
+          axis.title.x = ggplot2::element_text(margin = ggplot2::margin(t = 10), size = 14),
+          axis.title.y = ggplot2::element_text(margin = ggplot2::margin(r = 15), size = 14),
+        ) +
+        ggplot2::scale_color_manual(name = "color_group", values = top_colors) +
+        ggplot2::scale_fill_manual(name = "color_group", values = top_colors) +
+        ggplot2::scale_x_continuous(breaks = c(1:length(levels(gg_data$time_period))), labels = levels(gg_data$time_period)) +
+        ggplot2::scale_y_continuous(expand = ggplot2::expansion(mult = c(0.2, 0.3))) +
+        ggplot2::labs(
+          x = "Time period",
+          y = "-log10(p)",
+          title = "TimeCodeWAS",
+          subtitle = "",
+          caption = lubridate::today()
+        ) +
+        ggplot2::guides(
+          color = "none",
+          fill = "none",
+          size = "none"
+        )
+
+      gg_plot <- ggplotify::as.ggplot(gg_plot)
+      r$gg_plot2 <- gg_plot
+
+      gg_girafe <- ggiraph::girafe(ggobj = gg_plot, height_svg = 6, width_svg = 14)
+      gg_girafe <- ggiraph::girafe_options(
+        gg_girafe,
+        ggiraph::opts_sizing(rescale = TRUE, width = 1.0),
+        ggiraph::opts_hover(
+          css = "fill-opacity:1;fill:red;stroke:black;",
+          reactive = FALSE
+        ),
+        ggiraph::opts_selection(
+          type = c("none"),
+          only_shiny = TRUE
+        ),
+        ggiraph::opts_toolbar(
+          position = "topright",
+          hidden = c("zoom", "zoomReset", "lasso_select", "lasso_deselect", "saveaspng"),
+          delay_mouseout = 100000
+        )
+      )
+
+      return(gg_girafe)
+
+    }) # renderPlot
+
+
   })
 } # mod_timeCodeWASPlot_server
 
@@ -561,10 +738,11 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
       label = stringr::str_c(code),
       label = stringr::str_remove(label, "[:blank:]+$"),
       label = stringr::str_c(domain, " : ", name,
-                             "\n-log10(p)=", scales::number(-log10(p), accuracy = 0.1) ,
+                             "\n analysis: ", analysisName,
+                             "\n -log10(p) = ", scales::number(-log10(p), accuracy = 0.1) ,
                              "\n log10(OR) = ", ifelse(is.na(OR), "", scales::number(log10(OR), accuracy = 0.1)),
-                             "\n cases:", nCasesYes, " (", scales::percent(cases_per, accuracy = 0.01), ")",
-                             "\n controls:", nControlsYes, " (", scales::percent(controls_per, accuracy = 0.01), ")"
+                             "\n cases: ", nCasesYes, " (", scales::percent(cases_per, accuracy = 0.01), ")",
+                             "\n controls: ", nControlsYes, " (", scales::percent(controls_per, accuracy = 0.01), ")"
       ),
       link = paste0("https://atlas.app.finngen.fi/#/concept/", stringr::str_sub(code, 1, -4)),
       upIn = upIn,
@@ -835,6 +1013,7 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
 
   return(studyResults)
 }
+
 
 
 
