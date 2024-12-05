@@ -24,7 +24,7 @@ mod_resultsVisualisation_TimeCodeWAS_ui <- function(id) {
       shiny::tabsetPanel(
         id = ns("tabset"),
         shiny::tabPanel(
-          "Plot",
+          "Proportions View",
           shiny::div(style = "margin-top: 10px; ",
                      shiny::fluidRow(
                        tags$style(HTML("
@@ -36,8 +36,18 @@ mod_resultsVisualisation_TimeCodeWAS_ui <- function(id) {
                        shiny::column(
                          width = 2,
                          shiny::checkboxInput(
-                           ns("top_10"), "Label top 10", value = TRUE)
+                           ns("top_10"), "Show labels", value = TRUE)
                        ),
+                       shiny::column(
+                         width = 2,
+                         div(style = "margin-top: -5px;",
+                             div(style = "margin-top: 2px; margin-right: 5px;", "Label top n"),
+                             div(style = "margin-top: -20px;",
+                                 shiny::sliderInput(
+                                   ns("label_top_n"), label = NULL, ticks = FALSE, min = 1, max = 20, value = 10, step = 1)
+                             )
+                         )
+                       ), # column
                        shiny::column(
                          width = 2,
                          div(style = "margin-top: -5px;",
@@ -47,7 +57,7 @@ mod_resultsVisualisation_TimeCodeWAS_ui <- function(id) {
                                    ns("point_scale"), label = NULL, ticks = FALSE, min = 0.2, max = 2.2, value = 1, step = 0.1)
                              )
                          )
-                       )
+                       ), # column
                      )
           ),
           ggiraph::girafeOutput(ns("codeWASplot"), width = "100%", height = "100%"),
@@ -57,7 +67,7 @@ mod_resultsVisualisation_TimeCodeWAS_ui <- function(id) {
           ),
         ),
         shiny::tabPanel(
-          "Plot2",
+          "Progress View",
           shiny::div(style = "margin-top: 10px; ",
                      shiny::fluidRow(
                        shiny::column(width = 2,
@@ -74,20 +84,20 @@ mod_resultsVisualisation_TimeCodeWAS_ui <- function(id) {
             shiny::downloadButton(ns("downloadPlot2"), "Download")
           ),
         ),
+        # shiny::tabPanel(
+        #   "Table",
+        #   shiny::div(
+        #     style = "margin-top: 20px; margin-bottom: 10px;",
+        #     DT::DTOutput(ns("demographicsData")),
+        #   ),
+        #   shiny::div(
+        #     style = "margin-top: 10px; margin-bottom: 10px;",
+        #     shiny::downloadButton(ns("downloadDataFiltered"), "Download filtered"),
+        #     shiny::downloadButton(ns("downloadDataAll"), "Download all"),
+        #   )
+        # ),
         shiny::tabPanel(
           "Table",
-          shiny::div(
-            style = "margin-top: 20px; margin-bottom: 10px;",
-            DT::DTOutput(ns("demographicsData")),
-          ),
-          shiny::div(
-            style = "margin-top: 10px; margin-bottom: 10px;",
-            shiny::downloadButton(ns("downloadDataFiltered"), "Download filtered"),
-            shiny::downloadButton(ns("downloadDataAll"), "Download all"),
-          )
-        ),
-        shiny::tabPanel(
-          "Reactable",
           shiny::div(
             style = "margin-top: 20px; margin-bottom: 10px;",
             reactable::reactableOutput(ns("reactableData")),
@@ -330,7 +340,8 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
         selection = r$line_to_plot,
         r = r,
         top_10 = input$top_10,
-        point_scale = input$point_scale
+        point_scale = input$point_scale,
+        label_top_n = input$label_top_n
       )
 
       return(gg_girafe)
@@ -407,11 +418,13 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
     #
     .renderTable <- function(df){
       df <- df |>
+        dplyr::mutate(GROUP = stringr::str_replace(GROUP, stringr::fixed("from "), "")) |>
         dplyr::mutate(meanCases = round(meanCases, 3)) |>
         dplyr::mutate(meanControls = round(meanControls, 3))|>
         dplyr::mutate(sdCases = round(sdCases, 3)) |>
         dplyr::mutate(sdControls = round(sdControls, 3))|>
         dplyr::mutate(beta = round(log(OR), 3)) |>
+        dplyr::mutate(mlogp = round(-log10(p), 3)) |>
         dplyr::mutate(
           code = round(code/1000),
           name = purrr::map2_chr(name, code, ~paste0('<a href="',atlasUrl,'/#/concept/', .y, '" target="_blank">', .x,'</a>'))
@@ -419,7 +432,7 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
         dplyr::select(
           GROUP, name, analysisName, domain, upIn,
           nCasesYes, nControlsYes, meanCases, meanControls, sdCases, sdControls,
-          OR, p, beta, notes)
+          OR, mlogp, beta, notes)
 
         DT::datatable(
           df,
@@ -436,26 +449,27 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
             'SD cases' = 'sdCases',
             'SD ctrls' = 'sdControls',
             'OR' = 'OR',
-            'p' = 'p',
+            'mlogp' = 'mlogp',
             'Beta' = 'beta',
             'Notes' = 'notes'
           ),
           options = list(
-            order = list(list(12, 'asc'), list(11, 'desc')) # order by p-value, then OR
-            # columnDefs = list(
-            #   list(width = '70px', targets = c(2, 3, 15)), # name, notes
-            #   list(width = '80px', targets = c(1)), # analysisName
-            #   list(width = '80px', targets = c(4)), # domain
-            #   list(width = '30px', targets = c(4)), # upIn
-            #   list(width = '40px', targets = c(6,7,8, 9, 10,11)), # GROUP, nCasesYes, nControlsYes, meanCases, meanControls, sdCases, sdControls
-            #   list(width = '50px', targets = c(12, 13)) # pValue, OR
-            # )
+            order = list(list(12, 'desc'), list(11, 'desc')), # order by p-value, then OR
+            columnDefs = list(
+              list(width = '70px', targets = c(2,3)), # name, notes
+              list(width = '25px', targets = c(6,7))
+              # list(width = '80px', targets = c(1)), # analysisName
+              # list(width = '80px', targets = c(4)), # domain
+              # list(width = '30px', targets = c(4)), # upIn
+              # list(width = '40px', targets = c(6,7,8, 9, 10,11)), # GROUP, nCasesYes, nControlsYes, meanCases, meanControls, sdCases, sdControls
+              # list(width = '50px', targets = c(12, 13)) # pValue, OR
+            )
           ),
           escape = FALSE,
           selection = 'none',
           rownames = FALSE
         ) |>
-        DT::formatSignif(columns = c('p', 'OR'), digits = 3) |>
+        DT::formatSignif(columns = c('mlogp', 'OR'), digits = 3) |>
         DT::formatStyle('Covariate Name', cursor = 'pointer' )
     }
 
@@ -482,6 +496,12 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
         dplyr::mutate(sdCases = round(sdCases, 3)) |>
         dplyr::mutate(sdControls = round(sdControls, 3))|>
         dplyr::mutate(beta = round(log(OR), 3)) |>
+        dplyr::mutate(pLog10 = round(-log10(p), 3)) |>
+        dplyr::mutate(OR = dplyr::case_when(
+          OR > 10e+100 ~ Inf,
+          OR < 10e-100 ~ -Inf,
+          TRUE ~ round(OR, 3)
+        )) |>
         dplyr::mutate(
           code = round(code/1000),
           name = purrr::map2_chr(name, code, ~paste0('<a href="',atlasUrl,'/#/concept/', .y, '" target="_blank">', .x,'</a>'))
@@ -489,14 +509,18 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
         dplyr::select(
           GROUP, name, covariate, analysisName, domain, upIn,
           nCasesYes, nControlsYes, meanCases, meanControls, sdCases, sdControls,
-          OR, p, beta, notes)
+          OR, pLog10, beta, notes)
 
       reactable::reactable(
         df,
+        filterable = TRUE,
+        bordered = TRUE,
+        # highlight = TRUE,
+        striped = TRUE,
         defaultColDef = reactable::colDef(
           resizable = TRUE
         ),
-        defaultSorted = list(p = "asc", OR = "desc"),
+        defaultSorted = list(pLog10 = "desc", OR = "desc"),
         columns = list(
           GROUP = reactable::colDef(name = "Time ID", minWidth = 20, align = "right"),
           name = reactable::colDef(
@@ -513,22 +537,10 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
           nControlsYes = reactable::colDef(name = "N ctrls", minWidth = 12),
           meanCases = reactable::colDef(name = "Ratio|Mean cases", minWidth = 13),
           meanControls = reactable::colDef(name = "Ratio|Mean ctrls", minWidth = 13),
-          sdCases = reactable::colDef(name = "SD cases", minWidth = 15),
-          sdControls = reactable::colDef(name = "SD ctrls", minWidth = 15),
-          OR = reactable::colDef(
-            name = "OR",
-            minWidth = 25,
-            cell = function(value) {
-              formatC(value, format = "e", digits = 3)
-            }
-          ),
-          p = reactable::colDef(
-            name = "p",
-            minWidth = 25,
-            cell = function(value) {
-              formatC(value, format = "e", digits = 3)
-             }
-          ),
+          sdCases = reactable::colDef(name = "SD cases", minWidth = 13),
+          sdControls = reactable::colDef(name = "SD ctrls", minWidth = 13),
+          OR = reactable::colDef( name = "OR", minWidth = 25),
+          pLog10 = reactable::colDef(name = "mlogp", minWidth = 25),
           beta = reactable::colDef(name = "Beta", minWidth = 25),
           notes = reactable::colDef(name = "Notes", minWidth = 30)
         ),
@@ -676,10 +688,10 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
             ggplot2::aes(label = name),
             color = "black",
             segment.color = "black",
-            segment.size = 0.2,
+            segment.size = 0.3,
             segment.linetype = "dashed",
             max.overlaps = Inf,
-            size = 4,
+            size = 3,
             hjust = 0.1,
             force = 0.5,
             force_pull = 0.5,
@@ -694,11 +706,11 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
         ggplot2::theme_minimal() +
         ggplot2::theme(
           legend.position = "bottom",
-          plot.title = ggplot2::element_text(size = 16, margin = ggplot2::margin(t = 10, b = 5)),
-          axis.text.x = ggplot2::element_text(size = 12),
-          axis.text.y = ggplot2::element_text(size = 12),
-          axis.title.x = ggplot2::element_text(margin = ggplot2::margin(t = 10), size = 14),
-          axis.title.y = ggplot2::element_text(margin = ggplot2::margin(r = 15), size = 14),
+          # plot.title = ggplot2::element_text(size = 16, margin = ggplot2::margin(t = 10, b = 5)),
+          axis.text.x = ggplot2::element_text(size = 10),
+          axis.text.y = ggplot2::element_text(size = 10),
+          axis.title.x = ggplot2::element_text(margin = ggplot2::margin(t = 10), size = 10),
+          axis.title.y = ggplot2::element_text(margin = ggplot2::margin(r = 15), size = 10),
         ) +
         ggplot2::scale_color_manual(name = "color_group", values = top_colors) +
         ggplot2::scale_fill_manual(name = "color_group", values = top_colors) +
@@ -707,7 +719,7 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
         ggplot2::labs(
           x = "Time period",
           y = "-log10(p)",
-          title = "TimeCodeWAS",
+          title = "",
           subtitle = "",
           caption = lubridate::today()
         ) +
@@ -851,7 +863,7 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
   return(gg_data)
 }
 
-
+# Proportions View ####
 
 .gg_data_to_gg_girafe <- function(
     gg_data,
@@ -860,7 +872,8 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
     selection,
     r,
     top_10,
-    point_scale
+    point_scale,
+    label_top_n
 ){
   # adjust the label area according to facet width
   facet_max_x <- max( gg_data$controls_per, 0.03, na.rm = TRUE)
@@ -884,35 +897,37 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
                    xend = ifelse(facet_max_x > facet_max_y, facet_max_y, facet_max_x),
                    yend = ifelse(facet_max_x > facet_max_y, facet_max_y, facet_max_x)
       ),
-      color = "darkgray", alpha = 0.5, linewidth = 0.2, linetype = "dashed") +
+      color = "blue", alpha = 0.5, linewidth = 0.2, linetype = "solid") +
     ggplot2::geom_segment(
       ggplot2::aes(x = 0, y = 0, xend = facet_max_x, yend = 0),
-      color = "black", alpha = 0.5, linewidth = 0.2, linetype = "dashed") +
+      color = "black", alpha = 0.5, linewidth = 0.2, linetype = "solid") +
     ggplot2::geom_segment(
       ggplot2::aes(x = 0, y = 0, xend = 0, yend = facet_max_y),
-      color = "black", alpha = 0.5, linewidth = 0.2, linetype = "dashed") +
+      color = "black", alpha = 0.5, linewidth = 0.2, linetype = "solid") +
     {if(length(selection) > 1)
       # label the selected points
       ggrepel::geom_text_repel(
         data =  gg_data |>
           dplyr::filter(data_id %in% selection$data_id),
-        ggplot2::aes(label = stringr::str_wrap(stringr::str_trunc(name, 30), 15)),
+        ggplot2::aes(label = stringr::str_wrap(stringr::str_trunc(name, 50), 15)),
         max.overlaps = Inf,
         size = 3,
         hjust = 0.1,
         force = 0.5,
         force_pull = 0.5,
+        color = "black",
         xlim = c(facet_max_x / 4, NA),
-        box.padding = 0.8
+        box.padding = 0.8,
+        segment.linetype = "dashed"
       )} +
     {if((length(selection) == 0) & top_10)
       # label the top 10 values
       ggrepel::geom_text_repel(
         data =  gg_data |>
-          dplyr::group_by(GROUP) |>
+          # dplyr::group_by(GROUP) |>
           dplyr::arrange(p, OR) |>
-          dplyr::slice_head(n = 10) |>
-          dplyr::ungroup(),
+          dplyr::slice_head(n = label_top_n), # |>
+          # dplyr::ungroup(),
         ggplot2::aes(label = stringr::str_wrap(stringr::str_trunc(name, 45), 30)),
         max.overlaps = Inf,
         size = 3,
@@ -921,7 +936,8 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
         force_pull = 0.5,
         xlim = c(facet_max_x / 4, NA),
         box.padding = 0.8,
-        color = "black"
+        color = "black",
+        segment.linetype = "dashed"
       )} +
     ggiraph::geom_point_interactive(
       ggplot2::aes(size = p_group), show.legend=T, shape = 21, stroke = 0.2, color = "black"
@@ -942,7 +958,8 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
     ggplot2::scale_y_continuous(
       breaks = c(0, 0.05, seq(0.1, 0.8, 0.1)),
       labels = c(0, 5, seq(10, 80, 10)),
-      limits = c(-0.02 * facet_max_y, facet_max_y + 0.1 * facet_max_y)
+      limits = c(-0.02 * facet_max_y, facet_max_y + 0.1 * facet_max_y),
+      expand = ggplot2::expansion(mult = c(0.1, 0.1))
     ) +
     # ggplot2::coord_fixed() +
     ggplot2::facet_grid(
@@ -962,7 +979,15 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
     ggplot2::scale_color_manual(values = c("darkgray")) +
     ggplot2::scale_fill_discrete() +
     ggplot2::guides(color = "none", fill = ggplot2::guide_legend(override.aes = list(size = 5), nrow=2, byrow=TRUE)) +
-    ggplot2::labs(size = "p value group", fill = "Domain", x = "\nControls %", y = "Cases %")
+    ggplot2::labs(
+      title = "",
+      subtitle = "",
+      caption = "Blue line indicates the equal proportion of cases and controls",
+      size = "p value group",
+      fill = "Domain",
+      x = "\nControls %",
+      y = "Cases %"
+    )
 
   r$gg_plot <- gg_fig
 
@@ -1028,7 +1053,7 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
   #
   # convert ggplot to girafe object
   #
-  gg_girafe <- ggiraph::girafe(ggobj = gg_plot, width_svg = 15)
+  gg_girafe <- ggiraph::girafe(ggobj = gg_plot, width_svg = 15, height_svg = 6)
 
   #
   # modify girafe object
