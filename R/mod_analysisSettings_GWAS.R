@@ -185,6 +185,7 @@ mod_analysisSettings_GWAS_server <- function(id, r_connectionHandler) {
 
       cohortsOverlap <- r_connectionHandler$cohortTableHandler$getCohortsOverlap()
       cohortCounts <- r_connectionHandler$cohortTableHandler$getCohortCounts()
+      cohortsSumary  <- r_connectionHandler$cohortTableHandler$getCohortsSummary()
 
       nSubjectsOverlap <- cohortsOverlap |>
         dplyr::filter(
@@ -228,6 +229,8 @@ mod_analysisSettings_GWAS_server <- function(id, r_connectionHandler) {
           message <- paste0(message, "Results will be sent to: ", connectionSandboxAPI$notification_email, "\n")
         }
       }
+
+      
 
       # counts
       if (nSubjectsCase > nSubjectsControl) {
