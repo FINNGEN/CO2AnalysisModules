@@ -223,7 +223,7 @@ mod_analysisSettings_GWAS_server <- function(id, r_connectionHandler) {
         if (connectionSandboxAPI$conn_status$type == "ERROR") {
           message <- paste0(message, "\u26A0\uFE0F Error connecting to the sandbox API. Error message: ", connectionSandboxAPI$conn_status$message, "\n")
           connectionSandboxAPI <- NULL
-        }else {
+        } else {
           message <- paste0(message, "\u2705 Token found and connection to the sandbox API successful\n")
           message <- paste0(message, "Results will be sent to: ", connectionSandboxAPI$notification_email, "\n")
         }
@@ -250,29 +250,35 @@ mod_analysisSettings_GWAS_server <- function(id, r_connectionHandler) {
       }
 
       # sex
-      if(!(input$statistics_type_option == "full" & input$controlSex_checkboxInput)){
-        sexCase <- cohortsSumary |>
-          dplyr::filter(cohortId == input$selectCaseCohort_pickerInput) |>
-          dplyr::pull(sexCounts)
-        sexControl <- cohortsSumary |>
-          dplyr::filter(cohortId == input$selectControlCohort_pickerInput) |>
-          dplyr::pull(sexCounts)
-        nMaleCases <- sexCase[[1]]  |> dplyr::filter(sex == "MALE")  |> dplyr::pull(n)
-        nMaleCases <- ifelse(length(nMaleCases)==0, 0, nMaleCases)
-        nFemaleCases <- sexCase[[1]]  |> dplyr::filter(sex == "FEMALE")  |> dplyr::pull(n)
-        nFemaleCases <- ifelse(length(nFemaleCases)==0, 0, nFemaleCases)
-        nMaleControls <- sexControl[[1]]  |> dplyr::filter(sex == "MALE") |> dplyr::pull(n)
-        nMaleControls <- ifelse(length(nMaleControls)==0, 0, nMaleControls)
-        nFemaleControls <- sexControl[[1]]  |> dplyr::filter(sex == "FEMALE") |> dplyr::pull(n)
-        nFemaleControls <- ifelse(length(nFemaleControls)==0, 0, nFemaleControls)
+      sexCase <- cohortsSumary |>
+        dplyr::filter(cohortId == input$selectCaseCohort_pickerInput) |>
+        dplyr::pull(sexCounts)
+      sexControl <- cohortsSumary |>
+        dplyr::filter(cohortId == input$selectControlCohort_pickerInput) |>
+        dplyr::pull(sexCounts)
+      nMaleCases <- sexCase[[1]] |>
+        dplyr::filter(sex == "MALE") |>
+        dplyr::pull(n)
+      nMaleCases <- ifelse(length(nMaleCases) == 0, 0, nMaleCases)
+      nFemaleCases <- sexCase[[1]] |>
+        dplyr::filter(sex == "FEMALE") |>
+        dplyr::pull(n)
+      nFemaleCases <- ifelse(length(nFemaleCases) == 0, 0, nFemaleCases)
+      nMaleControls <- sexControl[[1]] |>
+        dplyr::filter(sex == "MALE") |>
+        dplyr::pull(n)
+      nMaleControls <- ifelse(length(nMaleControls) == 0, 0, nMaleControls)
+      nFemaleControls <- sexControl[[1]] |>
+        dplyr::filter(sex == "FEMALE") |>
+        dplyr::pull(n)
+      nFemaleControls <- ifelse(length(nFemaleControls) == 0, 0, nFemaleControls)
 
-        data <-matrix(c(nMaleCases,nFemaleCases,nMaleControls,nFemaleControls),ncol=2)
-        fisher_results <- stats::fisher.test(data)
+      data <- matrix(c(nMaleCases, nFemaleCases, nMaleControls, nFemaleControls), ncol = 2)
+      fisher_results <- stats::fisher.test(data)
 
-        if(fisher_results$p.value > 0.05){
-          message <- paste0(message, "\u26A0\uFE0F Cases and control cohorts, seem to have the same sex distribution. (Fisher's test p = ", scales::scientific(fisher_results$p.value)," ) \n")
-          message <- paste0(message, "It is not recommended to run GWAS with explicitly matched cohorts. GWAS analysis accounts for sex and year of birth in the model. Explicit matching may introduce bias.\n")
-        }
+      if (fisher_results$p.value > 0.05) {
+        message <- paste0(message, "\u26A0\uFE0F Cases and control cohorts, seem to have the same sex distribution. (Fisher's test p = ", scales::scientific(fisher_results$p.value), " ) \n")
+        message <- paste0(message, "It is not recommended to run GWAS with explicitly matched cohorts. GWAS analysis accounts for sex and year of birth in the model. Explicit matching may introduce bias.\n")
       }
 
       r$connectionSandboxAPI <- connectionSandboxAPI
