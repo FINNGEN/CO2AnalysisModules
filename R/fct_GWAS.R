@@ -35,52 +35,12 @@ execute_GWAS <- function(
   description <- analysisSettings$description
   analysisType <- analysisSettings$analysisType
   release <- analysisSettings$release
+  connectionSandboxAPI <- analysisSettings$connectionSandboxAPI
 
   #
   # get connectionSandboxAPI
   #
   ParallelLogger::logInfo("Get connectionSandboxAPI GWAS analysis")
-
-  # TEMP it may be that the token gets outdated
-  token <- Sys.getenv('SANDBOX_TOKEN')
-  if (is.null(token)  | token == ""){
-    stop("SANDBOX_TOKEN is not set")
-  }
-
-  # update token
-  # if different version of openssl package is used in docker and URL host
-  # there will be an error. To avoid the error set up the following configs
-  httr::set_config(httr::config(ssl_verifypeer = FALSE, ssl_verifyhost = FALSE))
-
-  base_url <- "https://internal-api.app.finngen.fi/internal-api/"
-  if(token != "test"){
-
-    # refresh the token
-    authorization <- paste("Bearer", token)
-    headers <- httr::add_headers(c('Authorization' = authorization))
-    url <- paste0(base_url, "v2/user/refresh-token")
-
-    # fetch refreshed token
-    error <- NULL
-    tryCatch({
-      res <- httr::GET(url, config = headers)
-      if(res$status_code == 200){
-        token <- jsonlite::fromJSON(rawToChar(res$content))$token
-        Sys.setenv(SANDBOX_TOKEN = token)
-      } else {
-        error <<- paste("status code ", res$status_code)
-      }
-    }, error = function(e){
-      error <<- e$message
-    })
-
-    # update token in the environment variable
-    if(!is.null(error)){
-      stop("Error refreshing token: ", error)
-    }
-  }
-
-  connectionSandboxAPI <- FinnGenUtilsR::createSandboxAPIConnection(base_url, token)
 
   #
   # Send the GWAS analysis
@@ -161,13 +121,14 @@ execute_GWAS <- function(
 #'
 assertAnalysisSettings_GWAS <- function(analysisSettings) {
   analysisSettings |> checkmate::assertList()
-  c('cohortIdCases', 'cohortIdControls', 'phenotype', 'description', 'analysisType', 'release')  |> checkmate::assertSubset(names(analysisSettings))
+  c('cohortIdCases', 'cohortIdControls', 'phenotype', 'description', 'analysisType', 'release', 'connectionSandboxAPI')  |> checkmate::assertSubset(names(analysisSettings))
   analysisSettings$cohortIdCases |> checkmate::assertNumeric()
   analysisSettings$cohortIdControls |> checkmate::assertNumeric()
   analysisSettings$phenotype |> checkmate::assertString(min.chars = 1, pattern = "^[A-Z0-9]+$")
   analysisSettings$description |> checkmate::assertString(min.chars = 1)
   analysisSettings$analysisType |> checkmate::assertChoice(choices = c("additive", "recessive", "dominant"))
   analysisSettings$release |> checkmate::assertChoice(choices = c("Regenie12"))
+  analysisSettings$connectionSandboxAPI  |> checkmate::assertList()
   return(analysisSettings)
 }
 

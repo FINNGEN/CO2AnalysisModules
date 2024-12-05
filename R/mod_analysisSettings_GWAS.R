@@ -24,8 +24,10 @@ mod_analysisSettings_GWAS_ui <- function(id) {
       choices = NULL,
       selected = NULL,
       options = list(
-        `actions-box` = TRUE),
-      multiple = FALSE),
+        `actions-box` = TRUE
+      ),
+      multiple = FALSE
+    ),
     shiny::tags$h5("Select control cohort:"),
     shinyWidgets::pickerInput(
       inputId = ns("selectControlCohort_pickerInput"),
@@ -33,18 +35,21 @@ mod_analysisSettings_GWAS_ui <- function(id) {
       choices = NULL,
       selected = NULL,
       options = list(
-        `actions-box` = TRUE),
-      multiple = FALSE),
+        `actions-box` = TRUE
+      ),
+      multiple = FALSE
+    ),
     htmltools::hr(),
     shiny::tags$h4("Settings"),
     shiny::tags$h5("Select analysis type:"),
     shinyWidgets::pickerInput(
-      inputId = ns("selectAnalysisType_pickerInput_gwas"),
+      inputId = ns("selectAnalysisType_pickerInput"),
       choices = c("additive", "recessive", "dominant"),
       selected = "additive",
-      multiple = FALSE),
-    shiny::textInput(ns("pheno"), label = "Phenotype Name:"),
-    shiny::textInput(ns("description"), label = "Description:"),
+      multiple = FALSE
+    ),
+    shiny::textInput(ns("phenotypeName_textInput"), label = "Phenotype Name:"),
+    shiny::textInput(ns("description_textInput"), label = "Description:"),
     htmltools::hr(),
     shiny::tags$h4("Pre-ran info"),
     shiny::verbatimTextOutput(ns("info_text"), placeholder = TRUE),
@@ -74,9 +79,12 @@ mod_analysisSettings_GWAS_ui <- function(id) {
 #'
 #' @export
 mod_analysisSettings_GWAS_server <- function(id, r_connectionHandler) {
-
   shiny::moduleServer(id, function(input, output, session) {
     ns <- session$ns
+
+    r <- shiny::reactiveValues(
+      connectionSandboxAPI = NULL
+    )
 
     #
     # update selectCaseCohort_pickerInput
@@ -87,7 +95,7 @@ mod_analysisSettings_GWAS_server <- function(id, r_connectionHandler) {
 
       cohortIdAndNames <- r_connectionHandler$cohortTableHandler$getCohortIdAndNames()
       cohortIdAndNamesList <- list()
-      if(nrow(cohortIdAndNames) != 0){
+      if (nrow(cohortIdAndNames) != 0) {
         cohortIdAndNamesList <- as.list(setNames(cohortIdAndNames$cohortId, paste(cohortIdAndNames$shortName, "(", cohortIdAndNames$cohortName, ")")))
       }
 
@@ -108,12 +116,12 @@ mod_analysisSettings_GWAS_server <- function(id, r_connectionHandler) {
 
       cohortIdAndNames <- r_connectionHandler$cohortTableHandler$getCohortIdAndNames()
       cohortIdAndNamesList <- list()
-      if(nrow(cohortIdAndNames) != 0){
+      if (nrow(cohortIdAndNames) != 0) {
         cohortIdAndNamesList <- as.list(setNames(cohortIdAndNames$cohortId, paste(cohortIdAndNames$shortName, "(", cohortIdAndNames$cohortName, ")")))
       }
 
       cohortIdAndNamesList <- cohortIdAndNamesList |>
-        purrr::discard(~.x %in% input$selectCaseCohort_pickerInput)
+        purrr::discard(~ .x %in% input$selectCaseCohort_pickerInput)
 
       shinyWidgets::updatePickerInput(
         inputId = "selectControlCohort_pickerInput",
@@ -132,33 +140,39 @@ mod_analysisSettings_GWAS_server <- function(id, r_connectionHandler) {
 
       cohortTableHandler <- r_connectionHandler$cohortTableHandler
 
-      cohorts  <- cohortTableHandler$getCohortsSummary()
-      casesCohortName <- cohorts |> filter(cohortId == input$selectCaseCohort_pickerInput) |> dplyr::pull(cohortName)
-      controlsCohortName <- cohorts |> filter(cohortId == input$selectControlCohort_pickerInput) |> dplyr::pull(cohortName)
+      cohorts <- cohortTableHandler$getCohortsSummary()
+      casesCohortName <- cohorts |>
+        filter(cohortId == input$selectCaseCohort_pickerInput) |>
+        dplyr::pull(cohortName)
+      controlsCohortName <- cohorts |>
+        filter(cohortId == input$selectControlCohort_pickerInput) |>
+        dplyr::pull(cohortName)
 
       defaultPhenotypeName <- paste0(
-        casesCohortName |> stringr::str_replace_all("[[:punct:]]|[^[:alnum:]]|[:blank:]", "")  |> toupper(),
-        controlsCohortName |> stringr::str_replace_all("[[:punct:]]|[^[:alnum:]]|[:blank:]", "")  |> toupper()
+        casesCohortName |> stringr::str_replace_all("[[:punct:]]|[^[:alnum:]]|[:blank:]", "") |> toupper(),
+        controlsCohortName |> stringr::str_replace_all("[[:punct:]]|[^[:alnum:]]|[:blank:]", "") |> toupper(),
+        input$selectAnalysisType_pickerInput |> toupper()
       )
       dbName <- cohortTableHandler$databaseName
-      defaultDescription <- paste0("Cases-cohort: ", casesCohortName, "; Controls-cohort: ",
-                                   controlsCohortName, " (db: ", dbName, ")")
+      defaultDescription <- paste0(
+        "Cases-cohort: ", casesCohortName, "; Controls-cohort: ",
+        controlsCohortName, " (db: ", dbName, ")",
+        "; Analysis type: ", input$selectAnalysisType_pickerInput
+      )
 
-      shiny::updateTextInput(session, "pheno", value = defaultPhenotypeName )
-      shiny::updateTextInput(session, "description", value = defaultDescription )
-
+      shiny::updateTextInput(session, "phenotypeName_textInput", value = defaultPhenotypeName)
+      shiny::updateTextInput(session, "description_textInput", value = defaultDescription)
     })
 
     #
     # setup warning on input for the phenotype name
     #
-    shiny::observeEvent(input$pheno, {
+    shiny::observeEvent(input$phenotypeName_textInput, {
       shinyFeedback::feedbackWarning(
-        inputId = "pheno",
-        stringr::str_detect(input$pheno, "[^[:alnum:]]|[:lower:]"),
+        inputId = "phenotypeName_textInput",
+        stringr::str_detect(input$phenotypeName_textInput, "[^[:alnum:]]|[:lower:]"),
         text = "Name must use only upper case characters or numbers"
       )
-
     })
 
 
@@ -177,7 +191,7 @@ mod_analysisSettings_GWAS_server <- function(id, r_connectionHandler) {
           stringr::str_detect(cohortIdCombinations, paste0("-", input$selectCaseCohort_pickerInput, "-")) &
             stringr::str_detect(cohortIdCombinations, paste0("-", input$selectControlCohort_pickerInput, "-"))
         ) |>
-        dplyr::pull(numberOfSubjects)  |>
+        dplyr::pull(numberOfSubjects) |>
         sum()
 
       nSubjectsCase <- cohortCounts |>
@@ -198,28 +212,71 @@ mod_analysisSettings_GWAS_server <- function(id, r_connectionHandler) {
 
       message <- ""
 
+      # check token
+      connectionSandboxAPI <- NULL
+      if (!file.exists(".sandbox_token")) {
+        message <- paste0(message, "\u26A0\uFE0F Token not found.\n")
+      } else {
+        token <- readLines(".sandbox_token")
+        base_url <- "https://internal-api.app.finngen.fi/internal-api/"
+        connectionSandboxAPI <- FinnGenUtilsR::createSandboxAPIConnection(base_url, token)
+        if (connectionSandboxAPI$conn_status$type == "ERROR") {
+          message <- paste0(message, "\u26A0\uFE0F Error connecting to the sandbox API. Error message: ", connectionSandboxAPI$conn_status$message, "\n")
+          connectionSandboxAPI <- NULL
+        }else {
+          message <- paste0(message, "\u2705 Token found and connection to the sandbox API successful\n")
+          message <- paste0(message, "Results will be sent to: ", connectionSandboxAPI$notification_email, "\n")
+        }
+      }
+
       # counts
-      if( nSubjectsCase > nSubjectsControl ){
-        message <- paste0(message, "\u274C There are more subjects in  ase cohort (", nSubjectsCase,") that in control cohort (", nSubjectsControl,"). Are you sure they are correct?\n")
+      if (nSubjectsCase > nSubjectsControl) {
+        message <- paste0(message, "\u274C There are more subjects in  ase cohort (", nSubjectsCase, ") that in control cohort (", nSubjectsControl, "). Are you sure they are correct?\n")
       }
 
       # overlap
-      if(nSubjectsOverlap==0){
+      if (nSubjectsOverlap == 0) {
         message <- paste0(message, "\u2705 No subjects overlap between case and control cohorts\n")
-      }else{
+      } else {
         message <- paste0(message, "\u274C There are ", nSubjectsOverlap, " subjects that overlap  berween case and control cohorts. Consider removing them in Operate Cohorts tab\n")
       }
 
       # duplicates
-      if(nEntriesCase > nSubjectsCase){
+      if (nEntriesCase > nSubjectsCase) {
         message <- paste0(message, "\u274C There are more entries than subjects in case cohort (", nEntriesCase, " > ", nSubjectsCase, "). Duplicate subject will be ignored.\n")
       }
-      if(nEntriesControl > nSubjectsControl){
+      if (nEntriesControl > nSubjectsControl) {
         message <- paste0(message, "\u274C There are more entries than subjects in control cohort (", nEntriesControl, " > ", nSubjectsControl, "). Duplicate subject will be ignored.\n")
       }
 
-      return(message)
+      # sex
+      if(!(input$statistics_type_option == "full" & input$controlSex_checkboxInput)){
+        sexCase <- cohortsSumary |>
+          dplyr::filter(cohortId == input$selectCaseCohort_pickerInput) |>
+          dplyr::pull(sexCounts)
+        sexControl <- cohortsSumary |>
+          dplyr::filter(cohortId == input$selectControlCohort_pickerInput) |>
+          dplyr::pull(sexCounts)
+        nMaleCases <- sexCase[[1]]  |> dplyr::filter(sex == "MALE")  |> dplyr::pull(n)
+        nMaleCases <- ifelse(length(nMaleCases)==0, 0, nMaleCases)
+        nFemaleCases <- sexCase[[1]]  |> dplyr::filter(sex == "FEMALE")  |> dplyr::pull(n)
+        nFemaleCases <- ifelse(length(nFemaleCases)==0, 0, nFemaleCases)
+        nMaleControls <- sexControl[[1]]  |> dplyr::filter(sex == "MALE") |> dplyr::pull(n)
+        nMaleControls <- ifelse(length(nMaleControls)==0, 0, nMaleControls)
+        nFemaleControls <- sexControl[[1]]  |> dplyr::filter(sex == "FEMALE") |> dplyr::pull(n)
+        nFemaleControls <- ifelse(length(nFemaleControls)==0, 0, nFemaleControls)
 
+        data <-matrix(c(nMaleCases,nFemaleCases,nMaleControls,nFemaleControls),ncol=2)
+        fisher_results <- stats::fisher.test(data)
+
+        if(fisher_results$p.value > 0.05){
+          message <- paste0(message, "\u26A0\uFE0F Cases and control cohorts, seem to have the same sex distribution. (Fisher's test p = ", scales::scientific(fisher_results$p.value)," ) \n")
+          message <- paste0(message, "It is not recommended to run GWAS with explicitly matched cohorts. GWAS analysis accounts for sex and year of birth in the model. Explicit matching may introduce bias.\n")
+        }
+      }
+
+      r$connectionSandboxAPI <- connectionSandboxAPI
+      return(message)
     })
 
 
@@ -227,15 +284,17 @@ mod_analysisSettings_GWAS_server <- function(id, r_connectionHandler) {
     # return reactive options
     #
     rf_analysisSettings <- shiny::reactive({
-      if(is.null(input$selectCaseCohort_pickerInput) |
+      if (is.null(input$selectCaseCohort_pickerInput) |
         is.null(input$selectControlCohort_pickerInput) |
-        input$pheno == "" |
-        input$description == "" |
-        is.null(input$selectAnalysisType_pickerInput_gwas)) {
+        input$phenotypeName_textInput == "" |
+        input$description_textInput == "" |
+        is.null(input$selectAnalysisType_pickerInput) |
+        is.null(r$connectionSandboxAPI)) {
         return(NULL)
       }
 
       cohortTableHandler <- r_connectionHandler$cohortTableHandler
+      connectionSandboxAPI <- r$connectionSandboxAPI
 
       databaseId <- cohortTableHandler$databaseId
       release <- paste0("Regenie", gsub("[A-Za-z]", "", cohortTableHandler$databaseId))
@@ -243,19 +302,16 @@ mod_analysisSettings_GWAS_server <- function(id, r_connectionHandler) {
       analysisSettings <- list(
         cohortIdCases = input$selectCaseCohort_pickerInput |> as.integer(),
         cohortIdControls = input$selectControlCohort_pickerInput |> as.integer(),
-        phenotype = input$pheno,
-        description = input$description,
-        analysisType = input$selectAnalysisType_pickerInput_gwas,
-        release = release
+        phenotype = input$phenotypeName_textInput,
+        description = input$description_textInput,
+        analysisType = input$selectAnalysisType_pickerInput,
+        release = release,
+        connectionSandboxAPI = connectionSandboxAPI
       )
 
       return(analysisSettings)
-
     })
 
     return(rf_analysisSettings)
-
   })
-
 }
-
