@@ -7,7 +7,7 @@
 CO2AnalysisModules host a collection of analysis modules to be used in the [CohortOperations2](https://github.com/FINNGEN/CohortOperations2) shiny app.
 
 Currently this package includes the following modules:
-
+  
 - CohortsOverlaps
 - CohortDemographics
 - CodeWAS

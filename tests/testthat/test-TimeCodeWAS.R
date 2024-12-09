@@ -35,10 +35,9 @@ test_that("executeTimeCodeWAS works", {
   # last 3 digits of covariate_it are 101
   timeCodeWASResults |> dplyr::filter(covariateId %% 1000 == 101)   |> nrow() |> expect_gt(0)
 
-  skip_if(testingDatabase != "EunomiaFinnGen",
-          "Skip test, it is only for EunomiaFinnGen")
+  skip_if(testingDatabase != "Eunomia-FinnGen",
+          "Skip test, it is only for Eunomia-FinnGen")
   timeCodeWASResults |> dplyr::filter(covariateId %% 1000 == 702)   |> nrow() |> expect_gt(0)
 
 })
-
 

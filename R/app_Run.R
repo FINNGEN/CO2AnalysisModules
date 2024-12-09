@@ -20,6 +20,10 @@ run_app <- function(CO2AnalysisModulesConfig, ...) {
     ...
   )
 
+  # Options use as global variables to set the analysis type
+  options(CO2AnalysisModules.analysisType = "")
+  options(CO2AnalysisModules.pathToResultsDatabase = "")
+
   # setup shiny options
   app$appOptions$CO2AnalysisModulesConfig  <- CO2AnalysisModulesConfig
 

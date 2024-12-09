@@ -24,7 +24,7 @@ mod_resultsVisualisation_TimeCodeWAS_ui <- function(id) {
       shiny::tabsetPanel(
         id = ns("tabset"),
         shiny::tabPanel(
-          "Plot",
+          "Proportions View",
           shiny::div(style = "margin-top: 10px; ",
                      shiny::fluidRow(
                        tags$style(HTML("
@@ -36,8 +36,18 @@ mod_resultsVisualisation_TimeCodeWAS_ui <- function(id) {
                        shiny::column(
                          width = 2,
                          shiny::checkboxInput(
-                           ns("top_10"), "Label top 10", value = TRUE)
+                           ns("top_10"), "Show labels", value = TRUE)
                        ),
+                       shiny::column(
+                         width = 2,
+                         div(style = "margin-top: -5px;",
+                             div(style = "margin-top: 2px; margin-right: 5px;", "Label top n"),
+                             div(style = "margin-top: -20px;",
+                                 shiny::sliderInput(
+                                   ns("label_top_n"), label = NULL, ticks = FALSE, min = 1, max = 20, value = 10, step = 1)
+                             )
+                         )
+                       ), # column
                        shiny::column(
                          width = 2,
                          div(style = "margin-top: -5px;",
@@ -47,7 +57,7 @@ mod_resultsVisualisation_TimeCodeWAS_ui <- function(id) {
                                    ns("point_scale"), label = NULL, ticks = FALSE, min = 0.2, max = 2.2, value = 1, step = 0.1)
                              )
                          )
-                       )
+                       ), # column
                      )
           ),
           ggiraph::girafeOutput(ns("codeWASplot"), width = "100%", height = "100%"),
@@ -57,19 +67,49 @@ mod_resultsVisualisation_TimeCodeWAS_ui <- function(id) {
           ),
         ),
         shiny::tabPanel(
+          "Progress View",
+          shiny::div(style = "margin-top: 10px; ",
+                     shiny::fluidRow(
+                       shiny::column(width = 2,
+                         shiny::checkboxInput(ns("top_10"), "Label top 10", value = TRUE)
+                       ),
+                       shiny::column(width = 2,
+                         shiny::checkboxInput(ns("connect_top_10"), "Connect top 10", value = TRUE),
+                       )
+                     )
+          ),
+          ggiraph::girafeOutput(ns("SimpleCodeWASplot"), width = "100%", height = "100%"),
+          shiny::div(
+            style = "margin-top: 10px; margin-bottom: 10px;",
+            shiny::downloadButton(ns("downloadPlot2"), "Download")
+          ),
+        ),
+        # shiny::tabPanel(
+        #   "Table",
+        #   shiny::div(
+        #     style = "margin-top: 20px; margin-bottom: 10px;",
+        #     DT::DTOutput(ns("demographicsData")),
+        #   ),
+        #   shiny::div(
+        #     style = "margin-top: 10px; margin-bottom: 10px;",
+        #     shiny::downloadButton(ns("downloadDataFiltered"), "Download filtered"),
+        #     shiny::downloadButton(ns("downloadDataAll"), "Download all"),
+        #   )
+        # ),
+        shiny::tabPanel(
           "Table",
           shiny::div(
             style = "margin-top: 20px; margin-bottom: 10px;",
-            DT::DTOutput(ns("demographicsData")),
+            reactable::reactableOutput(ns("reactableData")),
           ),
           shiny::div(
             style = "margin-top: 10px; margin-bottom: 10px;",
             shiny::downloadButton(ns("downloadDataFiltered"), "Download filtered"),
             shiny::downloadButton(ns("downloadDataAll"), "Download all"),
           )
-        )
-      )
-    )
+        ) # tabPanel
+      ) # tabsetPanel
+    ) # tagList
   )
 
 }
@@ -122,6 +162,7 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
     r <- shiny::reactiveValues(
       gg_data = NULL,
       gg_plot = NULL,
+      gg_plot2 = NULL,
       #
       line_to_plot = NULL,
       force_update = FALSE,
@@ -217,7 +258,6 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
     # observe the selected domains and p_groups
     #
     shiny::observe({
-      shiny::req(input$domain)
       shiny::req(input$or_range)
       shiny::req(input$n_cases)
       shiny::isTruthy(input$na_anywhere)
@@ -300,7 +340,8 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
         selection = r$line_to_plot,
         r = r,
         top_10 = input$top_10,
-        point_scale = input$point_scale
+        point_scale = input$point_scale,
+        label_top_n = input$label_top_n
       )
 
       return(gg_girafe)
@@ -377,11 +418,13 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
     #
     .renderTable <- function(df){
       df <- df |>
+        dplyr::mutate(GROUP = stringr::str_replace(GROUP, stringr::fixed("from "), "")) |>
         dplyr::mutate(meanCases = round(meanCases, 3)) |>
         dplyr::mutate(meanControls = round(meanControls, 3))|>
         dplyr::mutate(sdCases = round(sdCases, 3)) |>
         dplyr::mutate(sdControls = round(sdControls, 3))|>
         dplyr::mutate(beta = round(log(OR), 3)) |>
+        dplyr::mutate(mlogp = round(-log10(p), 3)) |>
         dplyr::mutate(
           code = round(code/1000),
           name = purrr::map2_chr(name, code, ~paste0('<a href="',atlasUrl,'/#/concept/', .y, '" target="_blank">', .x,'</a>'))
@@ -389,7 +432,7 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
         dplyr::select(
           GROUP, name, analysisName, domain, upIn,
           nCasesYes, nControlsYes, meanCases, meanControls, sdCases, sdControls,
-          OR, p, beta, notes)
+          OR, mlogp, beta, notes)
 
         DT::datatable(
           df,
@@ -406,26 +449,27 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
             'SD cases' = 'sdCases',
             'SD ctrls' = 'sdControls',
             'OR' = 'OR',
-            'p' = 'p',
+            'mlogp' = 'mlogp',
             'Beta' = 'beta',
             'Notes' = 'notes'
           ),
           options = list(
-            order = list(list(12, 'asc'), list(11, 'desc')) # order by p-value, then OR
-            # columnDefs = list(
-            #   list(width = '70px', targets = c(2, 3, 15)), # name, notes
-            #   list(width = '80px', targets = c(1)), # analysisName
-            #   list(width = '80px', targets = c(4)), # domain
-            #   list(width = '30px', targets = c(4)), # upIn
-            #   list(width = '40px', targets = c(6,7,8, 9, 10,11)), # GROUP, nCasesYes, nControlsYes, meanCases, meanControls, sdCases, sdControls
-            #   list(width = '50px', targets = c(12, 13)) # pValue, OR
-            # )
+            order = list(list(12, 'desc'), list(11, 'desc')), # order by p-value, then OR
+            columnDefs = list(
+              list(width = '70px', targets = c(2,3)), # name, notes
+              list(width = '25px', targets = c(6,7))
+              # list(width = '80px', targets = c(1)), # analysisName
+              # list(width = '80px', targets = c(4)), # domain
+              # list(width = '30px', targets = c(4)), # upIn
+              # list(width = '40px', targets = c(6,7,8, 9, 10,11)), # GROUP, nCasesYes, nControlsYes, meanCases, meanControls, sdCases, sdControls
+              # list(width = '50px', targets = c(12, 13)) # pValue, OR
+            )
           ),
           escape = FALSE,
           selection = 'none',
           rownames = FALSE
         ) |>
-        DT::formatSignif(columns = c('p', 'OR'), digits = 3) |>
+        DT::formatSignif(columns = c('mlogp', 'OR'), digits = 3) |>
         DT::formatStyle('Covariate Name', cursor = 'pointer' )
     }
 
@@ -436,6 +480,72 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
       shiny::req(r$gg_data)
 
       .renderTable(r$gg_data)
+    })
+
+    #
+    # output "Reactable" tab ####
+    #
+    output$reactableData <- reactable::renderReactable({
+      shiny::req(r$gg_data)
+
+      df <- r$gg_data |>
+        dplyr::mutate(GROUP = stringr::str_replace(GROUP, stringr::fixed("from "), "")) |>
+        dplyr::mutate(covariate = name) |>
+        dplyr::mutate(meanCases = round(meanCases, 3)) |>
+        dplyr::mutate(meanControls = round(meanControls, 3))|>
+        dplyr::mutate(sdCases = round(sdCases, 3)) |>
+        dplyr::mutate(sdControls = round(sdControls, 3))|>
+        dplyr::mutate(beta = round(log(OR), 3)) |>
+        dplyr::mutate(pLog10 = round(-log10(p), 3)) |>
+        dplyr::mutate(OR = dplyr::case_when(
+          OR > 10e+100 ~ Inf,
+          OR < 10e-100 ~ -Inf,
+          TRUE ~ round(OR, 3)
+        )) |>
+        dplyr::mutate(
+          code = round(code/1000),
+          name = purrr::map2_chr(name, code, ~paste0('<a href="',atlasUrl,'/#/concept/', .y, '" target="_blank">', .x,'</a>'))
+        ) |>
+        dplyr::select(
+          GROUP, name, covariate, analysisName, domain, upIn,
+          nCasesYes, nControlsYes, meanCases, meanControls, sdCases, sdControls,
+          OR, pLog10, beta, notes)
+
+      reactable::reactable(
+        df,
+        filterable = TRUE,
+        bordered = TRUE,
+        # highlight = TRUE,
+        striped = TRUE,
+        defaultColDef = reactable::colDef(
+          resizable = TRUE
+        ),
+        defaultSorted = list(pLog10 = "desc", OR = "desc"),
+        columns = list(
+          GROUP = reactable::colDef(name = "Time ID", minWidth = 20, align = "right"),
+          name = reactable::colDef(
+            name = "Covariate",
+            cell = function(name, rowIndex) {
+            htmltools::tags$a(href = name, target = "_blank", df$covariate[rowIndex])},
+            minWidth = 50
+          ),
+          covariate = reactable::colDef(show = FALSE),
+          analysisName = reactable::colDef(name = "Analysis Name", minWidth = 50),
+          domain = reactable::colDef(name = "Domain", minWidth = 40),
+          upIn = reactable::colDef(name = "Type", minWidth = 15),
+          nCasesYes = reactable::colDef(name = "N cases", minWidth = 12),
+          nControlsYes = reactable::colDef(name = "N ctrls", minWidth = 12),
+          meanCases = reactable::colDef(name = "Ratio|Mean cases", minWidth = 13),
+          meanControls = reactable::colDef(name = "Ratio|Mean ctrls", minWidth = 13),
+          sdCases = reactable::colDef(name = "SD cases", minWidth = 13),
+          sdControls = reactable::colDef(name = "SD ctrls", minWidth = 13),
+          OR = reactable::colDef( name = "OR", minWidth = 25),
+          pLog10 = reactable::colDef(name = "mlogp", minWidth = 25),
+          beta = reactable::colDef(name = "Beta", minWidth = 25),
+          notes = reactable::colDef(name = "Notes", minWidth = 30)
+        ),
+        searchable = TRUE, defaultPageSize = 10, showPageSizeOptions = TRUE
+      )
     })
 
     #
@@ -476,7 +586,7 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
         grDevices::cairo_pdf(filename = fname,
                              width = 15,
                              height = 5,
-                             pointsize = 1.0,
+                             pointsize = 20,
                              family = "sans",
                              bg = "transparent",
                              antialias = "default",
@@ -487,6 +597,165 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
       },
       contentType = "application/pdf"
     )
+
+    #
+    # download data as a plot (Plot2) ####
+    #
+    output$downloadPlot2 <- shiny::downloadHandler(
+      filename = function(){
+        paste('timecodewas_', format(lubridate::now(), "%Y_%m_%d_%H%M"), '.pdf', sep='')
+      },
+      content = function(fname){
+
+        grDevices::cairo_pdf(filename = fname,
+                             width = 15,
+                             height = 6,
+                             pointsize = 20,
+                             family = "sans",
+                             bg = "transparent",
+                             antialias = "default",
+                             fallback_resolution = 300,
+        )
+        print(r$gg_plot2)
+        grDevices::dev.off()
+      },
+      contentType = "application/pdf"
+    )
+
+    #
+    # render the simple plot ####
+    #
+    output$SimpleCodeWASplot <- ggiraph::renderGirafe({
+      shiny::req(r$gg_data)
+
+      top_colors <- c(
+        "1"= "blue",
+        "2" = "magenta",
+        "3" = "green",
+        "4" = "orange",
+        "5" = "turquoise",
+        "6" = "purple",
+        "7" = "darkgreen",
+        "8" = "cyan",
+        "9" = "brown",
+        "10" = "pink",
+        "11" = "lightgray"
+      )
+
+      gg_data <- r$gg_data |>
+        dplyr::mutate(time_period = factor(time_period, levels = time_periods, labels = time_periods)) |>
+        dplyr::mutate(name = factor(name, levels = unique(name))) |>
+        dplyr::mutate(name = stringr::str_remove_all(name, "'")) |>
+        dplyr::mutate(label = stringr::str_remove_all(label, "'")) |>
+        dplyr::mutate(oddsRatio = ifelse(is.na(OR), 1, OR)) |>
+        dplyr::mutate(pLog10 = -log10(p)) |>
+        dplyr::mutate(pLog10 = ifelse(pLog10 < 1e-30, 1e-30, pLog10)) |>
+        dplyr::mutate(beta = log(oddsRatio)) |>
+        dplyr::mutate(beta = ifelse(beta > 5, 5, beta)) |>
+        dplyr::mutate(beta = ifelse(beta < -5, -5, beta)) |>
+        dplyr::mutate(direction = ifelse(beta > 0, "cases", "controls")) |>
+        dplyr::mutate(data_id = paste0(name,analysisName)) |>
+        dplyr::mutate(time_period_jittered = jitter(as.numeric(time_period), amount = 0.3)) |>
+        dplyr::mutate(pLog10_jittered = jitter(pLog10, amount = 0.1 * max(pLog10)))
+
+      items <- gg_data |>
+        dplyr::select(name, analysisName, pLog10) |>
+        dplyr::arrange(desc(pLog10)) |>
+        dplyr::mutate(rank = row_number()) |>
+        dplyr::group_by(name) |>
+        dplyr::mutate(rank = min(rank, na.rm = TRUE)) |>
+        dplyr::ungroup() |>
+        dplyr::distinct(name, analysisName, rank) |>
+        dplyr::arrange(rank) |>
+        dplyr::mutate(rank = seq_along(rank)) |>
+        dplyr::mutate(color_group = ifelse(rank <= 10, as.character(rank), "11")) |>
+        dplyr::select(name, analysisName, color_group, rank)
+
+      if(nrow(gg_data) == 0){
+        return(NULL)
+      }
+
+      gg_data <- gg_data |>
+        left_join(items, by = c("name", "analysisName"))
+
+      gg_plot <- ggplot2::ggplot(gg_data, ggplot2::aes(x = time_period_jittered, y = pLog10_jittered,  group = data_id, fill = color_group, color = color_group)) +
+        {if(input$connect_top_10)
+          ggplot2::geom_line(data = gg_data |> dplyr::filter(color_group != "11"), linewidth = 1)
+        } +
+        {if(input$top_10)
+          ggrepel::geom_text_repel(
+            data = gg_data |> dplyr::filter(color_group != "11"),
+            ggplot2::aes(label = name),
+            color = "black",
+            segment.color = "black",
+            segment.size = 0.3,
+            segment.linetype = "dashed",
+            max.overlaps = Inf,
+            size = 3,
+            hjust = 0.1,
+            force = 0.5,
+            force_pull = 0.5,
+            # xlim = c(0.5, NA),
+            box.padding = 0.8
+          )
+        } +
+        ggiraph::geom_point_interactive(
+          aes(size = pLog10, data_id = data_id, tooltip = label),
+          color = "black", shape = 21, alpha = ifelse(gg_data$color_group == "11", 0.5, 1)
+        ) +
+        ggplot2::theme_minimal() +
+        ggplot2::theme(
+          legend.position = "bottom",
+          # plot.title = ggplot2::element_text(size = 16, margin = ggplot2::margin(t = 10, b = 5)),
+          axis.text.x = ggplot2::element_text(size = 10),
+          axis.text.y = ggplot2::element_text(size = 10),
+          axis.title.x = ggplot2::element_text(margin = ggplot2::margin(t = 10), size = 10),
+          axis.title.y = ggplot2::element_text(margin = ggplot2::margin(r = 15), size = 10),
+        ) +
+        ggplot2::scale_color_manual(name = "color_group", values = top_colors) +
+        ggplot2::scale_fill_manual(name = "color_group", values = top_colors) +
+        ggplot2::scale_x_continuous(breaks = c(1:length(levels(gg_data$time_period))), labels = levels(gg_data$time_period)) +
+        ggplot2::scale_y_continuous(expand = ggplot2::expansion(mult = c(0.2, 0.3))) +
+        ggplot2::labs(
+          x = "Time period",
+          y = "-log10(p)",
+          title = "",
+          subtitle = "",
+          caption = lubridate::today()
+        ) +
+        ggplot2::guides(
+          color = "none",
+          fill = "none",
+          size = "none"
+        )
+
+      gg_plot <- ggplotify::as.ggplot(gg_plot)
+      r$gg_plot2 <- gg_plot
+
+      gg_girafe <- ggiraph::girafe(ggobj = gg_plot, height_svg = 6, width_svg = 14)
+      gg_girafe <- ggiraph::girafe_options(
+        gg_girafe,
+        ggiraph::opts_sizing(rescale = TRUE, width = 1.0),
+        ggiraph::opts_hover(
+          css = "fill-opacity:1;fill:red;stroke:black;",
+          reactive = FALSE
+        ),
+        ggiraph::opts_selection(
+          type = c("none"),
+          only_shiny = TRUE
+        ),
+        ggiraph::opts_toolbar(
+          position = "topright",
+          hidden = c("zoom", "zoomReset", "lasso_select", "lasso_deselect", "saveaspng"),
+          delay_mouseout = 100000
+        )
+      )
+
+      return(gg_girafe)
+
+    }) # renderPlot
+
+
   })
 } # mod_timeCodeWASPlot_server
 
@@ -561,10 +830,11 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
       label = stringr::str_c(code),
       label = stringr::str_remove(label, "[:blank:]+$"),
       label = stringr::str_c(domain, " : ", name,
-                             "\n-log10(p)=", scales::number(-log10(p), accuracy = 0.1) ,
+                             "\n analysis: ", analysisName,
+                             "\n -log10(p) = ", scales::number(-log10(p), accuracy = 0.1) ,
                              "\n log10(OR) = ", ifelse(is.na(OR), "", scales::number(log10(OR), accuracy = 0.1)),
-                             "\n cases:", nCasesYes, " (", scales::percent(cases_per, accuracy = 0.01), ")",
-                             "\n controls:", nControlsYes, " (", scales::percent(controls_per, accuracy = 0.01), ")"
+                             "\n cases: ", nCasesYes, " (", scales::percent(cases_per, accuracy = 0.01), ")",
+                             "\n controls: ", nControlsYes, " (", scales::percent(controls_per, accuracy = 0.01), ")"
       ),
       link = paste0("https://atlas.app.finngen.fi/#/concept/", stringr::str_sub(code, 1, -4)),
       upIn = upIn,
@@ -593,7 +863,7 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
   return(gg_data)
 }
 
-
+# Proportions View ####
 
 .gg_data_to_gg_girafe <- function(
     gg_data,
@@ -602,7 +872,8 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
     selection,
     r,
     top_10,
-    point_scale
+    point_scale,
+    label_top_n
 ){
   # adjust the label area according to facet width
   facet_max_x <- max( gg_data$controls_per, 0.03, na.rm = TRUE)
@@ -626,35 +897,37 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
                    xend = ifelse(facet_max_x > facet_max_y, facet_max_y, facet_max_x),
                    yend = ifelse(facet_max_x > facet_max_y, facet_max_y, facet_max_x)
       ),
-      color = "darkgray", alpha = 0.5, linewidth = 0.2, linetype = "dashed") +
+      color = "blue", alpha = 0.5, linewidth = 0.2, linetype = "solid") +
     ggplot2::geom_segment(
       ggplot2::aes(x = 0, y = 0, xend = facet_max_x, yend = 0),
-      color = "black", alpha = 0.5, linewidth = 0.2, linetype = "dashed") +
+      color = "black", alpha = 0.5, linewidth = 0.2, linetype = "solid") +
     ggplot2::geom_segment(
       ggplot2::aes(x = 0, y = 0, xend = 0, yend = facet_max_y),
-      color = "black", alpha = 0.5, linewidth = 0.2, linetype = "dashed") +
+      color = "black", alpha = 0.5, linewidth = 0.2, linetype = "solid") +
     {if(length(selection) > 1)
       # label the selected points
       ggrepel::geom_text_repel(
         data =  gg_data |>
           dplyr::filter(data_id %in% selection$data_id),
-        ggplot2::aes(label = stringr::str_wrap(stringr::str_trunc(name, 30), 15)),
+        ggplot2::aes(label = stringr::str_wrap(stringr::str_trunc(name, 50), 15)),
         max.overlaps = Inf,
         size = 3,
         hjust = 0.1,
         force = 0.5,
         force_pull = 0.5,
+        color = "black",
         xlim = c(facet_max_x / 4, NA),
-        box.padding = 0.8
+        box.padding = 0.8,
+        segment.linetype = "dashed"
       )} +
     {if((length(selection) == 0) & top_10)
       # label the top 10 values
       ggrepel::geom_text_repel(
         data =  gg_data |>
-          dplyr::group_by(GROUP) |>
+          # dplyr::group_by(GROUP) |>
           dplyr::arrange(p, OR) |>
-          dplyr::slice_head(n = 10) |>
-          dplyr::ungroup(),
+          dplyr::slice_head(n = label_top_n), # |>
+          # dplyr::ungroup(),
         ggplot2::aes(label = stringr::str_wrap(stringr::str_trunc(name, 45), 30)),
         max.overlaps = Inf,
         size = 3,
@@ -663,7 +936,8 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
         force_pull = 0.5,
         xlim = c(facet_max_x / 4, NA),
         box.padding = 0.8,
-        color = "black"
+        color = "black",
+        segment.linetype = "dashed"
       )} +
     ggiraph::geom_point_interactive(
       ggplot2::aes(size = p_group), show.legend=T, shape = 21, stroke = 0.2, color = "black"
@@ -684,7 +958,8 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
     ggplot2::scale_y_continuous(
       breaks = c(0, 0.05, seq(0.1, 0.8, 0.1)),
       labels = c(0, 5, seq(10, 80, 10)),
-      limits = c(-0.02 * facet_max_y, facet_max_y + 0.1 * facet_max_y)
+      limits = c(-0.02 * facet_max_y, facet_max_y + 0.1 * facet_max_y),
+      expand = ggplot2::expansion(mult = c(0.1, 0.1))
     ) +
     # ggplot2::coord_fixed() +
     ggplot2::facet_grid(
@@ -704,7 +979,15 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
     ggplot2::scale_color_manual(values = c("darkgray")) +
     ggplot2::scale_fill_discrete() +
     ggplot2::guides(color = "none", fill = ggplot2::guide_legend(override.aes = list(size = 5), nrow=2, byrow=TRUE)) +
-    ggplot2::labs(size = "p value group", fill = "Domain", x = "\nControls %", y = "Cases %")
+    ggplot2::labs(
+      title = "",
+      subtitle = "",
+      caption = "Blue line indicates the equal proportion of cases and controls",
+      size = "p value group",
+      fill = "Domain",
+      x = "\nControls %",
+      y = "Cases %"
+    )
 
   r$gg_plot <- gg_fig
 
@@ -770,7 +1053,7 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
   #
   # convert ggplot to girafe object
   #
-  gg_girafe <- ggiraph::girafe(ggobj = gg_plot, width_svg = 15)
+  gg_girafe <- ggiraph::girafe(ggobj = gg_plot, width_svg = 15, height_svg = 6)
 
   #
   # modify girafe object
@@ -835,6 +1118,7 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
 
   return(studyResults)
 }
+
 
 
 

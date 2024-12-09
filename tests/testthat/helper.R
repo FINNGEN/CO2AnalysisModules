@@ -1,22 +1,18 @@
 
+
 helper_createNewCohortTableHandler <- function(addCohorts = NULL){
 
   addCohorts |> checkmate::assertCharacter(len = 1, null.ok = TRUE)
   addCohorts |> checkmate::assertSubset(c(
     "EunomiaDefaultCohorts", "HadesExtrasFractureCohorts","HadesExtrasAsthmaCohorts",
     "HadesExtrasFractureCohortsMatched","HadesExtrasAsthmaCohortsMatched"
-    ), empty.ok = TRUE)
+  ), empty.ok = TRUE)
 
+  # by default use the one from setup.R
   cohortTableHandlerConfig <- test_cohortTableHandlerConfig # set by setup.R
+
   loadConnectionChecksLevel = "basicChecks"
 
-  # TEMP
-  # name with current time with milisecond to avoid conflicts
-  cohortTableHandlerConfig$cohortTable$cohortTableName <- paste0(
-    cohortTableHandlerConfig$cohortTable$cohortTableName, "_",
-    gsub('\\.','',format(Sys.time(), "d%H%M%S%OS3"))
-  )
-  # END TEMP
   cohortTableHandler <- HadesExtras::createCohortTableHandlerFromList(cohortTableHandlerConfig, loadConnectionChecksLevel)
 
   if(!is.null(addCohorts) ){
@@ -31,7 +27,7 @@ helper_createNewCohortTableHandler <- function(addCohorts = NULL){
         verbose = FALSE
       )
     }
-    if(addCohorts == "HadesExtrasFractureCohorts"){
+      if(addCohorts == "HadesExtrasFractureCohorts"){
       cohortDefinitionSet <- CohortGenerator::getCohortDefinitionSet(
         settingsFileName = "testdata/fracture/Cohorts.csv",
         jsonFolder = "testdata/fracture/cohorts",
@@ -121,10 +117,91 @@ helper_createNewCohortTableHandler <- function(addCohorts = NULL){
         CohortGenerator::addCohortSubsetDefinition(subsetDef, targetCohortIds = 2)
 
     }
+
     cohortTableHandler$insertOrUpdateCohorts(cohortDefinitionSet)
   }
 
   return(cohortTableHandler)
 }
 
+helper_addCohortAndCohortDefinitionTables <- function(cohortTableHandlerConfig, cohortTablesToAdd = "Diabetes"){
 
+  connectionDetailsSettings <- cohortTableHandlerConfig$connection$connectionDetailsSettings
+  connectionDetails <- rlang::exec(DatabaseConnector::createConnectionDetails, !!!connectionDetailsSettings)
+  connection  <- DatabaseConnector::connect(connectionDetails)
+
+  if (cohortTablesToAdd == "Diabetes") {
+
+    testCohortTable <-  tibble::tribble(
+      ~cohort_definition_id, ~subject_id, ~cohort_start_date, ~cohort_end_date,
+      1, 1, as.Date("2000-01-01"), as.Date("2000-12-01"),
+      1, 2, as.Date("2000-01-01"), as.Date("2000-12-01"),
+      1, 3, as.Date("2000-01-01"), as.Date("2000-12-01"),
+      1, 4, as.Date("2000-01-01"), as.Date("2000-12-01"),
+      1, 5, as.Date("2000-01-01"), as.Date("2000-12-01"),
+      1, 5, as.Date("2004-01-01"), as.Date("2004-12-01"),
+
+      2, 2, as.Date("2001-01-01"), as.Date("2002-12-01"),# non overplaping
+      2, 3, as.Date("2000-06-01"), as.Date("2000-09-01"),# inside
+      2, 4, as.Date("2000-06-01"), as.Date("2010-12-01"),# overlap
+      2, 5, as.Date("2004-06-01"), as.Date("2010-12-01"),# overlap with second
+      2, 6, as.Date("2000-01-01"), as.Date("2010-12-01")
+    )
+
+    testCohortDefinitionTable <- tibble::tribble(
+      ~cohort_definition_id, ~cohort_definition_name, ~cohort_definition_description, ~definition_type_concept_id, ~cohort_definition_syntax, ~subject_concept_id, ~cohort_initiation_date,
+      1, 'Diabetes Cohort', 'Cohort of patients diagnosed with diabetes', 1234, 'SELECT * FROM patients WHERE diagnosis = "Diabetes"', 5678, as.Date('2022-01-01'),
+      2, 'Hypertension Cohort', 'Cohort of patients diagnosed with hypertension', 1234, 'SELECT * FROM patients WHERE diagnosis = "Hypertension"', 5678, as.Date('2022-01-01'),
+      3, 'Obesity Cohort', 'Cohort of patients diagnosed with obesity', 1234, 'SELECT * FROM patients WHERE diagnosis = "Obesity"', 5678, as.Date('2022-01-01')
+    )
+  }
+
+  DatabaseConnector::insertTable(
+    connection = connection,
+    table = "cohort",
+    data = testCohortTable
+  )
+
+  DatabaseConnector::insertTable(
+    connection = connection,
+    table = "cohort_definition",
+    data = testCohortDefinitionTable
+  )
+}
+
+
+helper_FinnGen_getDatabaseFile <- function(){
+   if( Sys.getenv("EUNOMIA_DATA_FOLDER") == "" ){
+    message("EUNOMIA_DATA_FOLDER not set. Please set this environment variable to the path of the Eunomia data folder.")
+    stop()
+  }
+
+  urlToFinnGenEunomiaZip <- "https://raw.githubusercontent.com/FINNGEN/EunomiaDatasets/main/datasets/FinnGenR12/FinnGenR12_v5.4.zip"
+  eunomiaDataFolder <- Sys.getenv("EUNOMIA_DATA_FOLDER")
+
+  # Download the database if it doesn't exist
+  if (!file.exists(file.path(eunomiaDataFolder, "FinnGenR12_v5.4.zip")) | !file.exists(file.path(eunomiaDataFolder, "FinnGenR12_v5.4.sqlite"))){
+
+    result <- utils::download.file(
+      url = urlToFinnGenEunomiaZip,
+      destfile = file.path(eunomiaDataFolder, "FinnGenR12_v5.4.zip"),
+      mode = "wb"
+    )
+
+    Eunomia::extractLoadData(
+      from = file.path(eunomiaDataFolder, "FinnGenR12_v5.4.zip"),
+      to = file.path(eunomiaDataFolder, "FinnGenR12_v5.4.sqlite"),
+      cdmVersion = '5.4',
+      verbose = TRUE
+    )
+  }
+
+  # copy to a temp folder
+  file.copy(
+    from = file.path(eunomiaDataFolder, "FinnGenR12_v5.4.sqlite"),
+    to = file.path(tempdir(), "FinnGenR12_v5.4.sqlite"),
+    overwrite = TRUE
+  )
+
+  return(file.path(tempdir(), "FinnGenR12_v5.4.sqlite"))
+}
