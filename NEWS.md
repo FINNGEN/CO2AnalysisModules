@@ -1,5 +1,5 @@
 # CO2AnalysisModules 2.0.0
-- Addapted to DBI drivers
+- Adapted to DBI drivers
 - Fixed GWAS token
 - Added year of birth distribution check to GWAS
 - Other minor fixes
