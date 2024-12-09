@@ -11,7 +11,7 @@ test_that("executeGWAS error if no token", {
     gc()
   })
 
-  exportFolder <- withr::local_tempdir('testGWAS')
+  exportFolder <- withr::local_tempdir("testGWAS")
 
   analysisSettings <- list(
     cohortIdCases = 1,
@@ -19,43 +19,22 @@ test_that("executeGWAS error if no token", {
     phenotype = "FRACTUREFRACTURECONTROLS",
     description = "Cases-cohort: fracture; Controls-cohort: fracture-controls (db: Eunomia GiBleed)",
     analysisType = "additive",
-    release = "Regenie12"
+    release = "Regenie12",
+    connectionSandboxAPI = FinnGenUtilsR::createSandboxAPIConnection(
+      base_url = "https://sandbox-api.finngen.fi/api/v1/",
+      token = "1234567890"
+    )
   )
 
   # function
-  expect_error({
-    execute_GWAS(
-      exportFolder = exportFolder,
-      cohortTableHandler = cohortTableHandler,
-      analysisSettings = analysisSettings
-    )
-  },"SANDBOX_TOKEN is not set")
-
-  withr::with_envvar(
-    new = c("SANDBOX_TOKEN" = "dddddddd"),
-    code = {
-      expect_error({
-        execute_GWAS(
-          exportFolder = exportFolder,
-          cohortTableHandler = cohortTableHandler,
-          analysisSettings = analysisSettings
-        )
-      },"Could not resolve host:")
-    }
+  expect_error(
+    {
+      execute_GWAS(
+        exportFolder = exportFolder,
+        cohortTableHandler = cohortTableHandler,
+        analysisSettings = analysisSettings
+      )
+    },
+    "GWAS run failedConnection in connection_sandboxAPI"
   )
-
-  withr::with_envvar(
-    new = c("SANDBOX_TOKEN" = "test"),
-    code = {
-      expect_error({
-        result <- execute_GWAS(
-          exportFolder = exportFolder,
-          cohortTableHandler = cohortTableHandler,
-          analysisSettings = analysisSettings
-        )},
-        "GWAS run failed")
-    }
-  )
-
 })
-
