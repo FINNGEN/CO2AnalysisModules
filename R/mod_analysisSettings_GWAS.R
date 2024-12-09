@@ -241,7 +241,7 @@ mod_analysisSettings_GWAS_server <- function(id, r_connectionHandler) {
 
       # overlap
       if (nSubjectsOverlap == 0) {
-        message <- paste0(message, "\u26A0\uFE0F No subjects overlap between case and control cohorts\n")
+        message <- paste0(message, "\u2705 No subjects overlap between case and control cohorts\n")
       } else {
         message <- paste0(message, "\u274C There are ", nSubjectsOverlap, " subjects that overlap  berween case and control cohorts. Consider removing them in Operate Cohorts tab\n")
       }
@@ -281,8 +281,18 @@ mod_analysisSettings_GWAS_server <- function(id, r_connectionHandler) {
       data <- matrix(c(nMaleCases, nFemaleCases, nMaleControls, nFemaleControls), ncol = 2)
       fisher_results <- stats::fisher.test(data)
 
-      if (fisher_results$p.value > 0.05) {
-        message <- paste0(message, "\u26A0\uFE0F Cases and control cohorts, seem to have the same sex distribution. (Fisher's test p = ", scales::scientific(fisher_results$p.value), " ) \n")
+      # year of birth
+      yearOfBirthCase <- cohortsSumary |>
+        dplyr::filter(cohortId == input$selectCaseCohort_pickerInput) |>
+        dplyr::pull(histogramBirthYear)
+      yearOfBirthControl <- cohortsSumary |>
+        dplyr::filter(cohortId == input$selectControlCohort_pickerInput) |>
+        dplyr::pull(histogramBirthYear)
+
+      ttestResult <- t.test(yearOfBirthCase[[1]]  |> tidyr::uncount(n), yearOfBirthControl[[1]]  |> tidyr::uncount(n))
+
+      if (fisher_results$p.value < 0.05 & ttestResult$p.value < 0.05) {
+        message <- paste0(message, "\u26A0\uFE0F Cases and control cohorts, seem to have the same sex and year of birth distribution. \n")
         message <- paste0(message, "It is not recommended to run GWAS with explicitly matched cohorts. GWAS analysis accounts for sex and year of birth in the model. Explicit matching may introduce bias.\n")
       }
 
