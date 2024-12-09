@@ -25,7 +25,7 @@ mod_resultsVisualisation_TimeCodeWAS_ui <- function(id) {
         id = ns("tabset"),
         shiny::tabPanel(
           "Proportions View",
-          shiny::div(style = "margin-top: 10px; ",
+          shiny::div(style = "margin-top: 0px; ",
                      shiny::fluidRow(
                        tags$style(HTML("
                          .slider-animate-container,
@@ -35,13 +35,15 @@ mod_resultsVisualisation_TimeCodeWAS_ui <- function(id) {
                       ")),
                        shiny::column(
                          width = 2,
-                         shiny::checkboxInput(
-                           ns("top_10"), "Show labels", value = TRUE)
+                         shiny::div(style = "margin-top: 25px; ",
+                                    shiny::checkboxInput(
+                                      ns("top_10"), "Show labels", value = TRUE)
+                         )
                        ),
                        shiny::column(
                          width = 2,
-                         div(style = "margin-top: -5px;",
-                             div(style = "margin-top: 2px; margin-right: 5px;", "Label top n"),
+                         div(style = "margin-top: 10px;",
+                             div(style = "margin-top: 5px; margin-right: 5px;", "Label top n"),
                              div(style = "margin-top: -20px;",
                                  shiny::sliderInput(
                                    ns("label_top_n"), label = NULL, ticks = FALSE, min = 1, max = 20, value = 10, step = 1)
@@ -50,8 +52,8 @@ mod_resultsVisualisation_TimeCodeWAS_ui <- function(id) {
                        ), # column
                        shiny::column(
                          width = 2,
-                         div(style = "margin-top: -5px;",
-                             div(style = "margin-top: 2px; margin-right: 5px;", "Point size"),
+                         div(style = "margin-top: 10px;",
+                             div(style = "margin-top: 5px; margin-right: 5px;", "Point size"),
                              div(style = "margin-top: -20px;",
                                  shiny::sliderInput(
                                    ns("point_scale"), label = NULL, ticks = FALSE, min = 0.2, max = 2.2, value = 1, step = 0.1)
