@@ -20,6 +20,7 @@ mod_resultsVisualisation_CodeWAS_ui <- function(id) {
     shinyFeedback::useShinyFeedback(),
     shinyjs::useShinyjs(),
     shiny::tagList(
+      shinyWidgets::chooseSliderSkin("Flat"),
       shiny::h4("Filters"),
       shiny::div(
         style = "margin-top: 10px; margin-bottom: 20px;"
@@ -31,11 +32,27 @@ mod_resultsVisualisation_CodeWAS_ui <- function(id) {
         shiny::tabPanel(
           "Plot",
           # shiny::div(style = "height: 20px;"),
+          tags$style(HTML("
+                         .slider-animate-container,
+                          .irs-min, .irs-max, .irs-single {
+                              display: none !important;
+                          }
+                      ")),
           shiny::column(
             width = 2, align = "left",
             shiny::div(style = "margin-top: 30px; ",
-                       shiny::checkboxInput(ns("top_10"), "Label top 10", value = TRUE),
+                       shiny::checkboxInput(ns("top_10"), "Show labels", value = TRUE),
             ),
+          ), # column
+          shiny::column(
+            width = 2,
+            div(style = "margin-top: 10px;",
+                div(style = "margin-top: 2px; margin-right: 5px;", "Label top n"),
+                div(style = "margin-top: -20px;",
+                    shiny::sliderInput(
+                      ns("label_top_n"), label = NULL, ticks = FALSE, min = 1, max = 20, value = 10, step = 1)
+                )
+            )
           ), # column
           shiny::div(style = "height: 100%; width: 800px; margin-left:40px;",
                      ggiraph::girafeOutput(ns("codeWASplot"))
@@ -341,7 +358,7 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
           # 'covariateNameFull' = 'covariateNameFull'
         ),
         options = list(
-          order = list(list(10, 'asc'), list(9, 'desc')), # pValue, OR
+          order = list(list(10, 'desc'), list(9, 'desc')), # pValue, OR
           pageLength = 20,
           lengthMenu = c(10, 15, 20, 25, 30)
         )
@@ -380,7 +397,7 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
     }
 
     #
-    # create a ggiraph plot
+    # create a ggiraph plot ####
     #
     output$codeWASplot <- ggiraph::renderGirafe({
       shiny::req(r$codeWASData)
@@ -422,7 +439,7 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
           ggrepel::geom_text_repel(
             data =  df |>
               dplyr::arrange(pValue, oddsRatio) |>
-              dplyr::slice_head(n = 10),
+              dplyr::slice_head(n = input$label_top_n),
             ggplot2::aes(
               label = stringr::str_wrap(stringr::str_trunc(.removeDomain(covariateName), 45), 30)
             ),
@@ -435,7 +452,7 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
           )} +
         ggplot2::geom_vline(xintercept = 0, col = "red", linetype = 'dashed') +
         ggplot2::scale_x_continuous() +
-        ggplot2::scale_y_continuous(transform = "log10", labels = function(x)round(x,1)) +
+        ggplot2::scale_y_continuous(transform = "log10", labels = function(x)round(x,1), expand = ggplot2::expansion(mult = c(0.1, 0.2))) +
         ggplot2::coord_cartesian(xlim = c(-5, 5), ylim = range(df$pLog10)) +
         ggplot2::labs(
           x = "beta",
