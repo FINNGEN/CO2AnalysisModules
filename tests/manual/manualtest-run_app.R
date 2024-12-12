@@ -8,7 +8,7 @@ source(testthat::test_path("helper.R"))
 run_app(
   CO2AnalysisModulesConfig = test_CO2AnalysisModulesConfig,
   options = list(
-    port = 5907,
+    port = 8561,
     launch.browser=TRUE
     )
   )
