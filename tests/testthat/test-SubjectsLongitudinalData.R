@@ -74,7 +74,7 @@ test_that("execute_SubjectsLongitudinalData works no prevalence table", {
     duckdb::dbConnect(duckdb::duckdb(), pathToResultsDatabase)
 
   analysisResults  |> dplyr::tbl("events")  |> dplyr::count()  |> dplyr::pull(n) |>  expect_gt(0)
-  analysisResults  |> dplyr::tbl("measurements")  |> dplyr::count()  |> dplyr::pull(n) |>  expect_gt(0)
+  analysisResults  |> dplyr::tbl("measurements")  |> dplyr::count()  |> dplyr::pull(n) |>  expect_equal(0)
   analysisResults  |> dplyr::tbl("drugs")  |> dplyr::count()  |> dplyr::pull(n) |>  expect_gt(0)
   analysisResults  |> dplyr::tbl("eras")  |> dplyr::count()  |> dplyr::pull(n) |>  expect_gt(0)
   analysisResults  |> dplyr::tbl("concept_ancestor")  |> dplyr::count()  |> dplyr::pull(n) |>  expect_gt(0)

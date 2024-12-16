@@ -25,64 +25,67 @@ INSERT INTO #concept_ancestor (
 )
 
 WITH concept_ids AS (
+  SELECT DISTINCT concept_id 
+  FROM (
   -- Events
   SELECT concept_id
   FROM #events
-  UNION DISTINCT
+  UNION 
   SELECT source_concept_id
   FROM #events
-  UNION DISTINCT
+  UNION 
   SELECT visit_concept_id
   FROM #events
-  UNION DISTINCT
+  UNION 
   SELECT visit_source_concept_id
   FROM #events
-  UNION DISTINCT
+  UNION 
   -- Measurements
   SELECT concept_id
   FROM #measurements
-  UNION DISTINCT
+  UNION 
   SELECT source_concept_id
   FROM #measurements
-  UNION DISTINCT
+  UNION 
   SELECT visit_concept_id
   FROM #measurements
-  UNION DISTINCT
+  UNION 
   SELECT visit_source_concept_id
   FROM #measurements
-  UNION DISTINCT
+  UNION 
   SELECT unit_concept_id
   FROM #measurements
-  UNION DISTINCT
+  UNION 
   SELECT value_as_concept_id
   FROM #measurements
-  UNION DISTINCT
+  UNION 
   -- Drugs
   SELECT concept_id
   FROM #drugs
-  UNION DISTINCT
+  UNION 
   SELECT source_concept_id
   FROM #drugs
-  UNION DISTINCT
+  UNION 
   SELECT visit_concept_id
   FROM #drugs
-  UNION DISTINCT
+  UNION 
   SELECT visit_source_concept_id
   FROM #drugs
-  UNION DISTINCT
+  UNION 
   -- Eras
   SELECT concept_id
   FROM #eras
+  )
 )
 
-SELECT ancestor_concept_id,
+SELECT DISTINCT ancestor_concept_id,
        descendant_concept_id,
        min_levels_of_separation,
        max_levels_of_separation
 FROM (
     SELECT * FROM @cdm_database_schema.concept_ancestor
     JOIN concept_ids ON concept_ancestor.ancestor_concept_id = concept_ids.concept_id
-    UNION DISTINCT
+    UNION 
     SELECT * FROM @cdm_database_schema.concept_ancestor
     JOIN concept_ids ON concept_ancestor.descendant_concept_id = concept_ids.concept_id
 ) AS concept_ancestor_union;

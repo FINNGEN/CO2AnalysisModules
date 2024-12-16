@@ -31,54 +31,57 @@ INSERT INTO #concept (
 )
 
 WITH concept_ids AS (
+  SELECT  concept_id 
+  FROM (
   -- Events
   SELECT concept_id
   FROM #events
-  UNION DISTINCT
+  UNION 
   SELECT source_concept_id
   FROM #events
-  UNION DISTINCT
+  UNION 
   SELECT visit_concept_id
   FROM #events
-  UNION DISTINCT
+  UNION 
   SELECT visit_source_concept_id
   FROM #events
-  UNION DISTINCT
+  UNION 
   -- Measurements
   SELECT concept_id
   FROM #measurements
-  UNION DISTINCT
+  UNION 
   SELECT source_concept_id
   FROM #measurements
-  UNION DISTINCT
+  UNION 
   SELECT visit_concept_id
   FROM #measurements
-  UNION DISTINCT
+  UNION 
   SELECT visit_source_concept_id
   FROM #measurements
-  UNION DISTINCT
+  UNION 
   SELECT unit_concept_id
   FROM #measurements
-  UNION DISTINCT
+  UNION 
   SELECT value_as_concept_id
   FROM #measurements
-  UNION DISTINCT
+  UNION 
   -- Drugs
   SELECT concept_id
   FROM #drugs
-  UNION DISTINCT
+  UNION 
   SELECT source_concept_id
   FROM #drugs
-  UNION DISTINCT
+  UNION 
   SELECT visit_concept_id
   FROM #drugs
-  UNION DISTINCT
+  UNION 
   SELECT visit_source_concept_id
   FROM #drugs
-  UNION DISTINCT
+  UNION 
   -- Eras
   SELECT concept_id
   FROM #eras
+  )
 )
 
 

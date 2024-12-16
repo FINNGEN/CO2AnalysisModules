@@ -71,6 +71,10 @@ execute_SubjectsLongitudinalData <- function(
     n_subjects = nSubjects,
     seed = seed
   )
+  
+  if (connection@dbms == "sqlite") {
+    sql <- .tmpFixSqliteNoHash(sql)
+  }
   sql <- SqlRender::translate(sql, targetDialect = connection@dbms)
   DatabaseConnector::executeSql(connection, sql)
 
@@ -85,6 +89,9 @@ execute_SubjectsLongitudinalData <- function(
     n_subjects = nSubjects,
     seed = seed
   )
+  if (connection@dbms == "sqlite") {
+    sql <- .tmpFixSqliteNoHash(sql)
+  }
   sql <- SqlRender::translate(sql, targetDialect = connection@dbms)
   DatabaseConnector::executeSql(connection, sql)
 
@@ -99,6 +106,9 @@ execute_SubjectsLongitudinalData <- function(
     n_subjects = nSubjects,
     seed = seed
   )
+  if (connection@dbms == "sqlite") {
+    sql <- .tmpFixSqliteNoHash(sql)
+  }
   sql <- SqlRender::translate(sql, targetDialect = connection@dbms)
   DatabaseConnector::executeSql(connection, sql)
 
@@ -113,6 +123,9 @@ execute_SubjectsLongitudinalData <- function(
     n_subjects = nSubjects,
     seed = seed
   )
+  if (connection@dbms == "sqlite") {
+    sql <- .tmpFixSqliteNoHash(sql)
+  }
   sql <- SqlRender::translate(sql, targetDialect = connection@dbms)
   DatabaseConnector::executeSql(connection, sql)
 
@@ -306,7 +319,8 @@ execute_SubjectsLongitudinalData <- function(
       year_of_birth = as.integer(NA),
       age_decile = as.integer(NA),
       n_persons_with_code = as.integer(NA),
-      n_persons_with_observation = as.integer(NA)
+      n_persons_with_observation = as.integer(NA), 
+      .rows = 0
     )
   }
   duckdb::dbWriteTable(duckdbConnection, "prevalence", prevalence, overwrite = TRUE)
@@ -434,4 +448,10 @@ checkResults_SubjectsLongitudinalData <- function(pathToResultsDatabase) {
   #
   errors <- .checkDatabase(pathToResultsDatabase, expectedSchemas)
   return(errors)
+}
+
+
+.tmpFixSqliteNoHash <- function(sql) {
+  sql  <- stringr::str_replace(sql, "HASHBYTES\\('MD5'.*\\)", "person_source_value")
+  return(sql)
 }
