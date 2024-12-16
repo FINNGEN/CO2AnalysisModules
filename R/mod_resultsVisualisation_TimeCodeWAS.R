@@ -731,7 +731,7 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
           size = "none"
         )
 
-      gg_plot <- ggplotify::as.ggplot(gg_plot)
+      # gg_plot <- ggplotify::as.ggplot(gg_plot)
       r$gg_plot2 <- gg_plot
 
       gg_girafe <- ggiraph::girafe(ggobj = gg_plot, height_svg = 6, width_svg = 14)
