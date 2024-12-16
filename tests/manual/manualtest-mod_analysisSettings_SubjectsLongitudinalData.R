@@ -7,12 +7,6 @@ source(testthat::test_path("helper.R"))
 
 cohortTableHandler <- helper_createNewCohortTableHandler(addCohorts = "HadesExtrasFractureCohorts")
 
-r_connectionHandler <- shiny::reactiveValues(
-  cohortTableHandler = cohortTableHandler,
-  hasChangeCounter = 0,
-  connectionHandler = cohortTableHandler$connectionHandler
-)
-
 # run module --------------------------------------------------------------
 devtools::load_all(".")
 
@@ -23,11 +17,18 @@ app <- shiny::shinyApp(
   function(input, output, session) {
     rf_analysisSettings <- mod_analysisSettings_subjectsLongitudinalData_server("test", r_connectionHandler)
 
+    r_connectionHandler <- shiny::reactiveValues(
+      cohortTableHandler = cohortTableHandler,
+      hasChangeCounter = 0,
+      connectionHandler = cohortTableHandler$connectionHandler
+    )
     shiny::observe({
       analysisSettings <- rf_analysisSettings()
       print(analysisSettings)
-      if(!is.null(analysisSettings)){
-        analysisSettings |> assertAnalysisSettings_SubjectsLongitudinalData() |> expect_no_error()
+      if (!is.null(analysisSettings)) {
+        analysisSettings |>
+          assertAnalysisSettings_SubjectsLongitudinalData() |>
+          expect_no_error()
       }
     })
   },

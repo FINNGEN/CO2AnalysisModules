@@ -53,7 +53,7 @@ execute_SubjectsLongitudinalData <- function(
   #
   # function
   #
-  ParallelLogger::logInfo("Calculating cohort demographics")
+  ParallelLogger::logInfo("Calculating subjects longitudinal data")
   startAnalysisTime <- Sys.time()
 
   #
