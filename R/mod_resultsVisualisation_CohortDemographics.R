@@ -177,11 +177,12 @@ mod_resultsVisualisation_CohortsDemographics_server <- function(id, analysisResu
         {if(input$show_count)
           ggplot2::geom_text(ggplot2::aes(label = count), vjust = -0.7, position = ggplot2::position_dodge(width = .8))
         } +
-        ggplot2::facet_grid(eval(ggplot2::expr(!!ggplot2::ensym(rows) ~ !!ggplot2::ensym(cols))), scales = "fixed") +
+        ggh4x::facet_grid2(eval(ggplot2::expr(!!ggplot2::ensym(rows) ~ !!ggplot2::ensym(cols))), scales = "free_y", independent = "y") +
         {if(x == "calendarYear")
           ggplot2::scale_x_continuous(breaks = function(x) unique(floor(pretty(seq(min(x), (max(x) + 1) * 1.1)))))
         } +
         ggplot2::coord_cartesian(clip = "off") +
+        ggplot2::scale_y_continuous(labels = scales::number_format(accuracy = 1)) +
         ggplot2::expand_limits(y = max(ggplotData()$count) * 1.1) +
         ggplot2::theme_minimal(base_size = 13) +
         ggplot2::theme(
