@@ -453,34 +453,34 @@ execute_CodeWAS <- function(
   )
   duckdb::dbWriteTable(connection, "databaseInfo", databaseInfo, overwrite = TRUE)
 
-  # Cohort data ------------------------------------------------
-  cohortsInfo  <- cohortDefinitionSet |>
-    dplyr::transmute(
-     cohortId = as.integer(cohortId),
-     cohortName = as.character(cohortName),
-     shortName = as.character(shortName),
-     sql = as.character(sql),
-     json = as.character(json),
-     subsetParent = as.integer(subsetParent),
-     isSubset = as.logical(isSubset),
-     subsetDefinitionId = as.integer(subsetDefinitionId)
-    ) |>
-    dplyr::left_join(
-      cohortTableHandler$getCohortCounts() |>
-        dplyr::transmute(
-          cohortId = as.integer(cohortId),
-          cohortEntries = as.integer(cohortEntries),
-          cohortSubjects = as.integer(cohortSubjects)
-        ),
-      by = "cohortId"
-    ) |>
-    dplyr::mutate(
-      use = dplyr::case_when(
-        cohortId == cohortIdCases ~ "cases",
-        cohortId == cohortIdControls ~ "controls",
-        TRUE ~ ""
+    # Cohort data ------------------------------------------------
+    cohortsInfo  <- cohortDefinitionSet |>
+      dplyr::transmute(
+      cohortId = as.integer(cohortId),
+      cohortName = as.character(cohortName),
+      shortName = as.character(shortName),
+      sql = as.character(sql),
+      json = as.character(json),
+      subsetParent = as.integer(subsetParent),
+      isSubset = as.logical(isSubset),
+      subsetDefinitionId = as.integer(subsetDefinitionId)
+      ) |>
+      dplyr::left_join(
+        cohortTableHandler$getCohortCounts() |>
+          dplyr::transmute(
+            cohortId = as.integer(cohortId),
+            cohortEntries = as.integer(cohortEntries),
+            cohortSubjects = as.integer(cohortSubjects)
+          ),
+        by = "cohortId"
+      ) |>
+      dplyr::mutate(
+        use = dplyr::case_when(
+          cohortId == cohortIdCases ~ "cases",
+          cohortId == cohortIdControls ~ "controls",
+          TRUE ~ ""
+        )
       )
-    )
 
   duckdb::dbWriteTable(connection, "cohortsInfo",cohortsInfo, overwrite = TRUE)
 

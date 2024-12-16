@@ -18,7 +18,7 @@
   # Check parameters
   #
   check <- checkmate::checkFileExists(pathToResultsDatabase, extension = 'duckdb')
-  if (!check) { errors <- c(errors, check) ; return(errors) }
+  if (is.character(check)) { errors <- c(errors, check) ; return(errors) }
 
   #
   # Function
@@ -29,7 +29,7 @@
 
   check <- duckdb::dbListTables(connection) |>
     checkmate::checkSubset(expectedSchemas |> names())
-  if (!check) { errors <- c(errors, check) ; return(errors) }
+  if (is.character(check)) { errors <- c(errors, check) ; return(errors) }
 
   # check scheme
   for (expectedSchemaName in  names(expectedSchemas)) {
@@ -37,8 +37,8 @@
     schema <- DBI::dbGetQuery(connection, paste0("PRAGMA table_info('",expectedSchemaName, "')")) |>
       dplyr::select(name, type) |>
       dplyr::as_tibble()
-    check <- .checkSchema(schema, expectedSchema)
-    if (check != TRUE) { errors <- c(errors, check) }
+    check <- .checkSchema(expectedSchemaName,schema, expectedSchema)
+    if (is.character(check)) { errors <- c(errors, check) }
   }
 
   duckdb::dbDisconnect(connection)
@@ -58,7 +58,7 @@
 #' @importFrom checkmate assertTibble
 #' @importFrom dplyr anti_join
 #'
-.checkSchema  <- function(schema, expectedSchema) {
+.checkSchema  <- function(schemaName, schema, expectedSchema) {
   schema  |> checkmate::assertTibble(types = c('character', 'character'))
   expectedSchema  |> checkmate::assertTibble(types = c('character', 'character'))
 
@@ -67,7 +67,7 @@
   if (nrow(errors_schema) == 0){ return(TRUE) }
 
   error_message <- paste(
-    'Schema does not match expected schema:\n',
+    'Schema', schemaName, 'does not match expected schema:\n',
     'Got errors:\n\t', errors_schema |> capture.output() |> (\(x) x[-c(1, 3)])() |> paste(collapse = '\n\t'),
     '\nExpected schema:\n\t', expectedSchema |> capture.output() |> (\(x) x[-c(1, 3)])() |> paste(collapse = '\n\t'),
     '\n'
