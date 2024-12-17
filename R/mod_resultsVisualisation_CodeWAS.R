@@ -110,7 +110,7 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
     ns <- session$ns
 
     # atlasUrl <- shiny::getShinyOption("cohortOperationsConfig")$atlasUrl
-    atlasUrl <- "http://atlas.app.finngen.fi"
+    atlasUrl <- "https://atlas.app.finngen.fi"
 
     # reactive values
     r <- shiny::reactiveValues(
