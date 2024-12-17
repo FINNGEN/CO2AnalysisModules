@@ -492,6 +492,7 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
 
       df <- r$gg_data |>
         dplyr::mutate(GROUP = stringr::str_replace(GROUP, stringr::fixed("from "), "")) |>
+        dplyr::mutate(code = round(code/1000)) |>
         dplyr::mutate(meanCases = round(meanCases, 3)) |>
         dplyr::mutate(meanControls = round(meanControls, 3))|>
         dplyr::mutate(sdCases = round(sdCases, 3)) |>
