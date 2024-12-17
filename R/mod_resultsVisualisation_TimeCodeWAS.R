@@ -72,12 +72,30 @@ mod_resultsVisualisation_TimeCodeWAS_ui <- function(id) {
           "Progress View",
           shiny::div(style = "margin-top: 10px; ",
                      shiny::fluidRow(
-                       shiny::column(width = 2,
-                         shiny::checkboxInput(ns("top_10"), "Label top 10", value = TRUE)
+                       shiny::column(
+                         width = 2,
+                         shiny::div(style = "margin-top: 25px; ",
+                                    shiny::checkboxInput(
+                                      ns("show_labels"), "Show labels", value = TRUE)
+                         )
                        ),
-                       shiny::column(width = 2,
-                         shiny::checkboxInput(ns("connect_top_10"), "Connect top 10", value = TRUE),
-                       )
+                       shiny::column(
+                         width = 2,
+                         shiny::div(style = "margin-top: 25px; ",
+                                    shiny::checkboxInput(
+                                      ns("connect_dots"), "Connect points", value = TRUE)
+                         )
+                       ),
+                       shiny::column(
+                         width = 2,
+                         div(style = "margin-top: 10px;",
+                             div(style = "margin-top: 5px; margin-right: 5px;", "Limit points"),
+                             div(style = "margin-top: -20px;",
+                                 shiny::sliderInput(
+                                   ns("label_limit"), label = NULL, ticks = FALSE, min = 1, max = 20, value = 10, step = 1)
+                             )
+                         )
+                       ), # column
                      )
           ),
           ggiraph::girafeOutput(ns("SimpleCodeWASplot"), width = "100%", height = "100%"),
@@ -671,7 +689,7 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
         dplyr::distinct(name, analysisName, rank) |>
         dplyr::arrange(rank) |>
         dplyr::mutate(rank = seq_along(rank)) |>
-        dplyr::mutate(color_group = ifelse(rank <= 10, as.character(rank), "11")) |>
+        dplyr::mutate(color_group = ifelse(rank <= input$label_limit, as.character(rank), "11")) |>
         dplyr::select(name, analysisName, color_group, rank)
 
       if(nrow(gg_data) == 0){
@@ -682,10 +700,10 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
         left_join(items, by = c("name", "analysisName"))
 
       gg_plot <- ggplot2::ggplot(gg_data, ggplot2::aes(x = time_period_jittered, y = pLog10_jittered,  group = data_id, fill = color_group, color = color_group)) +
-        {if(input$connect_top_10)
+        {if(input$connect_dots)
           ggplot2::geom_line(data = gg_data |> dplyr::filter(color_group != "11"), linewidth = 1)
         } +
-        {if(input$top_10)
+        {if(input$show_labels)
           ggrepel::geom_text_repel(
             data = gg_data |> dplyr::filter(color_group != "11"),
             ggplot2::aes(label = name),
@@ -704,7 +722,7 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
         } +
         ggiraph::geom_point_interactive(
           aes(size = pLog10, data_id = data_id, tooltip = label),
-          color = "black", shape = 21, alpha = ifelse(gg_data$color_group == "11", 0.5, 1)
+          color = "black", shape = 21, alpha = ifelse(gg_data$color_group == "11", 0.25, 1)
         ) +
         ggplot2::theme_minimal() +
         ggplot2::theme(
