@@ -150,7 +150,7 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
   shiny::moduleServer(id, function(input, output, session) {
     ns <- session$ns
 
-    atlasUrl <- shiny::getShinyOption("cohortOperationsConfig")$atlasUrl # or "TEMP"
+    atlasUrl <- "https://atlas.app.finngen.fi"
 
     studyResults  <- .analysisResultsHandler_to_studyResults(analysisResults)
 
@@ -492,7 +492,6 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
 
       df <- r$gg_data |>
         dplyr::mutate(GROUP = stringr::str_replace(GROUP, stringr::fixed("from "), "")) |>
-        dplyr::mutate(covariate = name) |>
         dplyr::mutate(meanCases = round(meanCases, 3)) |>
         dplyr::mutate(meanControls = round(meanControls, 3))|>
         dplyr::mutate(sdCases = round(sdCases, 3)) |>
@@ -504,12 +503,8 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
           OR < 10e-100 ~ -Inf,
           TRUE ~ round(OR, 3)
         )) |>
-        dplyr::mutate(
-          code = round(code/1000),
-          name = purrr::map2_chr(name, code, ~paste0('<a href="',atlasUrl,'/#/concept/', .y, '" target="_blank">', .x,'</a>'))
-        ) |>
         dplyr::select(
-          GROUP, name, covariate, analysisName, domain, upIn,
+          GROUP, name, code, analysisName, domain, upIn,
           nCasesYes, nControlsYes, meanCases, meanControls, sdCases, sdControls,
           OR, pLog10, beta, notes)
 
@@ -526,12 +521,17 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
         columns = list(
           GROUP = reactable::colDef(name = "Time ID", minWidth = 20, align = "right"),
           name = reactable::colDef(
-            name = "Covariate",
+            name = "Covariate Name",
             cell = function(name, rowIndex) {
-            htmltools::tags$a(href = name, target = "_blank", df$covariate[rowIndex])},
+              htmltools::tags$a(
+                href = paste0(atlasUrl, "/#/concept/", df$code[ rowIndex ]),
+                target = "_blank", df$name[ rowIndex ],
+                content = name
+              )
+            },
             minWidth = 50
           ),
-          covariate = reactable::colDef(show = FALSE),
+          code = reactable::colDef(show = FALSE),
           analysisName = reactable::colDef(name = "Analysis Name", minWidth = 50),
           domain = reactable::colDef(name = "Domain", minWidth = 40),
           upIn = reactable::colDef(name = "Type", minWidth = 15),
