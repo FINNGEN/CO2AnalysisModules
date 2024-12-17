@@ -66,7 +66,7 @@ mod_resultsVisualisation_CodeWAS_ui <- function(id) {
           "Table",
           shiny::div(
             style = "margin-top: 10px; margin-bottom: 10px;",
-            DT::dataTableOutput(ns("codeWAStable")),
+            reactable::reactableOutput(ns("codeWAStable")),
           ),
           shiny::div(
             style = "margin-top: 10px; margin-bottom: 10px;",
@@ -109,7 +109,7 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
   shiny::moduleServer(id, function(input, output, session) {
     ns <- session$ns
 
-    atlasUrl <- shiny::getShinyOption("cohortOperationsConfig")$atlasUrl
+    atlasUrl <- "https://atlas.app.finngen.fi"
 
     # reactive values
     r <- shiny::reactiveValues(
@@ -299,72 +299,67 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
     #
     # render the CodeWAS table
     #
-    output$codeWAStable <- DT::renderDataTable({
+    output$codeWAStable <- reactable::renderReactable({
       shiny::req(r$filteredCodeWASData)
       shiny::req(r$filteredCodeWASData  |>  nrow() > 0)
 
-      # https://github.com/rstudio/DT/issues/1127
-      # the bug can be worked around by setting shiny.json.digits to a smaller value
-      options(shiny.json.digits = 4)
-
-      DT::datatable(
-        r$filteredCodeWASData |>
-          dplyr::mutate(mlogp = -log10(pValue)) |>
-          dplyr::mutate(oddsRatio = round(oddsRatio, 3)) |>
-          dplyr::mutate(beta = round(beta, 3)) |>
-          dplyr::mutate(meanCases = round(meanCases, 3)) |>
-          dplyr::mutate(sdCases = round(sdCases, 3)) |>
-          dplyr::mutate(meanControls = round(meanControls, 3)) |>
-          dplyr::mutate(sdControls = round(sdControls, 3)) |>
-          dplyr::mutate(covariateNameFull = as.character(covariateName)) |>
-          dplyr::mutate(covariateName = stringr::str_trunc(covariateName, 50)) |>
-          dplyr::mutate(analysisName = stringr::str_trunc(analysisName, 20)) |>
-          dplyr::mutate(
-            covariateId = round(covariateId/1000),
-            covariateName = purrr::map2_chr(covariateName, covariateId, ~paste0('<a href="',atlasUrl,'/#/concept/', .y, '" target="_blank">', .x,'</a>'))
-          ) |>
-          dplyr::select(
-            covariateName, analysisName, domainId,
-            nCasesYes, nControlsYes, meanCases, sdCases, meanControls, sdControls,
-            oddsRatio, mlogp, beta, modelType, runNotes
-          ),
-        escape = FALSE,
-        class = 'display nowrap compact',
-        selection = 'none',
-        rownames = FALSE,
-        colnames = c(
-          # 'Database' = 'databaseId',
-          'Covariate Name' = 'covariateName',
-          'Analysis Name' = 'analysisName',
-          'Domain' = 'domainId',
-          # 'Concept ID' = 'conceptId',
-          # 'Cov. ID' = 'covariateId',
-          # 'N tot' = 'n_total',
-          # 'Type' = 'upIn',          # upIn MISSING from data
-          'N cases' = 'nCasesYes',
-          'N ctrls' = 'nControlsYes',
-          'Ratio|Mean cases' = 'meanCases',
-          'Ratio|Mean ctrls' = 'meanControls',
-          'SD cases' = 'sdCases',
-          'SD ctrls' = 'sdControls',
-          'OR' = 'oddsRatio',
-          'mLogP' = 'mlogp',
-          'Beta' = 'beta',
-          'Model' = 'modelType',
-          # 'ID' = 'analysisId',
-          'Notes' = 'runNotes'
-          # 'Binary' = 'isBinary',
-          # 'Missing mean zero' = 'missingMeansZero'
-          # 'covariateNameFull' = 'covariateNameFull'
-        ),
-        options = list(
-          order = list(list(10, 'desc'), list(9, 'desc')), # pValue, OR
-          pageLength = 20,
-          lengthMenu = c(10, 15, 20, 25, 30)
+      df <- r$filteredCodeWASData |>
+        dplyr::mutate(mlogp = round(-log10(pValue), 3)) |>
+        dplyr::mutate(oddsRatio = round(oddsRatio, 3)) |>
+        dplyr::mutate(beta = round(beta, 3)) |>
+        dplyr::mutate(meanCases = round(meanCases, 3)) |>
+        dplyr::mutate(sdCases = round(sdCases, 3)) |>
+        dplyr::mutate(meanControls = round(meanControls, 3)) |>
+        dplyr::mutate(sdControls = round(sdControls, 3)) |>
+        dplyr::mutate(covariateId = round(covariateId/1000)) |>
+        dplyr::select(
+          covariateName, covariateId, analysisName, domainId,
+          nCasesYes, nControlsYes, meanCases, sdCases, meanControls, sdControls,
+          oddsRatio, mlogp, beta, modelType, runNotes
         )
-      ) |>
-        DT::formatStyle('Covariate Name', cursor = 'pointer' ) |>
-        DT::formatSignif(columns = c('mLogP', 'OR'), digits = 3)
+
+      # browser()
+
+      reactable::reactable(
+        df,
+        filterable = TRUE,
+        bordered = TRUE,
+        # highlight = TRUE,
+        striped = TRUE,
+        defaultColDef = reactable::colDef(
+          resizable = TRUE
+        ),
+        defaultSorted = list(mlogp = "desc", oddsRatio = "desc"),
+        columns = list(
+          covariateName = reactable::colDef(
+            name = "Covariate Name",
+            cell = function(name, rowIndex) {
+              htmltools::tags$a(
+                href = paste0(atlasUrl, "/#/concept/", df$covariateId[ rowIndex ]),
+                target = "_blank", df$covariateName[ rowIndex ],
+                content = name
+              )
+            },
+            minWidth = 50
+          ),
+          covariateId = reactable::colDef(show = FALSE),
+          analysisName = reactable::colDef(name = "Analysis Name", minWidth = 30),
+          domainId = reactable::colDef(name = "Domain", minWidth = 25),
+          nCasesYes = reactable::colDef(name = "N cases", minWidth = 12),
+          nControlsYes = reactable::colDef(name = "N ctrls", minWidth = 12),
+          meanCases = reactable::colDef(name = "Ratio|Mean cases", minWidth = 13),
+          sdCases = reactable::colDef(name = "SD cases", minWidth = 13),
+          meanControls = reactable::colDef(name = "Ratio|Mean ctrls", minWidth = 13),
+          sdControls = reactable::colDef(name = "SD ctrls", minWidth = 13),
+          oddsRatio = reactable::colDef(name = "OR", minWidth = 25),
+          mlogp = reactable::colDef(name = "mlogp", minWidth = 25),
+          beta = reactable::colDef(name = "Beta", minWidth = 25),
+          modelType = reactable::colDef(name = "Model", minWidth = 30),
+          runNotes = reactable::colDef(name = "Notes", minWidth = 30)
+        ),
+        searchable = TRUE, defaultPageSize = 10, showPageSizeOptions = TRUE
+      ) # reactable
+
     })
 
     #

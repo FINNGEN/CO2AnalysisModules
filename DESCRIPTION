@@ -52,7 +52,8 @@ Imports:
     CohortGenerator,
     FinnGenUtilsR,
     httr,
-    jsonlite
+    jsonlite,
+    ggh4x
 Remotes: 
     FINNGEN/HadesExtras,
     FINNGEN/FinnGenUtilsR,
