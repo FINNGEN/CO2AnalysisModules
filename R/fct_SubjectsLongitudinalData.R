@@ -203,7 +203,7 @@ execute_SubjectsLongitudinalData <- function(
     dplyr::mutate(
       use = dplyr::case_when(
         cohortId == cohortIdCases ~ "cases",
-        cohortId == cohortIdControls ~ "controls",
+        #cohortId == cohortIdControls ~ "controls",
         TRUE ~ ""
       )
     )
@@ -370,9 +370,12 @@ assertAnalysisSettings_SubjectsLongitudinalData <- function(analysisSettings) {
     names() |>
     checkmate::assertSubset(c("cohortIdCases", "cohortIdControls", "nSubjects", "seed", "prevalenceTable"))
   analysisSettings$cohortIdCases |> checkmate::assertNumber(lower = 1)
-  analysisSettings$cohortIdControls |> checkmate::assertNumber(lower = 1, null.ok = TRUE)
   if (is.null(analysisSettings$cohortIdControls)) {
-    analysisSettings$cohortIdControls <- 100
+    analysisSettings$cohortIdControls <- 0
+  }
+  analysisSettings$cohortIdControls |> checkmate::assertNumber(lower = 1)
+  if (is.null(analysisSettings$nSubjects)) {
+    analysisSettings$nSubjects <- 1000
   }
   analysisSettings$nSubjects |> checkmate::assertNumber(lower = 1)
   if (is.null(analysisSettings$seed)) {
