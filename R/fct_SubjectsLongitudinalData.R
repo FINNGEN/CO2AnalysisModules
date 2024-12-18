@@ -373,7 +373,7 @@ assertAnalysisSettings_SubjectsLongitudinalData <- function(analysisSettings) {
   if (is.null(analysisSettings$cohortIdControls)) {
     analysisSettings$cohortIdControls <- 0
   }
-  analysisSettings$cohortIdControls |> checkmate::assertNumber(lower = 1)
+  analysisSettings$cohortIdControls |> checkmate::assertNumber()
   if (is.null(analysisSettings$nSubjects)) {
     analysisSettings$nSubjects <- 1000
   }

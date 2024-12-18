@@ -53,9 +53,9 @@ test_that("execute_SubjectsLongitudinalData works no prevalence table", {
   
   analysisSettings <- list(
     cohortIdCases = 1,
-    cohortIdControls = 2,
-    nSubjects = 1000,
-    seed = 1234, 
+    cohortIdControls = NULL,
+    nSubjects = 100,
+    seed = 123, 
     prevalenceTable = NULL
   )
   
