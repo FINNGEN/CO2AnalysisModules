@@ -259,11 +259,9 @@ mod_analysisSettings_timeCodeWAS_server <- function(id, r_connectionHandler) {
       )
 
       return(analysisSettings)
-
     })
 
     return(rf_analysisSettings)
-
   })
 }
 

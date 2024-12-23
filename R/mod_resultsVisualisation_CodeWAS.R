@@ -259,7 +259,7 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
         # filter the data
         r$filteredCodeWASData <- r$codeWASData |>
           dplyr::select(
-            databaseId, domainId, analysisName, covariateId, covariateName, nCasesYes, nControlsYes,
+            databaseId, domainId, conceptCode, vocabularyId, analysisName, covariateId, covariateName, nCasesYes, nControlsYes,
             meanCases, sdCases, meanControls, sdControls, oddsRatio, pValue, beta, modelType, runNotes
           ) |>
           dplyr::filter(
@@ -313,7 +313,7 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
         dplyr::mutate(sdControls = round(sdControls, 3)) |>
         dplyr::mutate(covariateId = round(covariateId/1000)) |>
         dplyr::select(
-          covariateName, covariateId, analysisName, domainId,
+          covariateName, covariateId, conceptCode, vocabularyId, analysisName, domainId,
           nCasesYes, nControlsYes, meanCases, sdCases, meanControls, sdControls,
           oddsRatio, mlogp, beta, modelType, runNotes
         )
@@ -344,6 +344,8 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
           ),
           covariateId = reactable::colDef(show = FALSE),
           analysisName = reactable::colDef(name = "Analysis Name", minWidth = 30),
+          conceptCode = reactable::colDef(name = "Concept Code", minWidth = 15),
+          vocabularyId = reactable::colDef(name = "Vocabulary", minWidth = 15),
           domainId = reactable::colDef(name = "Domain", minWidth = 25),
           nCasesYes = reactable::colDef(name = "N cases", minWidth = 12),
           nControlsYes = reactable::colDef(name = "N ctrls", minWidth = 12),
@@ -407,7 +409,7 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
         dplyr::mutate(beta = ifelse(beta > 5, 5, beta)) |>
         dplyr::mutate(beta = ifelse(beta < -5, -5, beta)) |>
         dplyr::mutate(direction = ifelse(beta > 0, "cases", "controls")) |> # n.s. = not significant
-        dplyr::select(analysisName, covariateName, pValue, oddsRatio, direction, oddsRatio, pLog10, beta, meanCases, meanControls, modelType) |>
+        dplyr::select(analysisName, covariateName, conceptCode, vocabularyId, pValue, oddsRatio, direction, oddsRatio, pLog10, beta, meanCases, meanControls, modelType) |>
         dplyr::mutate(data_id = dplyr::row_number())
 
       n_no_test <- sum(grepl("no test", df$modelType, ignore.case = TRUE))
@@ -419,6 +421,8 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
             data_id = data_id,
             tooltip = paste("Analysis: ", analysisName, "<br>",
                             "Covariate: ", covariateName, "<br>",
+                            "Concept code: ", conceptCode, "<br>",
+                            "Vocabulary: ", vocabularyId, "<br>",
                             "beta: ", signif(beta, digits = 3), "<br>",
                             "OR: ", signif(oddsRatio, digits = 3), "<br>",
                             "p-value: ", signif(pValue, digits = 2), "<br>"

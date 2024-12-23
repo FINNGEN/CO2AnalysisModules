@@ -523,7 +523,7 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
           TRUE ~ round(OR, 3)
         )) |>
         dplyr::select(
-          GROUP, name, code, analysisName, domain, upIn,
+          GROUP, name, conceptCode, vocabularyId, code, analysisName, domain, upIn,
           nCasesYes, nControlsYes, meanCases, meanControls, sdCases, sdControls,
           OR, pLog10, beta, notes)
 
@@ -551,6 +551,8 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
             minWidth = 50
           ),
           code = reactable::colDef(show = FALSE),
+          conceptCode = reactable::colDef(name = "Concept Code", minWidth = 15),
+          vocabularyId = reactable::colDef(name = "Vocabulary", minWidth = 15),
           analysisName = reactable::colDef(name = "Analysis Name", minWidth = 50),
           domain = reactable::colDef(name = "Domain", minWidth = 40),
           upIn = reactable::colDef(name = "Type", minWidth = 15),
@@ -822,6 +824,8 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
       code = covariateId,
       time_period = factor(timeRange, levels = time_periods, labels = time_periods),
       name = covariateName,
+      conceptCode = conceptCode,
+      vocabularyId = vocabularyId,
       analysisName = analysisName,
       model = modelType,
       notes = runNotes,
@@ -852,6 +856,8 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
       label = stringr::str_remove(label, "[:blank:]+$"),
       label = stringr::str_c(domain, " : ", name,
                              "\n analysis: ", analysisName,
+                             "\n concept code: ", conceptCode,
+                             "\n vocabulary: ", vocabularyId,
                              "\n -log10(p) = ", scales::number(-log10(p), accuracy = 0.1) ,
                              "\n log10(OR) = ", ifelse(is.na(OR), "", scales::number(log10(OR), accuracy = 0.1)),
                              "\n cases: ", nCasesYes, " (", scales::percent(cases_per, accuracy = 0.01), ")",
