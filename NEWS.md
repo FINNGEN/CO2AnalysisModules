@@ -1,3 +1,7 @@
+# CO2AnalysisModules 2.1.0
+- Replaced DT by reactable
+- other minor fixes
+
 # CO2AnalysisModules 2.0.0
 - Adapted to DBI drivers
 - Fixed GWAS token
