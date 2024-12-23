@@ -242,6 +242,24 @@ execute_timeCodeWAS <- function(
 
   covariateRef <- covariateCasesControls$covariateRef |> dplyr::collect()
 
+  # get concept_code for covariateRef
+  conceptIds <- covariateRef |>
+    dplyr::select(conceptId) |>
+    dplyr::collect() |>
+    dplyr::distinct() |>
+    dplyr::rename(concept_id = conceptId)
+  conceptIdsTbl <- dplyr::copy_to(connection, conceptIds, overwrite = TRUE, temporary = TRUE)
+
+  conceptIdsAndCodes <- dplyr::tbl(connection, dbplyr::in_schema(vocabularyDatabaseSchema, "concept")) |>
+    dplyr::left_join(conceptIdsTbl, by = "concept_id") |>
+    dplyr::select(concept_id, concept_code, vocabulary_id, standard_concept) |>
+    dplyr::collect() |>
+    # rename all to camelCase
+    SqlRender::snakeCaseToCamelCaseNames()
+
+  covariateRef <- covariateRef |>
+    dplyr::left_join(conceptIdsAndCodes, by = "conceptId") 
+
   ParallelLogger::logInfo("CohortDiagnostics_runTimeCodeWAS completed")
 
   analysisDuration <- Sys.time() - startAnalysisTime
@@ -335,7 +353,10 @@ execute_timeCodeWAS <- function(
       analysisId = as.double(analysisId),
       conceptId = as.double(conceptId),
       valueAsConceptId = as.double(valueAsConceptId),
-      collisions = as.character(collisions)
+      collisions = as.character(collisions),
+      conceptCode = as.character(conceptCode),
+      vocabularyId = as.character(vocabularyId),
+      standardConcept = as.character(standardConcept)
     )
   duckdb::dbWriteTable(connection, "covariateRef", covariateRef, overwrite = TRUE)
 
@@ -437,8 +458,8 @@ checkResults_timeCodeWAS <- function(pathToResultsDatabase) {
       type = c("DOUBLE", "VARCHAR", "VARCHAR", "VARCHAR", "VARCHAR")
     ),
     covariateRef = tibble::tibble(
-      name = c("covariateId", "covariateName", "analysisId", "conceptId", "valueAsConceptId", "collisions"),
-      type = c("DOUBLE", "VARCHAR", "DOUBLE", "DOUBLE", "DOUBLE", "VARCHAR")
+      name = c("covariateId", "covariateName", "analysisId", "conceptId", "valueAsConceptId", "collisions", "conceptCode", "vocabularyId", "standardConcept"),
+      type = c("DOUBLE", "VARCHAR", "DOUBLE", "DOUBLE", "DOUBLE", "VARCHAR", "VARCHAR", "VARCHAR", "VARCHAR")
     ),
     analysisInfo = tibble::tibble(
       name = c("analysisType", "version", "analysisSettings", "analysisDuration", "exportDuration"),
