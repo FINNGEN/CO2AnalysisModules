@@ -23,17 +23,14 @@ mod_resultsVisualisation_CohortsDemographics_ui <- function(id) {
         id = ns("tabset"),
         shiny::tabPanel(
           "Plot",
-          column(
-            3,
             shiny::tagList(
               shiny::div(
-                shiny::checkboxInput(ns("show_count"), "Show patient counts", value = FALSE),
-                style="margin-top: 22px; margin-bottom: 15px;"
-              ),
-              # shiny::div(
-              #   shiny::checkboxInput(ns("same_scale"), "Use same y-scale across cohorts", value = TRUE),
-              #   style="margin-top: -15px; margin-bottom: 15px;"
-              # ),
+                shiny::h4("Cohort Demographics"),
+                tags$div(
+                  style = "display: flex; align-items: left; gap: 5px;",  # CSS to align and add spacing
+                  shiny::checkboxInput(ns("show_count"), "Show patient counts", value = FALSE),
+                  shiny::checkboxInput(ns("same_scale"), "Use same y-scale across cohorts", value = TRUE),
+                ),
             )
           ), #
 
@@ -115,12 +112,10 @@ mod_resultsVisualisation_CohortsDemographics_server <- function(id, analysisResu
           ageGroup = forcats::fct_reorder(
             ageGroup, as.numeric(stringr::str_extract(ageGroup, "\\d+")))
         ) |>
-        # filters
-        # dplyr::filter(databaseId %in% input$databaseId) |>
         dplyr::filter(shortName %in% input$shortName) |>
         dplyr::filter(gender %in% input$gender) |>
         dplyr::filter(referenceYear == input$referenceYear) |>
-        dplyr::group_by(across(grouping_vars)) |>
+        dplyr::group_by(dplyr::across(dplyr::all_of(grouping_vars))) |>
         dplyr::summarise(count = sum(count)) |>
         dplyr::ungroup()
     })
@@ -177,12 +172,17 @@ mod_resultsVisualisation_CohortsDemographics_server <- function(id, analysisResu
         {if(input$show_count)
           ggplot2::geom_text(ggplot2::aes(label = count), vjust = -0.7, position = ggplot2::position_dodge(width = .8))
         } +
-        ggplot2::facet_grid(eval(ggplot2::expr(!!ggplot2::ensym(rows) ~ !!ggplot2::ensym(cols))), scales = "fixed") +
+        {if(input$same_scale)
+          ggplot2::facet_grid(eval(ggplot2::expr(!!ggplot2::ensym(rows) ~ !!ggplot2::ensym(cols))))
+        } +
+        {if(!input$same_scale)
+          ggh4x::facet_grid2(eval(ggplot2::expr(!!ggplot2::ensym(rows) ~ !!ggplot2::ensym(cols))), scales = "free_y", independent = "y")
+        } +
         {if(x == "calendarYear")
-          ggplot2::scale_x_continuous(breaks = function(x) unique(floor(pretty(seq(min(x), (max(x) + 1) * 1.1)))))
+          ggplot2::scale_x_continuous(expand = c(0.05, 0.05))
         } +
         ggplot2::coord_cartesian(clip = "off") +
-        ggplot2::expand_limits(y = max(ggplotData()$count) * 1.1) +
+        ggplot2::scale_y_continuous(labels = scales::number_format(accuracy = 1)) +
         ggplot2::theme_minimal(base_size = 13) +
         ggplot2::theme(
           axis.text.x = ggplot2::element_text(size = 12, angle = text_angle, hjust = 0.5),

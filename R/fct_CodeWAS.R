@@ -1,4 +1,3 @@
-
 #' @title execute_CodeWAS
 #' @description This function calculates cohort overlaps based on the provided cohort table and analysis settings, and exports the results to a DuckDB database.
 #'
@@ -21,8 +20,7 @@
 execute_CodeWAS <- function(
     exportFolder,
     cohortTableHandler,
-    analysisSettings
-) {
+    analysisSettings) {
   #
   # Check parameters
   #
@@ -53,7 +51,7 @@ execute_CodeWAS <- function(
   chunksSizeNOutcomes <- analysisSettings$chunksSizeNOutcomes
   cores <- analysisSettings$cores
 
-  covariatesNoAnalysis  <- setdiff(covariatesIds %% 1000, analysisIds)
+  covariatesNoAnalysis <- setdiff(covariatesIds %% 1000, analysisIds)
   if (length(covariatesNoAnalysis) > 0) {
     stop("The following covariates do not have an associated analysis: ", covariatesNoAnalysis)
   }
@@ -66,7 +64,7 @@ execute_CodeWAS <- function(
 
   noCovariatesMode <- is.null(covariatesIds) || length(covariatesIds) == 0
 
-  covariateSettings  <- HadesExtras::FeatureExtraction_createTemporalCovariateSettingsFromList(
+  covariateSettings <- HadesExtras::FeatureExtraction_createTemporalCovariateSettingsFromList(
     analysisIds = analysisIds,
     temporalStartDays = -99999,
     temporalEndDays = 99999
@@ -109,14 +107,12 @@ execute_CodeWAS <- function(
     DatabaseConnector::dbExecute(connection, sql)
 
     cohortTable <- newCohortTable
-
   }
 
   #
   # noCovariatesMode
   #
-  if (noCovariatesMode){
-
+  if (noCovariatesMode) {
     ParallelLogger::logInfo("Running regresions without covariates")
 
     ParallelLogger::logInfo("Getting FeatureExtraction for cases and controls")
@@ -133,27 +129,26 @@ execute_CodeWAS <- function(
 
     # binary
     covariateCountsBinary <- tibble::tibble()
-    if (covariateCasesControls$covariates |> dplyr::count()  |> dplyr::pull(n) != 0 ) {
-
+    if (covariateCasesControls$covariates |> dplyr::count() |> dplyr::pull(n) != 0) {
       ParallelLogger::logInfo("Running statistical test for binary covariates")
 
       covariateCountsBinary <- dplyr::full_join(
-        covariateCasesControls$covariates  |>
-          dplyr::filter(cohortDefinitionId == {{cohortIdCases}})  |>
+        covariateCasesControls$covariates |>
+          dplyr::filter(cohortDefinitionId == {{ cohortIdCases }}) |>
           dplyr::select(covariateId, nCasesYes = sumValue),
-        covariateCasesControls$covariates  |>
-          dplyr::filter(cohortDefinitionId == {{cohortIdControls}})  |>
+        covariateCasesControls$covariates |>
+          dplyr::filter(cohortDefinitionId == {{ cohortIdControls }}) |>
           dplyr::select(covariateId, nControlsYes = sumValue),
         by = "covariateId"
-      )  |>
+      ) |>
         dplyr::mutate(
           nCasesYes = ifelse(is.na(nCasesYes), 0, nCasesYes),
           nControlsYes = ifelse(is.na(nControlsYes), 0, nControlsYes),
-          nCasesTotal = {{nCasesTotal}},
-          nControlsTotal = {{nControlsTotal}},
+          nCasesTotal = {{ nCasesTotal }},
+          nControlsTotal = {{ nControlsTotal }},
           nCasesNo = nCasesTotal - nCasesYes,
           nControlsNo = nControlsTotal - nControlsYes
-        )  |>
+        ) |>
         dplyr::collect()
 
       covariateCountsBinary <- .addTestToCodeCounts(covariateCountsBinary) |>
@@ -169,22 +164,21 @@ execute_CodeWAS <- function(
           pValue = countsPValue,
           oddsRatio = dplyr::if_else(is.infinite(countsOddsRatio), .Machine$double.xmax, countsOddsRatio),
           modelType = countsTest,
-          runNotes =  ''
+          runNotes = ""
         )
     }
 
     # continuous
     covariateCountsContinuous <- tibble::tibble()
-    if (covariateCasesControls$covariatesContinuous |> dplyr::count()  |> dplyr::pull(n) != 0) {
-
+    if (covariateCasesControls$covariatesContinuous |> dplyr::count() |> dplyr::pull(n) != 0) {
       ParallelLogger::logInfo("Running statistical test for continuous covariates")
 
       covariateCountsContinuous <- dplyr::full_join(
         covariateCasesControls$covariatesContinuous |>
-          dplyr::filter(cohortDefinitionId == {{cohortIdCases}})  |>
+          dplyr::filter(cohortDefinitionId == {{ cohortIdCases }}) |>
           dplyr::select(covariateId, nCasesYesWithValue = countValue, meanValueCases = averageValue, sdValueCases = standardDeviation),
         covariateCasesControls$covariatesContinuous |>
-          dplyr::filter(cohortDefinitionId == {{cohortIdControls}})  |>
+          dplyr::filter(cohortDefinitionId == {{ cohortIdControls }}) |>
           dplyr::select(covariateId, nControlsYesWithValue = countValue, meanValueControls = averageValue, sdValueControls = standardDeviation),
         by = "covariateId"
       ) |>
@@ -214,13 +208,10 @@ execute_CodeWAS <- function(
 
     codewasResults <- dplyr::bind_rows(covariateCountsBinary, covariateCountsContinuous)
 
-    analysisRef  <-  covariateCasesControls$analysisRef  |> dplyr::collect()
+    analysisRef <- covariateCasesControls$analysisRef |> dplyr::collect()
 
-    covariateRef  <- covariateCasesControls$covariateRef  |> dplyr::collect()
-
-
-
-  }else{
+    covariateRef <- covariateCasesControls$covariateRef |> dplyr::collect()
+  } else {
     #
     # CovariatesMode
     #
@@ -251,14 +242,14 @@ execute_CodeWAS <- function(
 
     # case control covariates
     covarCase <- covariate_case$covariates |>
-      dplyr::distinct(rowId)  |>
+      dplyr::distinct(rowId) |>
       dplyr::collect() |>
-      dplyr::transmute(personId=rowId, covariateId="caseControl", covariateValue=TRUE)
+      dplyr::transmute(personId = rowId, covariateId = "caseControl", covariateValue = TRUE)
 
     covarControl <- covariate_control$covariates |>
       dplyr::distinct(rowId) |>
       dplyr::collect() |>
-      dplyr::transmute(personId=rowId, covariateId="caseControl", covariateValue=FALSE)
+      dplyr::transmute(personId = rowId, covariateId = "caseControl", covariateValue = FALSE)
 
     # error if no patients in cases
     if (nrow(covarCase) == 0) {
@@ -276,7 +267,7 @@ execute_CodeWAS <- function(
       covarControl <- covarControl |> dplyr::filter(!personId %in% covarCase$personId)
     }
 
-    caseControlCovariateWide <- dplyr::bind_rows(covarCase,covarControl)  |>
+    caseControlCovariateWide <- dplyr::bind_rows(covarCase, covarControl) |>
       tidyr::spread(covariateId, covariateValue)
 
 
@@ -286,26 +277,30 @@ execute_CodeWAS <- function(
     allCovariates <- dplyr::bind_rows(
       covariate_case$covariates |>
         dplyr::left_join(covariate_case$covariateRef, by = "covariateId") |>
-        dplyr::left_join(covariate_case$analysisRef, by = "analysisId")  |>
+        dplyr::left_join(covariate_case$analysisRef, by = "analysisId") |>
         dplyr::distinct(covariateId, isBinary) |>
         dplyr::collect(),
       covariate_control$covariates |>
         dplyr::left_join(covariate_control$covariateRef, by = "covariateId") |>
-        dplyr::left_join(covariate_control$analysisRef, by = "analysisId")  |>
+        dplyr::left_join(covariate_control$analysisRef, by = "analysisId") |>
         dplyr::distinct(covariateId, isBinary) |>
         dplyr::collect()
     ) |> dplyr::distinct()
 
-    codewasResults  <- tibble::tibble()
+    codewasResults <- tibble::tibble()
 
     ParallelLogger::logInfo("Running ", nrow(allCovariates), " covariates in ", length(seq(1, nrow(allCovariates), chunksSizeNOutcomes)), " chunks of ", chunksSizeNOutcomes, " covariates")
     for (i in seq(1, nrow(allCovariates), chunksSizeNOutcomes)) {
-      ParallelLogger::logInfo("Running chunk ", i, " to ", min(i + chunksSizeNOutcomes - 1, nrow(allCovariates)) )
-      covariateIdsChunk <- allCovariates  |> dplyr::slice(i:min(i + chunksSizeNOutcomes - 1, nrow(allCovariates)))  |> dplyr::pull(covariateId)
+      ParallelLogger::logInfo("Running chunk ", i, " to ", min(i + chunksSizeNOutcomes - 1, nrow(allCovariates)))
+      covariateIdsChunk <- allCovariates |>
+        dplyr::slice(i:min(i + chunksSizeNOutcomes - 1, nrow(allCovariates))) |>
+        dplyr::pull(covariateId)
       # add controling covariates
       covariateIdsChunk <- union(covariateIdsChunk, covariatesIds)
 
-      BinaryCovariateNames <- covariateIdsChunk |> intersect(allCovariates$covariateId[allCovariates$isBinary=='Y']) |> as.character()
+      BinaryCovariateNames <- covariateIdsChunk |>
+        intersect(allCovariates$covariateId[allCovariates$isBinary == "Y"]) |>
+        as.character()
 
       ParallelLogger::logInfo("Prepare data for ", length(covariateIdsChunk), " covariates")
 
@@ -320,19 +315,23 @@ execute_CodeWAS <- function(
           dplyr::distinct(rowId, covariateId, covariateValue) |>
           dplyr::collect() |>
           dplyr::anti_join(covarCase, by = c("rowId" = "personId"))
-      )  |>
+      ) |>
         dplyr::distinct() |>
         tidyr::spread(covariateId, covariateValue)
 
       covariatesWideTable <- caseControlCovariateWide |>
-        dplyr::left_join(covariatesWideTable, by = c("personId"="rowId")) |>
-        dplyr::mutate(dplyr::across(BinaryCovariateNames, ~dplyr::if_else(is.na(.), FALSE, TRUE) )) |>
+        dplyr::left_join(covariatesWideTable, by = c("personId" = "rowId")) |>
+        dplyr::mutate(dplyr::across(BinaryCovariateNames, ~ dplyr::if_else(is.na(.), FALSE, TRUE))) |>
         as.data.frame()
 
       # calculate using speedglm
-      outcomes  <- covariatesWideTable  |> dplyr::select(3:ncol(covariatesWideTable))  |> colnames()
-      predictors <- covariatesWideTable  |> dplyr::select(2)  |> colnames()
-      covariates  <- as.character(covariatesIds)
+      outcomes <- covariatesWideTable |>
+        dplyr::select(3:ncol(covariatesWideTable)) |>
+        colnames()
+      predictors <- covariatesWideTable |>
+        dplyr::select(2) |>
+        colnames()
+      covariates <- as.character(covariatesIds)
       outcomes <- outcomes |> dplyr::setdiff(covariates)
 
       ParallelLogger::logInfo("Running ", length(outcomes), " regresions for ", nrow(covariatesWideTable), " subjects, and ", length(covariates), " covariates")
@@ -341,55 +340,62 @@ execute_CodeWAS <- function(
       cluster <- ParallelLogger::makeCluster(numberOfThreads = cores)
 
       # x
-      if (cores == 1){
-        x  <- list(outcomes)
-      }else{
-        x <- split(outcomes, cut(seq_along(outcomes), breaks=cores, labels=FALSE))
+      if (cores == 1) {
+        x <- list(outcomes)
+      } else {
+        x <- split(outcomes, cut(seq_along(outcomes), breaks = cores, labels = FALSE))
       }
 
       # fun
-      .fun <- function(outcomes, predictors, covariates, data){
-
+      .fun <- function(outcomes, predictors, covariates, data) {
         results <- tibble::tibble()
-        for (outcome in outcomes){
-
-          formula  <-  as.formula( paste( paste0('`',outcome,'`'), ' ~ ', paste(paste0('`',c(predictors, covariates),'`'), collapse = ' + ')) )
-          family  <- if(data[[outcome]] |> is.logical()){binomial()}else{gaussian()}
+        for (outcome in outcomes) {
+          formula <- as.formula(paste(paste0("`", outcome, "`"), " ~ ", paste(paste0("`", c(predictors, covariates), "`"), collapse = " + ")))
+          family <- if (data[[outcome]] |> is.logical()) {
+            binomial()
+          } else {
+            gaussian()
+          }
           model <- NULL
           error <- ""
-          tryCatch({
-            model = speedglm::speedglm(formula, data, family)
-          }, error = function(e){
-            error <<- paste0("[Error in speedglm: ", e$message, "]")
-          })
+          tryCatch(
+            {
+              model <- speedglm::speedglm(formula, data, family)
+            },
+            error = function(e) {
+              error <<- paste0("[Error in speedglm: ", e$message, "]")
+            }
+          )
 
-          #If the models did not converge or error, report NA values instead.
-          or=NA; p=NA; note=""
-          if ( is.null(model) ){
-            note = error
+          # If the models did not converge or error, report NA values instead.
+          or <- NA
+          p <- NA
+          note <- ""
+          if (is.null(model)) {
+            note <- error
           } else {
-            modsum=summary(model)
-            if(model$convergence) {
-              gen_list=grep(predictors,row.names(modsum$coefficients))
-              or=exp(modsum$coefficients[gen_list,1])
-              p=modsum$coefficients[gen_list,4]
+            modsum <- summary(model)
+            if (model$convergence) {
+              gen_list <- grep(predictors, row.names(modsum$coefficients))
+              or <- exp(modsum$coefficients[gen_list, 1])
+              p <- modsum$coefficients[gen_list, 4]
             } else {
-              note=paste(note,"[Error: The model did not converge]")
+              note <- paste(note, "[Error: The model did not converge]")
             }
           }
 
           if (family$family == "binomial") {
             # n is the number of TRUE
-            covariateType = "binary"
-            nCasesYes = sum(data[[outcome]][data$caseControl == TRUE], na.rm = TRUE)
-            nControlsYes = sum(data[[outcome]][data$caseControl == FALSE], na.rm = TRUE)
-            modelType = "Logistic regresion"
-          }else{
+            covariateType <- "binary"
+            nCasesYes <- sum(data[[outcome]][data$caseControl == TRUE], na.rm = TRUE)
+            nControlsYes <- sum(data[[outcome]][data$caseControl == FALSE], na.rm = TRUE)
+            modelType <- "Logistic regresion"
+          } else {
             # n is the number of no na
-            covariateType = "continuous"
-            nCasesYes = sum(!is.na(data[[outcome]][data$caseControl == TRUE]))
-            nControlsYes = sum(!is.na(data[[outcome]][data$caseControl == FALSE]))
-            modelType = "Linear Regresion"
+            covariateType <- "continuous"
+            nCasesYes <- sum(!is.na(data[[outcome]][data$caseControl == TRUE]))
+            nControlsYes <- sum(!is.na(data[[outcome]][data$caseControl == FALSE]))
+            modelType <- "Linear Regresion"
           }
 
           results <- dplyr::bind_rows(results, tibble::tibble(
@@ -416,21 +422,37 @@ execute_CodeWAS <- function(
 
       codewasResults <- dplyr::bind_rows(codewasResults, chunkResults)
 
-      analysisRef  <-  dplyr::bind_rows(
+      analysisRef <- dplyr::bind_rows(
         covariate_case$analysisRef |> tibble::as_tibble(),
         covariate_control$analysisRef |> tibble::as_tibble()
       ) |>
         dplyr::distinct()
 
-      covariateRef  <-  dplyr::bind_rows(
+      covariateRef <- dplyr::bind_rows(
         covariate_case$covariateRef |> tibble::as_tibble(),
         covariate_control$covariateRef |> tibble::as_tibble()
       ) |>
         dplyr::distinct()
-
-
     }
   }
+
+  # get concept_code for covariateRef
+  conceptIds <- covariateRef |>
+    dplyr::select(conceptId) |>
+    dplyr::collect() |>
+    dplyr::distinct() |>
+    dplyr::rename(concept_id = conceptId)
+  conceptIdsTbl <- dplyr::copy_to(connection, conceptIds, overwrite = TRUE, temporary = TRUE)
+
+  conceptIdsAndCodes <- dplyr::tbl(connection, dbplyr::in_schema(vocabularyDatabaseSchema, "concept")) |>
+    dplyr::left_join(conceptIdsTbl, by = "concept_id") |>
+    dplyr::select(concept_id, concept_code, vocabulary_id, standard_concept) |>
+    dplyr::collect() |>
+    # rename all to camelCase
+    SqlRender::snakeCaseToCamelCaseNames()
+
+  covariateRef <- covariateRef |>
+    dplyr::left_join(conceptIdsAndCodes, by = "conceptId") 
 
   analysisDuration <- Sys.time() - startAnalysisTime
 
@@ -444,26 +466,26 @@ execute_CodeWAS <- function(
   connection <- duckdb::dbConnect(duckdb::duckdb(), pathToResultsDatabase)
 
   # Database metadata ---------------------------------------------
-  databaseInfo  <- tibble::tibble(
+  databaseInfo <- tibble::tibble(
     databaseId = databaseId,
-    databaseName =  databaseName,
-    databaseDescription =  databaseDescription,
+    databaseName = databaseName,
+    databaseDescription = databaseDescription,
     vocabularyVersionCdm = vocabularyVersionCdm,
     vocabularyVersion = vocabularyVersion
   )
   duckdb::dbWriteTable(connection, "databaseInfo", databaseInfo, overwrite = TRUE)
 
   # Cohort data ------------------------------------------------
-  cohortsInfo  <- cohortDefinitionSet |>
+  cohortsInfo <- cohortDefinitionSet |>
     dplyr::transmute(
-     cohortId = as.integer(cohortId),
-     cohortName = as.character(cohortName),
-     shortName = as.character(shortName),
-     sql = as.character(sql),
-     json = as.character(json),
-     subsetParent = as.integer(subsetParent),
-     isSubset = as.logical(isSubset),
-     subsetDefinitionId = as.integer(subsetDefinitionId)
+      cohortId = as.integer(cohortId),
+      cohortName = as.character(cohortName),
+      shortName = as.character(shortName),
+      sql = as.character(sql),
+      json = as.character(json),
+      subsetParent = as.integer(subsetParent),
+      isSubset = as.logical(isSubset),
+      subsetDefinitionId = as.integer(subsetDefinitionId)
     ) |>
     dplyr::left_join(
       cohortTableHandler$getCohortCounts() |>
@@ -482,12 +504,12 @@ execute_CodeWAS <- function(
       )
     )
 
-  duckdb::dbWriteTable(connection, "cohortsInfo",cohortsInfo, overwrite = TRUE)
+  duckdb::dbWriteTable(connection, "cohortsInfo", cohortsInfo, overwrite = TRUE)
 
   # CodeWASCounts ------------------------------------------------
-  codewasResults  <-  codewasResults |>
+  codewasResults <- codewasResults |>
     dplyr::transmute(
-      databaseId = as.character({{databaseId}}),
+      databaseId = as.character({{ databaseId }}),
       covariateId = as.double(covariateId),
       covariateType = as.character(covariateType),
       nCasesYes = as.integer(nCasesYes),
@@ -502,7 +524,7 @@ execute_CodeWAS <- function(
       runNotes = as.character(runNotes)
     )
   duckdb::dbWriteTable(connection, "codewasResults", codewasResults, overwrite = TRUE)
-
+  
   analysisRef <- analysisRef |>
     dplyr::transmute(
       analysisId = as.double(analysisId),
@@ -529,7 +551,10 @@ execute_CodeWAS <- function(
       analysisId = as.double(analysisId),
       conceptId = as.double(conceptId),
       valueAsConceptId = as.double(valueAsConceptId),
-      collisions = as.character(collisions)
+      collisions = as.character(collisions),
+      conceptCode = as.character(conceptCode),
+      vocabularyId = as.character(vocabularyId),
+      standardConcept = as.character(standardConcept)
     )
   duckdb::dbWriteTable(connection, "covariateRef", covariateRef, overwrite = TRUE)
 
@@ -551,7 +576,6 @@ execute_CodeWAS <- function(
   ParallelLogger::logInfo("Results exported")
 
   return(pathToResultsDatabase)
-
 }
 
 #' @title Assert Analysis Settings for CodeWAS
@@ -574,35 +598,33 @@ execute_CodeWAS <- function(
 #'
 #' @export
 assertAnalysisSettings_CodeWAS <- function(analysisSettings) {
-
   analysisSettings |> checkmate::assertList()
-  c('cohortIdCases', 'cohortIdControls', 'analysisIds')  |> checkmate::assertSubset(names(analysisSettings))
+  c("cohortIdCases", "cohortIdControls", "analysisIds") |> checkmate::assertSubset(names(analysisSettings))
   analysisSettings$cohortIdCases |> checkmate::assertNumeric()
   analysisSettings$cohortIdControls |> checkmate::assertNumeric()
   analysisSettings$analysisIds |> checkmate::assertNumeric()
 
-  if(is.null(analysisSettings$covariatesIds)){
+  if (is.null(analysisSettings$covariatesIds)) {
     analysisSettings$covariatesIds <- NULL
   }
   analysisSettings$covariatesIds |> checkmate::assertNumeric(null.ok = TRUE)
 
-  if(is.null(analysisSettings$minCellCount)){
+  if (is.null(analysisSettings$minCellCount)) {
     analysisSettings$minCellCount <- 1
   }
   analysisSettings$minCellCount |> checkmate::assertNumeric()
 
-  if(is.null(analysisSettings$chunksSizeNOutcomes)){
+  if (is.null(analysisSettings$chunksSizeNOutcomes)) {
     analysisSettings$chunksSizeNOutcomes <- 1000000000000
   }
   analysisSettings$chunksSizeNOutcomes |> checkmate::assertNumeric(null.ok = TRUE)
 
-  if(is.null(analysisSettings$cores)){
+  if (is.null(analysisSettings$cores)) {
     analysisSettings$cores <- 1
   }
   analysisSettings$cores |> checkmate::assertNumeric()
 
   return(analysisSettings)
-
 }
 
 
@@ -620,11 +642,10 @@ assertAnalysisSettings_CodeWAS <- function(analysisSettings) {
 #'
 #' @export
 checkResults_CodeWAS <- function(pathToResultsDatabase) {
-
   #
   # Checking rules
   #
-  expectedSchemas  <- list(
+  expectedSchemas <- list(
     databaseInfo = tibble::tibble(
       name = c("databaseId", "databaseName", "databaseDescription", "vocabularyVersionCdm", "vocabularyVersion"),
       type = c("VARCHAR", "VARCHAR", "VARCHAR", "VARCHAR", "VARCHAR")
@@ -642,8 +663,8 @@ checkResults_CodeWAS <- function(pathToResultsDatabase) {
       type = c("DOUBLE", "VARCHAR", "VARCHAR", "VARCHAR", "VARCHAR")
     ),
     covariateRef = tibble::tibble(
-      name = c("covariateId", "covariateName", "analysisId", "conceptId", "valueAsConceptId", "collisions"),
-      type = c("DOUBLE", "VARCHAR", "DOUBLE", "DOUBLE", "DOUBLE", "VARCHAR")
+      name = c("covariateId", "covariateName", "analysisId", "conceptId", "valueAsConceptId", "collisions", "conceptCode", "vocabularyId", "standardConcept"),
+      type = c("DOUBLE", "VARCHAR", "DOUBLE", "DOUBLE", "DOUBLE", "VARCHAR", "VARCHAR", "VARCHAR", "VARCHAR")
     ),
     analysisInfo = tibble::tibble(
       name = c("analysisType", "version", "analysisSettings", "analysisDuration", "exportDuration"),
@@ -654,9 +675,6 @@ checkResults_CodeWAS <- function(pathToResultsDatabase) {
   #
   # Check
   #
-  errors  <- .checkDatabase(pathToResultsDatabase, expectedSchemas)
+  errors <- .checkDatabase(pathToResultsDatabase, expectedSchemas)
   return(errors)
 }
-
-
-
