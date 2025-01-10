@@ -1128,6 +1128,8 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
 
 .analysisResultsHandler_to_studyResults <- function(analysisResults){
 
+  tictoc::tic()
+
   studyResults  <- analysisResults |> dplyr::tbl("timeCodeWASResults")  |>
     dplyr::left_join(
       analysisResults |> dplyr::tbl("timeRef") |>
@@ -1149,8 +1151,25 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
     ) |>
     dplyr::collect()
 
-  studyResults <- studyResults|>
-    dplyr::mutate(timeRange = paste0(.vectorized_convert_days(as.integer(startDay)), " / ", .vectorized_convert_days(as.integer(endDay))))|>
+  tictoc::toc()
+
+  timeRange <- studyResults |>
+    dplyr::select(startDay, endDay) |>
+    dplyr::distinct() |>
+    dplyr::collect() |>
+    na.omit() |>
+    dplyr::arrange(startDay, endDay) |>
+    dplyr::mutate(startDayText = .vectorized_convert_days(as.integer(startDay))) |>
+    dplyr::mutate(endDayText = .vectorized_convert_days(as.integer(endDay))) |>
+    dplyr::mutate(timeRange = paste0(startDayText, " / ", endDayText)) |>
+    dplyr::select(-c(startDayText, endDayText))
+
+  studyResults <- studyResults |>
+    dplyr::left_join(timeRange, by = c("startDay", "endDay"))
+
+  tictoc::tic()
+
+  studyResults <- studyResults |>
     dplyr::mutate(oddsRatio = dplyr::if_else(is.na(oddsRatio), Inf, oddsRatio)) |>
     dplyr::rename(
       covariateId = covariateId,
@@ -1160,6 +1179,8 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
       p = pValue,
       OR = oddsRatio
     )
+
+  tictoc::toc()
 
   return(studyResults)
 }
