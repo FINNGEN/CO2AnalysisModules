@@ -646,7 +646,7 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
     )
 
     #
-    # render the simple plot ####
+    # render the Progress View ####
     #
     output$SimpleCodeWASplot <- ggiraph::renderGirafe({
       shiny::req(r$gg_data)
@@ -791,15 +791,7 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
   return(s)
 }
 
-#
-# label facet periods as months
-#
-
 .label_editor_single <- function(s){
-  limits <- as.numeric(stringr::str_extract_all(s, "[-]*\\d+")[[1]])
-  from <- round(lubridate::days(limits[1])/months(1), 1)
-  to <- round(lubridate::days(limits[2])/months(1), 1)
-  s <- paste0(from, " / ", to, "\nmonths")
   return(s)
 }
 
@@ -807,13 +799,14 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
   l <- unique(studyResult |> dplyr::filter(!is.na(startDay) & !is.na(endDay)) |> dplyr::pull(timeRange))
   l_split <- lapply(l, function(x) {stringr::str_split(x, " ", simplify = TRUE)})
   time_periods <- as.data.frame(do.call(rbind, l_split)) |>
-    dplyr::arrange(as.numeric(V2)) |>
-    dplyr::mutate(period = paste(V1,V2,V3,V4)) |>
+    dplyr::mutate(V1_pos = as.numeric(str_extract(V1, "[-]*\\d+"))) |>
+    dplyr::mutate(V3_pos = as.numeric(str_extract(V3, "[-]*\\d+"))) |>
+    dplyr::arrange(V1_pos, V3_pos) |>
+    dplyr::mutate(period = paste(V1,V2,V3)) |>
     dplyr::pull(period)
 
   return(time_periods)
 }
-
 
 .studyResults_to_gg_data <- function(studyResult){
 
@@ -1107,6 +1100,31 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
   return(gg_girafe)
 }
 
+#
+# Convert days to years and months, e.g. "1 y 3 m"
+#
+
+.vectorized_convert_days <- Vectorize(function(d) {
+  if (is.na(d)) return(NA_character_)
+  is_negative <- d < 0
+  abs_days <- abs(d)
+  start_date <- lubridate::ymd("1900-01-01")
+  end_date <- start_date + lubridate::days(abs_days)
+  diff <- lubridate::as.period(lubridate::interval(start_date, end_date))
+  years <- diff@year
+  months <- diff@month
+  # Format the result
+  result <- case_when(
+    years == 0 & months == 0 ~ paste0("0"),
+    years == 0 & months != 0 ~ paste0(months, "m"),
+    years != 0 & months == 0 ~ paste0(years, "y"),
+    TRUE ~ paste0(years, "y,", months, "m")
+  )
+  if (is_negative) {
+    result <- paste0("-", result)
+  }
+  return(result)
+})
 
 .analysisResultsHandler_to_studyResults <- function(analysisResults){
 
@@ -1132,7 +1150,7 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
     dplyr::collect()
 
   studyResults <- studyResults|>
-    dplyr::mutate(timeRange = paste0("from ", as.integer(startDay)," to ", as.integer(endDay)))|>
+    dplyr::mutate(timeRange = paste0(.vectorized_convert_days(as.integer(startDay)), " / ", .vectorized_convert_days(as.integer(endDay))))|>
     dplyr::mutate(oddsRatio = dplyr::if_else(is.na(oddsRatio), Inf, oddsRatio)) |>
     dplyr::rename(
       covariateId = covariateId,
