@@ -1128,8 +1128,6 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
 
 .analysisResultsHandler_to_studyResults <- function(analysisResults){
 
-  tictoc::tic()
-
   studyResults  <- analysisResults |> dplyr::tbl("timeCodeWASResults")  |>
     dplyr::left_join(
       analysisResults |> dplyr::tbl("timeRef") |>
@@ -1151,8 +1149,6 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
     ) |>
     dplyr::collect()
 
-  tictoc::toc()
-
   timeRange <- studyResults |>
     dplyr::select(startDay, endDay) |>
     dplyr::distinct() |>
@@ -1167,8 +1163,6 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
   studyResults <- studyResults |>
     dplyr::left_join(timeRange, by = c("startDay", "endDay"))
 
-  tictoc::tic()
-
   studyResults <- studyResults |>
     dplyr::mutate(oddsRatio = dplyr::if_else(is.na(oddsRatio), Inf, oddsRatio)) |>
     dplyr::rename(
@@ -1179,8 +1173,6 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
       p = pValue,
       OR = oddsRatio
     )
-
-  tictoc::toc()
 
   return(studyResults)
 }
