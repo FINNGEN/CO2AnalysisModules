@@ -19,6 +19,16 @@ mod_fct_formTimeWindows_ui <- function(id) {
   shiny::tagList(
     shinyjs::useShinyjs(),
     shinyFeedback::useShinyFeedback(),
+    # custom CSS for the pre tags, #e0f7fa
+    shiny::tags$style(HTML("
+    .custom-container pre {
+      background-color: white !important;
+      color: black;
+      padding: 10px;
+      border-radius: 4px;
+      border: 1px solid #004d40;
+    }
+    ")),
     shiny::tags$div(
       style = "margin-left: 30px; margin-right: 50px; min-width: 600px;",
       shiny::br(),
@@ -53,7 +63,7 @@ mod_fct_formTimeWindows_ui <- function(id) {
           3, offset = 0, style="margin-left:10px; margin-top: 0px;",
           shiny::selectizeInput(
             inputId = ns("presets"),
-            label = "Presets",
+            label = "Presets for breakpoints",
             multiple = FALSE,
             choices = c(
               "-5, -1, 1, 5",
@@ -68,17 +78,24 @@ mod_fct_formTimeWindows_ui <- function(id) {
           )
         ),
       ),
+      # text outputs with custom containers
       shiny::fixedRow(
-        shiny::column(12, offset = 0, style = "margin-top: 0px;",
-                      shiny::tags$h5("Time windows (approximate)"),
-                      shiny::verbatimTextOutput(ns("output_approximate_windows")))
+        shiny::div(
+          shiny::column(12, offset = 0, style = "margin-top: 0px;",
+                        shiny::tags$h5("Time windows (approximate)"),
+                        shiny::verbatimTextOutput(ns("output_approximate_windows"))),
+          class = "custom-container"
+        ), # div
       ),
       shiny::fixedRow(
-        shiny::column(12, offset = 0, style = "margin-top: 0px;",
-                      shiny::tags$h5("Time windows (exact, as days)"),
-                      shiny::verbatimTextOutput(ns("output_window_as_days")))
-      ),
-    )
+        shiny::div(
+          shiny::column(12, offset = 0, style = "margin-top: 0px;",
+                        shiny::tags$h5("Time windows (exact, as days)"),
+                        shiny::verbatimTextOutput(ns("output_window_as_days"))),
+          class = "custom-container"
+        ), # div
+      )
+    ), # div
   )
 }
 

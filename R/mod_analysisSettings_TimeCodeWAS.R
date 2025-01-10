@@ -60,7 +60,7 @@ mod_analysisSettings_timeCodeWAS_ui <- function(id) {
     shiny::tags$br(),
     #
     htmltools::hr(),
-    shiny::tags$h4("Pre-ran info"),
+    shiny::tags$h4("Pre-run info"),
     shiny::verbatimTextOutput(ns("info_text"), placeholder = TRUE)
   )
 }
