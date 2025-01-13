@@ -175,7 +175,7 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
     last_plot <- NULL
 
     # fixed values
-    time_periods = .get_time_periods(studyResults)
+    time_periods = .get_time_periods(studyResults) |> dplyr::pull(timeRange)
     gg_data_saved = .studyResults_to_gg_data(studyResults)
 
     # reactive values
@@ -795,22 +795,9 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
   return(s)
 }
 
-.get_time_periods <- function(studyResult){
-  l <- unique(studyResult |> dplyr::filter(!is.na(startDay) & !is.na(endDay)) |> dplyr::pull(timeRange))
-  l_split <- lapply(l, function(x) {stringr::str_split(x, " ", simplify = TRUE)})
-  time_periods <- as.data.frame(do.call(rbind, l_split)) |>
-    dplyr::mutate(V1_pos = as.numeric(str_extract(V1, "[-]*\\d+"))) |>
-    dplyr::mutate(V3_pos = as.numeric(str_extract(V3, "[-]*\\d+"))) |>
-    dplyr::arrange(V1_pos, V3_pos) |>
-    dplyr::mutate(period = paste(V1,V2,V3)) |>
-    dplyr::pull(period)
-
-  return(time_periods)
-}
-
 .studyResults_to_gg_data <- function(studyResult){
 
-  time_periods <- .get_time_periods(studyResult)
+  time_periods <- .get_time_periods(studyResult) |> dplyr::pull(timeRange)
 
   studyResult <- studyResult |>
     dplyr::transmute(
@@ -1126,6 +1113,20 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
   return(result)
 })
 
+.get_time_periods <- function(studyResults){
+  timeRange <- studyResults |>
+    dplyr::select(startDay, endDay) |>
+    dplyr::distinct() |>
+    dplyr::collect() |>
+    na.omit() |>
+    dplyr::arrange(startDay, endDay) |>
+    dplyr::mutate(startDayText = .vectorized_convert_days(as.integer(startDay))) |>
+    dplyr::mutate(endDayText = .vectorized_convert_days(as.integer(endDay))) |>
+    dplyr::mutate(timeRange = paste0(startDayText, " / ", endDayText))
+
+  return(timeRange)
+}
+
 .analysisResultsHandler_to_studyResults <- function(analysisResults){
 
   studyResults  <- analysisResults |> dplyr::tbl("timeCodeWASResults")  |>
@@ -1149,16 +1150,7 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
     ) |>
     dplyr::collect()
 
-  timeRange <- studyResults |>
-    dplyr::select(startDay, endDay) |>
-    dplyr::distinct() |>
-    dplyr::collect() |>
-    na.omit() |>
-    dplyr::arrange(startDay, endDay) |>
-    dplyr::mutate(startDayText = .vectorized_convert_days(as.integer(startDay))) |>
-    dplyr::mutate(endDayText = .vectorized_convert_days(as.integer(endDay))) |>
-    dplyr::mutate(timeRange = paste0(startDayText, " / ", endDayText)) |>
-    dplyr::select(-c(startDayText, endDayText))
+  timeRange <- .get_time_periods(studyResults)
 
   studyResults <- studyResults |>
     dplyr::left_join(timeRange, by = c("startDay", "endDay"))
