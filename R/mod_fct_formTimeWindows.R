@@ -211,13 +211,14 @@ mod_fct_formTimeWindows_server <- function(id, session) {
     })
 
     .format_window <- function(days, window_type = "years"){
-      if(window_type == "months") {
+      months <- round(lubridate::days(days)/months(1), 0)
+      months_remaining <- sign(months) * (abs(months) %% 12)
+
+      if(window_type == "months" & months_remaining != 0) {
         years <- floor(lubridate::days(abs(days))/lubridate::years(1))
       } else {
         years <- round(lubridate::days(abs(days))/lubridate::years(1))
       }
-      months <- round(lubridate::days(days)/months(1), 0)
-      months_remaining <- sign(months) * (abs(months) %% 12)
 
       dplyr::case_when(
         years == 0 & months == 0 ~ paste0("0", stringr::str_sub(window_type, 1, 1)),
