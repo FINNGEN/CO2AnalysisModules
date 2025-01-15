@@ -104,18 +104,6 @@ mod_resultsVisualisation_TimeCodeWAS_ui <- function(id) {
             shiny::downloadButton(ns("downloadPlot2"), "Download")
           ),
         ),
-        # shiny::tabPanel(
-        #   "Table",
-        #   shiny::div(
-        #     style = "margin-top: 20px; margin-bottom: 10px;",
-        #     DT::DTOutput(ns("demographicsData")),
-        #   ),
-        #   shiny::div(
-        #     style = "margin-top: 10px; margin-bottom: 10px;",
-        #     shiny::downloadButton(ns("downloadDataFiltered"), "Download filtered"),
-        #     shiny::downloadButton(ns("downloadDataAll"), "Download all"),
-        #   )
-        # ),
         shiny::tabPanel(
           "Table",
           shiny::div(
@@ -230,7 +218,18 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
               multiple = TRUE,
               options = list(`actions-box` = TRUE, `selected-text-format` = "count > 3", `count-selected-text` = "{0} model types selected")
             )
-          )
+          ), # column
+          shiny::column(
+            width = 2,
+            shinyWidgets::pickerInput(
+              ns("time_period"),
+              "Time periods",
+              choices = time_periods,
+              selected = time_periods,
+              multiple = TRUE,
+              options = list(`actions-box` = TRUE, `selected-text-format` = "count > 3", `count-selected-text` = "{0} time periods selected")
+            )
+          ) # column
         ), # fluidRow
         shiny::div(style = "margin-top: 20px; margin-bottom: 10px;"),
         shiny::fluidRow(
@@ -324,11 +323,20 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
             | is.na(OR)
           ) |>
           dplyr::filter(nCasesYes >= input$n_cases)  |>
-          dplyr::filter(!dplyr::if_any(c("p", "OR"), is.na) | input$na_anywhere)
+          dplyr::filter(!dplyr::if_any(c("p", "OR"), is.na) | input$na_anywhere) |>
+          dplyr::filter(!is.null(input$time_period) & time_period %in% input$time_period)
 
         # update gg_data
         r$gg_data <- gg_data
+        time_periods <- input$time_period
       }
+    })
+
+    shiny::observe({
+      shiny::req(input$time_period)
+
+      # cat("time_period: ", input$time_period, "\n")
+      time_periods <- input$time_period
     })
 
     #
@@ -344,7 +352,6 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
         shinyjs::enable("or_range")
       }
     })
-
 
     #
     # updates ggirafe plot when r$gg_data or r$show_labels or r$show_labels_cases_per changes
@@ -794,6 +801,10 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
 .label_editor_single <- function(s){
   return(s)
 }
+
+#
+#
+#
 
 .studyResults_to_gg_data <- function(studyResult){
 
