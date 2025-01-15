@@ -527,6 +527,8 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
           nCasesYes, nControlsYes, meanCases, meanControls, sdCases, sdControls,
           OR, pLog10, beta, notes)
 
+      ParallelLogger::logInfo("df, n = ", nrow(df))
+
       reactable::reactable(
         df,
         filterable = TRUE,
@@ -700,6 +702,8 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
 
       gg_data <- gg_data |>
         left_join(items, by = c("name", "analysisName"))
+
+      ParallelLogger::logInfo("ProgressView, n = ", nrow(gg_data))
 
       gg_plot <- ggplot2::ggplot(gg_data, ggplot2::aes(x = time_period_jittered, y = pLog10_jittered,  group = data_id, fill = color_group, color = color_group)) +
         {if(input$connect_dots)
@@ -882,6 +886,8 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
     point_scale,
     label_top_n
 ){
+  ParallelLogger::logInfo("ProportionsView, n = ", nrow(gg_data))
+
   # adjust the label area according to facet width
   facet_max_x <- max( gg_data$controls_per, 0.03, na.rm = TRUE)
   facet_max_y <- max( gg_data$cases_per, 0.03, na.rm = TRUE)
@@ -1165,6 +1171,8 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
       p = pValue,
       OR = oddsRatio
     )
+
+  ParallelLogger::logInfo("studyResults, n = ", nrow(studyResults))
 
   return(studyResults)
 }
