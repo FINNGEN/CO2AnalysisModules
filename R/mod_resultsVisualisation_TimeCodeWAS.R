@@ -170,8 +170,6 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
 
     atlasUrl <- "https://atlas.app.finngen.fi"
 
-    browser()
-
     studyResults  <- .analysisResultsHandler_to_studyResults(analysisResults)
 
     last_plot <- NULL
