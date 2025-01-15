@@ -171,7 +171,7 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
     atlasUrl <- "https://atlas.app.finngen.fi"
 
     studyResults  <- .analysisResultsHandler_to_studyResults(analysisResults)
-    ParallelLogger::log_info("studyResults", studyResults)
+    ParallelLogger::logInfo("studyResults", studyResults)
 
     last_plot <- NULL
 
