@@ -60,9 +60,21 @@ mod_resultsVisualisation_TimeCodeWAS_ui <- function(id) {
                              )
                          )
                        ), # column
+                       shiny::column(
+                         width = 2,
+                         div(style = "margin-top: 10px;",
+                             div(style = "margin-top: 5px; margin-right: 5px;"),
+                             div(style = "margin-top: 20px;",
+                                 shiny::actionButton(
+                                   ns("unselect"), label = "Unselect")
+                             )
+                         )
+                       ), # column
                      )
           ),
-          ggiraph::girafeOutput(ns("codeWASplot"), width = "100%", height = "100%"),
+          shinycssloaders::withSpinner(
+            ggiraph::girafeOutput(ns("codeWASplot"), width = "100%", height = "100%")
+          ),
           shiny::div(
             style = "margin-top: 10px; margin-bottom: 10px;",
             shiny::downloadButton(ns("downloadPlot"), "Download")
@@ -338,6 +350,12 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
       shiny::req(input$time_period)
 
       time_periods <- input$time_period
+      r$line_to_plot <- NULL
+    })
+
+    shiny::observe({
+      shiny::req(input$unselect)
+
       r$line_to_plot <- NULL
     })
 

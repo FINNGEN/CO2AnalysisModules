@@ -17,6 +17,7 @@ Imports:
     HadesExtras,
     ParallelLogger, 
     shinydashboard,
+    shinycssloaders,
     UpSetR,
     ggplot2,
     shiny,
