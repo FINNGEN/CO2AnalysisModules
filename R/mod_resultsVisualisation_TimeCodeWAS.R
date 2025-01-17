@@ -118,7 +118,7 @@ mod_resultsVisualisation_TimeCodeWAS_ui <- function(id) {
         ) # tabPanel
       ) # tabsetPanel
     ) # tagList
-  )
+  ) # fluidPage
 
 }
 
@@ -335,7 +335,6 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
     shiny::observe({
       shiny::req(input$time_period)
 
-      # cat("time_period: ", input$time_period, "\n")
       time_periods <- input$time_period
     })
 
@@ -675,7 +674,7 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
       )
 
       gg_data <- r$gg_data |>
-        dplyr::mutate(time_period = factor(time_period, levels = time_periods, labels = time_periods)) |>
+        dplyr::mutate(time_period = factor(time_period, levels = input$time_period, labels = input$time_period)) |>
         dplyr::mutate(name = factor(name, levels = unique(name))) |>
         dplyr::mutate(name = stringr::str_remove_all(name, "'")) |>
         dplyr::mutate(label = stringr::str_remove_all(label, "'")) |>
@@ -987,7 +986,7 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
     ) +
     # ggplot2::coord_fixed() +
     ggplot2::facet_grid(
-      .~GROUP, drop = FALSE, scales = "fixed",
+      .~GROUP, drop = TRUE, scales = "fixed",
       labeller = ggplot2::labeller(GROUP = .label_editor)
     )+
     ggplot2::theme_minimal()+
@@ -1122,7 +1121,7 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
     years == 0 & months == 0 ~ paste0("0"),
     years == 0 & months != 0 ~ paste0(months, "m"),
     years != 0 & months == 0 ~ paste0(years, "y"),
-    TRUE ~ paste0(years, "y,", months, "m")
+    TRUE ~ paste0(years, "y ", months, "m")
   )
   if (is_negative) {
     result <- paste0("-", result)
