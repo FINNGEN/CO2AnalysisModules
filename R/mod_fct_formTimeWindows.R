@@ -82,19 +82,19 @@ mod_fct_formTimeWindows_ui <- function(id) {
       shiny::fixedRow(
         shiny::div(
           shiny::column(12, offset = 0, style = "margin-top: 0px;",
-                        shiny::tags$h5("Time windows (approximate)"),
+                        shiny::tags$h5("Time windows (approximate, no overlap)"),
                         shiny::verbatimTextOutput(ns("output_approximate_windows"))),
           class = "custom-container"
         ), # div
-      ),
-      shiny::fixedRow(
-        shiny::div(
-          shiny::column(12, offset = 0, style = "margin-top: 0px;",
-                        shiny::tags$h5("Time windows (exact, as days)"),
-                        shiny::verbatimTextOutput(ns("output_window_as_days"))),
-          class = "custom-container"
-        ), # div
-      )
+      ) # fixedRow
+      # shiny::fixedRow(
+      #   shiny::div(
+      #     shiny::column(12, offset = 0, style = "margin-top: 0px;",
+      #                   shiny::tags$h5("Time windows (exact, as days)"),
+      #                   shiny::verbatimTextOutput(ns("output_window_as_days"))),
+      #     class = "custom-container"
+      #   ), # div
+      # ) # fixedRow
     ), # div
   )
 }
@@ -210,6 +210,9 @@ mod_fct_formTimeWindows_server <- function(id, session) {
       paste0(output, "\n")
     })
 
+    #
+    # helper function to format the window
+    #
     .format_window <- function(days, window_type = "years"){
       months <- round(lubridate::days(days)/months(1), 0)
       months_remaining <- sign(months) * (abs(months) %% 12)
@@ -224,7 +227,7 @@ mod_fct_formTimeWindows_server <- function(id, session) {
         years == 0 & months == 0 ~ paste0("0", stringr::str_sub(window_type, 1, 1)),
         years == 0 ~ paste0(months, "m"),
         months == 0 ~ paste0(years, "y"),
-        TRUE ~ paste0(sign(days) * years, "y", ifelse(months_remaining != 0, paste0(abs(months_remaining), "m"), ""))
+        TRUE ~ paste0(sign(days) * years, "y", ifelse(months_remaining != 0, paste0(" ", abs(months_remaining), "m"), ""))
       )
     }
 
