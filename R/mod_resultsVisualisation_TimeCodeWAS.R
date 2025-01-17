@@ -162,6 +162,8 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
 
     last_plot <- NULL
 
+    ParallelLogger::logInfo("TimeCodeWAS server started")
+
     # fixed values
     time_periods = .get_time_periods(studyResults) |> dplyr::pull(timeRange)
     gg_data_saved = .studyResults_to_gg_data(studyResults)
@@ -336,6 +338,7 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
       shiny::req(input$time_period)
 
       time_periods <- input$time_period
+      r$line_to_plot <- NULL
     })
 
     #
@@ -430,8 +433,8 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
         line_to_plot <- r$gg_data |>
           dplyr::filter(code %in% selected_rows_clean) |>
           dplyr::arrange(code, time_period) |>
-          dplyr::mutate(position = match(time_period, time_periods)) |>
-          dplyr::mutate(name = ifelse(!is.na(position), paste0("panel-1-", position), "NA")) |>
+          dplyr::mutate(position = match(time_period, unique(as.character(r$gg_data$time_period)))) |>
+          dplyr::mutate(name = ifelse(!is.na(position), paste0("panel-1-", position), "NA"))  |>
           dplyr::select(code, domain, name, cases_per, controls_per, data_id)
         # update reactive values
         r$line_to_plot <- line_to_plot
@@ -532,8 +535,6 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
           GROUP, name, conceptCode, vocabularyId, code, analysisName, domain, upIn,
           nCasesYes, nControlsYes, meanCases, meanControls, sdCases, sdControls,
           OR, pLog10, beta, notes)
-
-      ParallelLogger::logInfo("df, n = ", nrow(df))
 
       reactable::reactable(
         df,
@@ -708,8 +709,6 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
 
       gg_data <- gg_data |>
         left_join(items, by = c("name", "analysisName"))
-
-      ParallelLogger::logInfo("ProgressView, n = ", nrow(gg_data))
 
       gg_plot <- ggplot2::ggplot(gg_data, ggplot2::aes(x = time_period_jittered, y = pLog10_jittered,  group = data_id, fill = color_group, color = color_group)) +
         {if(input$connect_dots)
@@ -896,8 +895,9 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
     point_scale,
     label_top_n
 ){
-  ParallelLogger::logInfo("ProportionsView, n = ", nrow(gg_data))
-
+  if(nrow(gg_data) == 0){
+    return(NULL)
+  }
   # adjust the label area according to facet width
   facet_max_x <- max( gg_data$controls_per, 0.03, na.rm = TRUE)
   facet_max_y <- max( gg_data$cases_per, 0.03, na.rm = TRUE)
@@ -1181,8 +1181,6 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
       p = pValue,
       OR = oddsRatio
     )
-
-  ParallelLogger::logInfo("studyResults, n = ", nrow(studyResults))
 
   return(studyResults)
 }
