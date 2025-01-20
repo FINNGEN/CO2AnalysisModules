@@ -170,6 +170,7 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
 
     atlasUrl <- "https://atlas.app.finngen.fi"
 
+    # reactlogShow
     # options(shiny.reactlog = TRUE)
 
     # reactive values
@@ -466,12 +467,11 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
     })
 
     #
-    # update time periods
+    # remove lines from the Proportions View
     #
     shiny::observe({
       shiny::req(input$time_period)
 
-      r$timePeriods <- input$time_period
       r$line_to_plot <- NULL
     })
 
