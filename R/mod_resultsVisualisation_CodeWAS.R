@@ -418,22 +418,6 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
       p_limit <- -log(0.05/(nrow(r$codeWASData) - n_no_test))
 
       p <- ggplot2::ggplot(data = df, mapping = ggplot2::aes(x = beta, y = pLog10, color = direction)) +
-        ggiraph::geom_point_interactive(
-          ggplot2::aes(
-            data_id = data_id,
-            tooltip = paste("Analysis: ", analysisName, "<br>",
-                            "Covariate: ", covariateName, "<br>",
-                            "Concept code: ", conceptCode, "<br>",
-                            "Vocabulary: ", vocabularyId, "<br>",
-                            "beta: ", signif(beta, digits = 3), "<br>",
-                            "OR: ", signif(oddsRatio, digits = 3), "<br>",
-                            "p-value: ", signif(pValue, digits = 2), "<br>"
-            )
-          ),
-          hover_nearest = TRUE,
-          size = 1.5,
-          alpha = 0.5
-        ) +
         # show the p-value limit
         ggplot2::geom_hline(aes(yintercept = p_limit), col = "red", linetype = 'dashed') +
         {if(input$top_10)
@@ -455,6 +439,23 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
             segment.alpha = 0.5
           )} +
         ggplot2::geom_vline(xintercept = 0, col = "red", linetype = 'dashed') +
+        ggiraph::geom_point_interactive(
+          ggplot2::aes(
+            data_id = data_id,
+            tooltip = paste("Analysis: ", analysisName, "<br>",
+                            "Covariate: ", covariateName, "<br>",
+                            "Concept code: ", conceptCode, "<br>",
+                            "Vocabulary: ", vocabularyId, "<br>",
+                            "beta: ", signif(beta, digits = 3), "<br>",
+                            "OR: ", signif(oddsRatio, digits = 3), "<br>",
+                            "p-value: ", signif(pValue, digits = 2), "<br>"
+            )
+          ),
+          hover_nearest = TRUE,
+          size = 1.5,
+          alpha = 0.5,
+          stroke = 0.2
+        ) +
         ggplot2::scale_x_continuous() +
         ggplot2::scale_y_continuous(transform = "log10", labels = function(x)round(x,1), expand = ggplot2::expansion(mult = c(0.1, 0.3))) +
         ggplot2::coord_cartesian(xlim = c(-5, 5), ylim = range(df$pLog10)) +
@@ -490,7 +491,10 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
           ggiraph::opts_zoom(min = 0.5, max = 5),
           ggiraph::opts_sizing(rescale = TRUE, width = 1),
           ggiraph::opts_toolbar(saveaspng = TRUE, delay_mouseout = 2000),
-          ggiraph::opts_hover(css = "fill: black;"),
+          ggiraph::opts_hover(
+            css = "fill-opacity:1;fill:red;stroke:black;",
+            reactive = FALSE
+          ),
           ggiraph::opts_toolbar(
             saveaspng = FALSE,
             hidden = c("zoom", "reset", "zoomin", "zoomout", "pan", "lasso", "select", "lasso_select", "lasso_deselect", "box_select", "box_zoom", "reset", "saveaspng"),
