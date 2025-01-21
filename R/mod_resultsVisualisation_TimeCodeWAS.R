@@ -460,9 +460,6 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
           dplyr::filter(!dplyr::if_any(c("p", "OR"), is.na) | input$na_anywhere) |>
           dplyr::filter(!is.null(input$time_period) & time_period %in% input$time_period)
 
-        # # update gg_data
-        # r$gg_data <- gg_data
-        # time_periods <- input$time_period
       }
     })
 
@@ -690,14 +687,10 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
         gg_plot <- gg_fig
       }
 
-      #
       # convert ggplot to girafe object
-      #
       gg_girafe <- ggiraph::girafe(ggobj = gg_plot, width_svg = 15, height_svg = 6)
 
-      #
       # modify girafe object
-      #
       gg_girafe <- ggiraph::girafe_options(
         gg_girafe,
         ggiraph::opts_sizing(rescale = TRUE, width = 1.0),
@@ -759,18 +752,18 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
         shiny::showModal(
           shiny::modalDialog(
             shiny::div(
-            tags$style(HTML(".modal-dialog {width: 90%; max-width: 90%;}")),
-            DT::renderDataTable({
-              .renderTable(df_lasso)
-            }),
-            size = "l",
-            easyClose = FALSE,
-            title = paste0("Entries (", nrow(df_lasso), ")"),
-            footer = shiny::modalButton("Close"),
-            options = list(
-              autowidth = TRUE
-            )
-          ))
+              tags$style(HTML(".modal-dialog {width: 90%; max-width: 90%;}")),
+              DT::renderDataTable({
+                .renderTable(df_lasso)
+              }),
+              size = "l",
+              easyClose = FALSE,
+              title = paste0("Entries (", nrow(df_lasso), ")"),
+              footer = shiny::modalButton("Close"),
+              options = list(
+                autowidth = TRUE
+              )
+            ))
         )
         r$line_to_plot <- NULL
         r$force_update <- !r$force_update
@@ -811,41 +804,41 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
           nCasesYes, nControlsYes, meanCases, meanControls, sdCases, sdControls,
           OR, mlogp, beta, notes)
 
-        DT::datatable(
-          df,
-          colnames = c(
-            'Time ID' = 'GROUP',
-            'Covariate Name' = 'name',
-            'Analysis Name' = 'analysisName',
-            'Domain' = 'domain',
-            'Type' = 'upIn',
-            'N cases' = 'nCasesYes',
-            'N ctrls' = 'nControlsYes',
-            'Ratio|Mean cases' = 'meanCases',
-            'Ratio|Mean ctrls' = 'meanControls',
-            'SD cases' = 'sdCases',
-            'SD ctrls' = 'sdControls',
-            'OR' = 'OR',
-            'mlogp' = 'mlogp',
-            'Beta' = 'beta',
-            'Notes' = 'notes'
-          ),
-          options = list(
-            order = list(list(12, 'desc'), list(11, 'desc')), # order by p-value, then OR
-            columnDefs = list(
-              list(width = '70px', targets = c(2,3)), # name, notes
-              list(width = '25px', targets = c(6,7))
-              # list(width = '80px', targets = c(1)), # analysisName
-              # list(width = '80px', targets = c(4)), # domain
-              # list(width = '30px', targets = c(4)), # upIn
-              # list(width = '40px', targets = c(6,7,8, 9, 10,11)), # GROUP, nCasesYes, nControlsYes, meanCases, meanControls, sdCases, sdControls
-              # list(width = '50px', targets = c(12, 13)) # pValue, OR
-            )
-          ),
-          escape = FALSE,
-          selection = 'none',
-          rownames = FALSE
-        ) |>
+      DT::datatable(
+        df,
+        colnames = c(
+          'Time ID' = 'GROUP',
+          'Covariate Name' = 'name',
+          'Analysis Name' = 'analysisName',
+          'Domain' = 'domain',
+          'Type' = 'upIn',
+          'N cases' = 'nCasesYes',
+          'N ctrls' = 'nControlsYes',
+          'Ratio|Mean cases' = 'meanCases',
+          'Ratio|Mean ctrls' = 'meanControls',
+          'SD cases' = 'sdCases',
+          'SD ctrls' = 'sdControls',
+          'OR' = 'OR',
+          'mlogp' = 'mlogp',
+          'Beta' = 'beta',
+          'Notes' = 'notes'
+        ),
+        options = list(
+          order = list(list(12, 'desc'), list(11, 'desc')), # order by p-value, then OR
+          columnDefs = list(
+            list(width = '70px', targets = c(2,3)), # name, notes
+            list(width = '25px', targets = c(6,7))
+            # list(width = '80px', targets = c(1)), # analysisName
+            # list(width = '80px', targets = c(4)), # domain
+            # list(width = '30px', targets = c(4)), # upIn
+            # list(width = '40px', targets = c(6,7,8, 9, 10,11)), # GROUP, nCasesYes, nControlsYes, meanCases, meanControls, sdCases, sdControls
+            # list(width = '50px', targets = c(12, 13)) # pValue, OR
+          )
+        ),
+        escape = FALSE,
+        selection = 'none',
+        rownames = FALSE
+      ) |>
         DT::formatSignif(columns = c('mlogp', 'OR'), digits = 3) |>
         DT::formatStyle('Covariate Name', cursor = 'pointer' )
     }
@@ -1100,7 +1093,6 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
           size = "none"
         )
 
-      # gg_plot <- ggplotify::as.ggplot(gg_plot)
       r$savedProgressView <- gg_plot
 
       gg_girafe <- ggiraph::girafe(ggobj = gg_plot, height_svg = 6, width_svg = 14)
@@ -1128,63 +1120,63 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
 
 
   })
+
+  #
+  # utility functions
+  #
+
+  .label_editor <- function(s){
+    for(i in 1:length(s)){
+      s[[i]] <- .label_editor_single(s[[i]])
+    }
+    return(s)
+  }
+
+  .label_editor_single <- function(s){
+    return(s)
+  }
+
+  #
+  # Convert days to years and months, e.g. "1 y 3 m"
+  #
+
+  .vectorized_convert_days <- Vectorize(function(d) {
+    if (is.na(d)) return(NA_character_)
+    is_negative <- d < 0
+    abs_days <- abs(d)
+    start_date <- lubridate::ymd("1900-01-01")
+    end_date <- start_date + lubridate::days(abs_days)
+    diff <- lubridate::as.period(lubridate::interval(start_date, end_date))
+    years <- diff@year
+    months <- diff@month
+    # Format the result
+    result <- case_when(
+      years == 0 & months == 0 ~ paste0("0"),
+      years == 0 & months != 0 ~ paste0(months, "m"),
+      years != 0 & months == 0 ~ paste0(years, "y"),
+      TRUE ~ paste0(years, "y ", months, "m")
+    )
+    if (is_negative) {
+      result <- paste0("-", result)
+    }
+    return(result)
+  })
+
+  .get_time_periods <- function(studyResults){
+    timeRange <- studyResults |>
+      dplyr::select(startDay, endDay) |>
+      dplyr::distinct() |>
+      dplyr::collect() |>
+      na.omit() |>
+      dplyr::arrange(startDay, endDay) |>
+      dplyr::mutate(startDayText = .vectorized_convert_days(as.integer(startDay))) |>
+      dplyr::mutate(endDayText = .vectorized_convert_days(as.integer(endDay))) |>
+      dplyr::mutate(timeRange = paste0(startDayText, " / ", endDayText))
+
+    return(timeRange)
+  }
+
 } # mod_timeCodeWASPlot_server
-
-#
-# utility functions
-#
-
-.label_editor <- function(s){
-  for(i in 1:length(s)){
-    s[[i]] <- .label_editor_single(s[[i]])
-  }
-  return(s)
-}
-
-.label_editor_single <- function(s){
-  return(s)
-}
-
-#
-# Convert days to years and months, e.g. "1 y 3 m"
-#
-
-.vectorized_convert_days <- Vectorize(function(d) {
-  if (is.na(d)) return(NA_character_)
-  is_negative <- d < 0
-  abs_days <- abs(d)
-  start_date <- lubridate::ymd("1900-01-01")
-  end_date <- start_date + lubridate::days(abs_days)
-  diff <- lubridate::as.period(lubridate::interval(start_date, end_date))
-  years <- diff@year
-  months <- diff@month
-  # Format the result
-  result <- case_when(
-    years == 0 & months == 0 ~ paste0("0"),
-    years == 0 & months != 0 ~ paste0(months, "m"),
-    years != 0 & months == 0 ~ paste0(years, "y"),
-    TRUE ~ paste0(years, "y ", months, "m")
-  )
-  if (is_negative) {
-    result <- paste0("-", result)
-  }
-  return(result)
-})
-
-.get_time_periods <- function(studyResults){
-  timeRange <- studyResults |>
-    dplyr::select(startDay, endDay) |>
-    dplyr::distinct() |>
-    dplyr::collect() |>
-    na.omit() |>
-    dplyr::arrange(startDay, endDay) |>
-    dplyr::mutate(startDayText = .vectorized_convert_days(as.integer(startDay))) |>
-    dplyr::mutate(endDayText = .vectorized_convert_days(as.integer(endDay))) |>
-    dplyr::mutate(timeRange = paste0(startDayText, " / ", endDayText))
-
-  return(timeRange)
-}
-
 
 
 
