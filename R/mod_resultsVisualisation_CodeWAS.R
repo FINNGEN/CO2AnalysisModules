@@ -466,6 +466,11 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
         ggplot2::scale_color_manual(values = c("cases" = "#E41A1C", "controls" = "#377EB8", "n.s." = "lightgrey")) + #, guide = "none") +
         ggplot2::theme_minimal() +
         ggplot2::theme(
+          text = ggplot2::element_text(size = 8),
+          plot.title = ggplot2::element_text(size = 12),
+          plot.caption = ggplot2::element_text(size = 8),
+          axis.text.x = ggplot2::element_text(size = 8),
+          axis.text.y = ggplot2::element_text(size = 8),
           legend.key.height = grid::unit(3, "mm"),
           legend.key.width = grid::unit(7, "mm"),
           legend.title = ggplot2::element_text(size = 8),
