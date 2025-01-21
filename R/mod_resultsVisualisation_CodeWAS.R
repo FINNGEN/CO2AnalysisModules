@@ -55,7 +55,9 @@ mod_resultsVisualisation_CodeWAS_ui <- function(id) {
             )
           ), # column
           shiny::div(style = "height: 100%; width: 100%; ",
-                     ggiraph::girafeOutput(ns("codeWASplot"))
+                     shinycssloaders::withSpinner(
+                       ggiraph::girafeOutput(ns("codeWASplot"))
+                     )
           ),
           shiny::div(
             style = "margin-top: 10px; margin-bottom: 10px;",
@@ -467,8 +469,8 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
         ggplot2::theme_minimal() +
         ggplot2::theme(
           text = ggplot2::element_text(size = 8),
-          plot.title = ggplot2::element_text(size = 12),
-          plot.caption = ggplot2::element_text(size = 8),
+          plot.title = ggplot2::element_text(size = 10),
+          plot.caption = ggplot2::element_text(size = 6),
           axis.text.x = ggplot2::element_text(size = 8),
           axis.text.y = ggplot2::element_text(size = 8),
           legend.key.height = grid::unit(3, "mm"),
