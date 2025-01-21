@@ -54,7 +54,7 @@ mod_resultsVisualisation_CodeWAS_ui <- function(id) {
                 )
             )
           ), # column
-          shiny::div(style = "height: 100%; width: 800px; margin-left:40px;",
+          shiny::div(style = "height: 100%; width: 100%; ",
                      ggiraph::girafeOutput(ns("codeWASplot"))
           ),
           shiny::div(
@@ -430,7 +430,8 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
           ),
           hover_nearest = TRUE,
           size = 1.5,
-          alpha = 0.4) +
+          alpha = 0.5
+        ) +
         # show the p-value limit
         ggplot2::geom_hline(aes(yintercept = p_limit), col = "red", linetype = 'dashed') +
         {if(input$top_10)
@@ -447,7 +448,9 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
             force = 1,
             size = grid::unit(3, "mm"),
             # hjust = 0.1,
-            box.padding = grid::unit(3, "mm")
+            box.padding = grid::unit(3, "mm"),
+            segment.linetype = "dashed",
+            segment.alpha = 0.5
           )} +
         ggplot2::geom_vline(xintercept = 0, col = "red", linetype = 'dashed') +
         ggplot2::scale_x_continuous() +
@@ -472,7 +475,7 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
         options = list(
           ggiraph::opts_tooltip(use_fill = FALSE),
           ggiraph::opts_zoom(min = 0.5, max = 5),
-          ggiraph::opts_sizing(rescale = FALSE, width = 1),
+          ggiraph::opts_sizing(rescale = TRUE, width = 1),
           ggiraph::opts_toolbar(saveaspng = TRUE, delay_mouseout = 2000),
           ggiraph::opts_hover(css = "fill: black;"),
           ggiraph::opts_toolbar(
