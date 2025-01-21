@@ -454,7 +454,7 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
           )} +
         ggplot2::geom_vline(xintercept = 0, col = "red", linetype = 'dashed') +
         ggplot2::scale_x_continuous() +
-        ggplot2::scale_y_continuous(transform = "log10", labels = function(x)round(x,1), expand = ggplot2::expansion(mult = c(0.1, 0.2))) +
+        ggplot2::scale_y_continuous(transform = "log10", labels = function(x)round(x,1), expand = ggplot2::expansion(mult = c(0.1, 0.3))) +
         ggplot2::coord_cartesian(xlim = c(-5, 5), ylim = range(df$pLog10)) +
         ggplot2::labs(
           x = "beta",
@@ -464,7 +464,13 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
           subtitle = paste("-log( 0.05 / (number of covariates))")
         ) +
         ggplot2::scale_color_manual(values = c("cases" = "#E41A1C", "controls" = "#377EB8", "n.s." = "lightgrey")) + #, guide = "none") +
-        ggplot2::theme_minimal()
+        ggplot2::theme_minimal() +
+        ggplot2::theme(
+          legend.key.height = grid::unit(3, "mm"),
+          legend.key.width = grid::unit(7, "mm"),
+          legend.title = ggplot2::element_text(size = 8),
+          legend.text = ggplot2::element_text(size = 8)
+        )
 
       r$lastPlot <- p
 
