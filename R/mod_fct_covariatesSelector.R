@@ -6,6 +6,7 @@
 #' @param inputId The input ID for the UI component.
 #' @param label The label for the UI component.
 #' @param analysisIdsToShow A vector of analysis IDs to show in the selector. If NULL, all analysis IDs are shown.
+#' @param analysisRegexToShowTibble A tibble with the analysis IDs, names and regex to show in the selector. If NULL, no analysis IDs are shown.
 #' @param analysisIdsSelected A vector of analysis IDs to be selected by default. If NULL, all analysis IDs are selected.
 #'
 #' @return A shiny UI component for selecting covariates.
