@@ -124,7 +124,10 @@ mod_resultsVisualisation_TimeCodeWAS_ui <- function(id) {
           "Table",
           shiny::div(
             style = "margin-top: 20px; margin-bottom: 10px;",
-            reactable::reactableOutput(ns("reactableData")),
+            shinycssloaders::withSpinner(
+              reactable::reactableOutput(ns("reactableData")),
+              proxy.height = "400px"
+            )
           ),
           shiny::div(
             style = "margin-top: 10px; margin-bottom: 10px;",

@@ -69,7 +69,10 @@ mod_resultsVisualisation_CodeWAS_ui <- function(id) {
           "Table",
           shiny::div(
             style = "margin-top: 10px; margin-bottom: 10px;",
-            reactable::reactableOutput(ns("codeWAStable")),
+            shinycssloaders::withSpinner(
+              reactable::reactableOutput(ns("codeWAStable")),
+              proxy.height = "400px"
+            )
           ),
           shiny::div(
             style = "margin-top: 10px; margin-bottom: 10px;",
