@@ -18,7 +18,12 @@
 #' @importFrom checkmate assertNumeric assertSubset
 #' @export
 #'
-mod_fct_covariateSelector_ui <- function(inputId, label = NULL, analysisIdsToShow = NULL, analysisIdsSelected = NULL) {
+mod_fct_covariateSelector_ui <- function(inputId, label = NULL, analysisIdsToShow = NULL, analysisRegexToShow = NULL, analysisIdsSelected = NULL) {
+
+  if(!is.null(analysisRegexToShow)){
+    analysisRegexToShow  |> checkmate::assertDataFrame()
+    analysisRegexToShow  |> names() |> checkmate::assertSetEqual(c("analysisName", "analysisRegex"))
+  }
 
   if(is.null(analysisIdsToShow)) {
     analysisIdsToShow  <- HadesExtras::getListOfAnalysis()$analysisId
@@ -28,9 +33,9 @@ mod_fct_covariateSelector_ui <- function(inputId, label = NULL, analysisIdsToSho
   }
 
   checkmate::assertNumeric(analysisIdsToShow)
-  checkmate::assertNumeric(analysisIdsSelected)
+  checkmate::assertCharacter(analysisIdsSelected)
   checkmate::assertSubset(analysisIdsToShow, HadesExtras::getListOfAnalysis()$analysisId)
-  checkmate::assertSubset(analysisIdsSelected, analysisIdsToShow)
+  checkmate::assertSubset(analysisIdsSelected, c(analysisIdsToShow |> as.character(), analysisRegexToShow$analysisRegex))
 
   analysisNamePretty  <- tibble::tribble(
     ~analysisName, ~analysisNamePretty,
@@ -50,8 +55,21 @@ mod_fct_covariateSelector_ui <- function(inputId, label = NULL, analysisIdsToSho
     dplyr::mutate(analysisNamePretty = dplyr::if_else(is.na(analysisNamePretty), analysisName, analysisNamePretty)) |>
     dplyr::mutate(analysisNamePretty = stringr::str_replace_all(analysisNamePretty, "([a-z])([A-Z])", "\\1 \\2")) |>
     dplyr::mutate(analysisNamePretty = paste0(analysisNamePretty, " [", dplyr::if_else(isBinary, "Binary", "Continuous"), dplyr::if_else(isSourceConcept, ", Source Codes", ""), "]")) |>
-    dplyr::filter(analysisId %in% analysisIdsToShow) |>
-    dplyr::select(group = domainId, analysisId, analysisNamePretty)
+    dplyr::filter(analysisId %in% analysisIdsToShow)|> 
+    dplyr::mutate(analysisId = as.character(analysisId)) |>
+    dplyr::select(group = domainId, analysisId, analysisNamePretty) 
+
+  if(!is.null(analysisRegexToShow)){
+    analysisToShow <- dplyr::bind_rows(
+      analysisToShow,
+      analysisRegexToShow |>
+      dplyr::transmute(
+        group  = "Cohort Based",
+        analysisId = analysisRegex,
+        analysisNamePretty = analysisName
+      )
+    )
+  }
 
   # named list with group names and sublist of analysisNamePretty and analysisId
   choices <- analysisToShow |>
