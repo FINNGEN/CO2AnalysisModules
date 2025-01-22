@@ -431,7 +431,8 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
             ),
             color = "black",
             max.overlaps = Inf,
-            force = 1,
+            force = 0.5,
+            force_pull = 0.5,
             size = grid::unit(3, "mm"),
             # hjust = 0.1,
             box.padding = grid::unit(3, "mm"),
@@ -470,14 +471,14 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
         ggplot2::theme_minimal() +
         ggplot2::theme(
           text = ggplot2::element_text(size = 8),
-          plot.title = ggplot2::element_text(size = 10),
-          plot.caption = ggplot2::element_text(size = 6),
-          axis.text.x = ggplot2::element_text(size = 8),
-          axis.text.y = ggplot2::element_text(size = 8),
+          plot.title = ggplot2::element_text(size = 8),
+          plot.caption = ggplot2::element_text(size = 4),
+          axis.text.x = ggplot2::element_text(size = 7),
+          axis.text.y = ggplot2::element_text(size = 7),
           legend.key.height = grid::unit(3, "mm"),
           legend.key.width = grid::unit(7, "mm"),
-          legend.title = ggplot2::element_text(size = 8),
-          legend.text = ggplot2::element_text(size = 8)
+          legend.title = ggplot2::element_text(size = 7),
+          legend.text = ggplot2::element_text(size = 7)
         )
 
       r$lastPlot <- p
