@@ -1039,7 +1039,7 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
 
       r$savedProgressView <- gg_plot
 
-      gg_girafe <- ggiraph::girafe(ggobj = gg_plot, height_svg = 6, width_svg = 14)
+      gg_girafe <- ggiraph::girafe(ggobj = gg_plot, height_svg = 7, width_svg = 14) # plot size in inches
       gg_girafe <- ggiraph::girafe_options(
         gg_girafe,
         ggiraph::opts_sizing(rescale = TRUE, width = 1.0),
