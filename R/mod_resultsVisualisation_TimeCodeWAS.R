@@ -993,7 +993,7 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
         {if(input$show_labels)
           ggrepel::geom_text_repel(
             data = gg_data |> dplyr::filter(color_group != "11"),
-            ggplot2::aes(label = name),
+            ggplot2::aes(label = stringr::str_trunc(name, 36)), # limit label width
             color = "black",
             segment.color = "black",
             segment.size = 0.3,
@@ -1023,7 +1023,7 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
         ggplot2::scale_color_manual(name = "color_group", values = top_colors) +
         ggplot2::scale_fill_manual(name = "color_group", values = top_colors) +
         ggplot2::scale_x_continuous(breaks = c(1:length(levels(gg_data$time_period))), labels = levels(gg_data$time_period)) +
-        ggplot2::scale_y_continuous(expand = ggplot2::expansion(mult = c(0.2, 0.3))) +
+        ggplot2::scale_y_continuous(expand = ggplot2::expansion(mult = c(0.35, 0.35))) +
         ggplot2::labs(
           x = "Time period",
           y = "-log10(p)",
