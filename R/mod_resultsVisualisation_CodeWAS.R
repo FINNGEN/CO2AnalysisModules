@@ -433,11 +433,11 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
             max.overlaps = Inf,
             force = 0.5,
             force_pull = 0.5,
-            size = grid::unit(3, "mm"),
+            size = grid::unit(2.25, "mm"),
             # hjust = 0.1,
             box.padding = grid::unit(3, "mm"),
             segment.linetype = "dashed",
-            segment.alpha = 0.5
+            segment.alpha = 0.25
           )} +
         ggplot2::geom_vline(xintercept = 0, col = "red", linetype = 'dashed') +
         ggiraph::geom_point_interactive(
