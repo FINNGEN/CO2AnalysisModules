@@ -18,24 +18,26 @@
 #' @importFrom checkmate assertNumeric assertSubset
 #' @export
 #'
-mod_fct_covariateSelector_ui <- function(inputId, label = NULL, analysisIdsToShow = NULL, analysisRegexToShow = NULL, analysisIdsSelected = NULL) {
-
-  if(!is.null(analysisRegexToShow)){
-    analysisRegexToShow  |> checkmate::assertDataFrame()
-    analysisRegexToShow  |> names() |> checkmate::assertSetEqual(c("analysisName", "analysisRegex"))
-  }
+mod_fct_covariateSelector_ui <- function(inputId, label = NULL, analysisIdsToShow = NULL, analysisRegexToShowTibble = NULL, analysisIdsSelected = NULL) {
 
   if(is.null(analysisIdsToShow)) {
     analysisIdsToShow  <- HadesExtras::getListOfAnalysis()$analysisId
   }
-  if(is.null(analysisIdsSelected)) {
-    analysisIdsSelected <- analysisIdsToShow
+
+  if(!is.null(analysisRegexToShowTibble)){
+    analysisRegexToShowTibble  |> checkmate::assertDataFrame()
+    analysisRegexToShowTibble  |> names() |> checkmate::assertSetEqual(c("analysisId", "analysisName", "analysisRegex"))
   }
 
+   if(is.null(analysisIdsSelected)) {
+    analysisIdsSelected <- c(analysisIdsToShow, {if(!is.null(analysisRegexTibble)) analysisRegexTibble |> dplyr::pull(analysisId) else c()})
+  }
+
+
   checkmate::assertNumeric(analysisIdsToShow)
-  checkmate::assertCharacter(analysisIdsSelected)
+  checkmate::assertNumeric(analysisIdsSelected)
   checkmate::assertSubset(analysisIdsToShow, HadesExtras::getListOfAnalysis()$analysisId)
-  checkmate::assertSubset(analysisIdsSelected, c(analysisIdsToShow |> as.character(), analysisRegexToShow$analysisRegex))
+  checkmate::assertSubset(analysisIdsSelected, c(analysisIdsToShow, {if(!is.null(analysisRegexToShowTibble)) analysisRegexToShowTibble |> dplyr::pull(analysisId) else c()}))
 
   analysisNamePretty  <- tibble::tribble(
     ~analysisName, ~analysisNamePretty,
@@ -56,16 +58,15 @@ mod_fct_covariateSelector_ui <- function(inputId, label = NULL, analysisIdsToSho
     dplyr::mutate(analysisNamePretty = stringr::str_replace_all(analysisNamePretty, "([a-z])([A-Z])", "\\1 \\2")) |>
     dplyr::mutate(analysisNamePretty = paste0(analysisNamePretty, " [", dplyr::if_else(isBinary, "Binary", "Continuous"), dplyr::if_else(isSourceConcept, ", Source Codes", ""), "]")) |>
     dplyr::filter(analysisId %in% analysisIdsToShow)|> 
-    dplyr::mutate(analysisId = as.character(analysisId)) |>
     dplyr::select(group = domainId, analysisId, analysisNamePretty) 
 
-  if(!is.null(analysisRegexToShow)){
+  if(!is.null(analysisRegexToShowTibble)){
     analysisToShow <- dplyr::bind_rows(
       analysisToShow,
-      analysisRegexToShow |>
+      analysisRegexToShowTibble |>
       dplyr::transmute(
         group  = "Cohort Based",
-        analysisId = analysisRegex,
+        analysisId = analysisId,
         analysisNamePretty = analysisName
       )
     )
@@ -94,5 +95,4 @@ mod_fct_covariateSelector_ui <- function(inputId, label = NULL, analysisIdsToSho
       multiple = TRUE)
 
   return(picker)
-
 }

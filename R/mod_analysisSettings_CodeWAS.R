@@ -45,7 +45,12 @@ mod_analysisSettings_codeWAS_ui <- function(id) {
         801, 841, 909,
         501, 541, 907,
         910, 911 ),
-      analysisIdsSelected = c(141, 1, 2, 8, 10, 41, 641, 404, 701, 702, 841, 541 )
+        analysisRegexToShowTibble  = tibble::tribble(
+          ~analysisId, ~analysisName, ~analysisRegex,
+          999, "Endpoints", "^(?!.*\\[CohortLibrary\\]).*$",
+          998, "CohortLibrary", ".*\\[CohortLibrary\\]"
+        ),
+      analysisIdsSelected = c(141, 1, 2, 8, 10, 41, 641, 404, 701, 702, 841, 541, 999)
     ),
     shinyWidgets::radioGroupButtons(
       inputId = ns("statistics_type_option"),
@@ -302,7 +307,12 @@ mod_analysisSettings_codeWAS_server <- function(id, r_connectionHandler) {
         covariatesIds = covariatesIds,
         minCellCount = input$minCellCount_numericInput,
         chunksSizeNOutcomes = chunksSizeNOutcomes,
-        cores = cores
+        cores = cores, 
+        analysisRegexTibble  = tibble::tribble(
+          ~analysisId, ~analysisName, ~analysisRegex,
+          999, "Endpoints", "^(?!.*\\[CohortLibrary\\]).*$",
+          998, "CohortLibrary", ".*\\[CohortLibrary\\]"
+        )
       )
 
       return(analysisSettings)

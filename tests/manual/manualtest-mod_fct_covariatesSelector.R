@@ -5,12 +5,12 @@ devtools::load_all(".")
 
 analysisIdsToShow <- HadesExtras::getListOfAnalysis() |> dplyr::pull(analysisId)
 analysisIdsToShow <- analysisIdsToShow[1:30] 
-analysisIdsSelected <- c(analysisIdsToShow[1:3] |> as.character(), "^(?!.*\\[CohortLibrary\\]).*$")
-analysisRegexToShow <- tibble::tribble(
-  ~analysisName, ~analysisRegex,
-  "Endpoints", "^(?!.*\\[CohortLibrary\\]).*$",
-  "Cohorts in CohortLibrary", ".*\\[CohortLibrary\\]"
+analysisRegexToShowTibble <- tibble::tribble(
+  ~analysisId, ~analysisName, ~analysisRegex,
+  999, "Endpoints", "^(?!.*\\[CohortLibrary\\]).*$",
+  998, "CohortLibrary", ".*\\[CohortLibrary\\]"
 )
+analysisIdsSelected <- c(analysisIdsToShow[1:3], 999) 
 
 
 shiny::shinyApp(
@@ -19,7 +19,7 @@ shiny::shinyApp(
       inputId = "test",
       label = "This is a test lable",
       analysisIdsToShow = analysisIdsToShow,
-      analysisRegexToShow = analysisRegexToShow,
+      analysisRegexToShowTibble = analysisRegexToShowTibble,
       analysisIdsSelected = analysisIdsSelected
       )
   ),

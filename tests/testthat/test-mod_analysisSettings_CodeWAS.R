@@ -79,6 +79,3 @@ test_that("mod_analysisSettings_CodeWAS works", {
   )
 
 })
-
-
-
