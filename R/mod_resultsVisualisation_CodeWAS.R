@@ -56,7 +56,8 @@ mod_resultsVisualisation_CodeWAS_ui <- function(id) {
           ), # column
           shiny::div(style = "height: 100%; width: 100%; ",
                      shinycssloaders::withSpinner(
-                       ggiraph::girafeOutput(ns("codeWASplot"))
+                       ggiraph::girafeOutput(ns("codeWASplot")),
+                       proxy.height = "400px"
                      )
           ),
           shiny::div(

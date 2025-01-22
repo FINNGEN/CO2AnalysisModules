@@ -73,7 +73,8 @@ mod_resultsVisualisation_TimeCodeWAS_ui <- function(id) {
                      )
           ),
           shinycssloaders::withSpinner(
-            ggiraph::girafeOutput(ns("proportionsView"), width = "100%", height = "100%")
+            ggiraph::girafeOutput(ns("proportionsView"), width = "100%", height = "100%"),
+            proxy.height = "400px"
           ),
           shiny::div(
             style = "margin-top: 10px; margin-bottom: 10px;",
@@ -110,7 +111,10 @@ mod_resultsVisualisation_TimeCodeWAS_ui <- function(id) {
                        ), # column
                      )
           ),
-          ggiraph::girafeOutput(ns("progressView"), width = "100%", height = "100%"),
+          shinycssloaders::withSpinner(
+            ggiraph::girafeOutput(ns("progressView"), width = "100%", height = "100%"),
+            proxy.height = "400px"
+          ),
           shiny::div(
             style = "margin-top: 10px; margin-bottom: 10px;",
             shiny::downloadButton(ns("downloadProgressView"), "Download")
