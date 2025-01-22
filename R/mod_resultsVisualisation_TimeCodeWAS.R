@@ -77,7 +77,7 @@ mod_resultsVisualisation_TimeCodeWAS_ui <- function(id) {
           ),
           shiny::div(
             style = "margin-top: 10px; margin-bottom: 10px;",
-            shiny::downloadButton(ns("downloadPlot"), "Download")
+            shiny::downloadButton(ns("downloadProportionsView"), "Download")
           ),
         ),
         shiny::tabPanel(
@@ -113,7 +113,7 @@ mod_resultsVisualisation_TimeCodeWAS_ui <- function(id) {
           ggiraph::girafeOutput(ns("progressView"), width = "100%", height = "100%"),
           shiny::div(
             style = "margin-top: 10px; margin-bottom: 10px;",
-            shiny::downloadButton(ns("downloadPlot2"), "Download")
+            shiny::downloadButton(ns("downloadProgressView"), "Download")
           ),
         ),
         shiny::tabPanel(
@@ -305,14 +305,11 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
       r$timeCodeWASData <- timeCodeWASData
     })
 
-
     #
     # render the timeCodeWAS filters from the data
     #
     output$outputUI <- shiny::renderUI({
       shiny::req(r$timeCodeWASData)
-
-      # browser()
 
       shiny::tagList(
         shinyFeedback::useShinyFeedback(),
@@ -459,7 +456,6 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
           dplyr::filter(nCasesYes >= input$n_cases)  |>
           dplyr::filter(!dplyr::if_any(c("p", "OR"), is.na) | input$na_anywhere) |>
           dplyr::filter(!is.null(input$time_period) & time_period %in% input$time_period)
-
       }
     })
 
@@ -708,9 +704,7 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
           hidden = c("zoom", "zoomReset", "lasso_deselect", "saveaspng"),
           delay_mouseout = 100000
         )
-
       )
-
       return(gg_girafe)
     })
 
@@ -753,7 +747,7 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
           shiny::modalDialog(
             shiny::div(
               tags$style(HTML(".modal-dialog {width: 90%; max-width: 90%;}")),
-              DT::renderDataTable({
+              reactable::renderReactable({
                 .renderTable(df_lasso)
               }),
               size = "l",
@@ -788,68 +782,6 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
     #
     .renderTable <- function(df){
       df <- df |>
-        dplyr::mutate(GROUP = stringr::str_replace(GROUP, stringr::fixed("from "), "")) |>
-        dplyr::mutate(meanCases = round(meanCases, 3)) |>
-        dplyr::mutate(meanControls = round(meanControls, 3))|>
-        dplyr::mutate(sdCases = round(sdCases, 3)) |>
-        dplyr::mutate(sdControls = round(sdControls, 3))|>
-        dplyr::mutate(beta = round(log(OR), 3)) |>
-        dplyr::mutate(mlogp = round(-log10(p), 3)) |>
-        dplyr::mutate(
-          code = round(code/1000),
-          name = purrr::map2_chr(name, code, ~paste0('<a href="',atlasUrl,'/#/concept/', .y, '" target="_blank">', .x,'</a>'))
-        ) |>
-        dplyr::select(
-          GROUP, name, analysisName, domain, upIn,
-          nCasesYes, nControlsYes, meanCases, meanControls, sdCases, sdControls,
-          OR, mlogp, beta, notes)
-
-      DT::datatable(
-        df,
-        colnames = c(
-          'Time ID' = 'GROUP',
-          'Covariate Name' = 'name',
-          'Analysis Name' = 'analysisName',
-          'Domain' = 'domain',
-          'Type' = 'upIn',
-          'N cases' = 'nCasesYes',
-          'N ctrls' = 'nControlsYes',
-          'Ratio|Mean cases' = 'meanCases',
-          'Ratio|Mean ctrls' = 'meanControls',
-          'SD cases' = 'sdCases',
-          'SD ctrls' = 'sdControls',
-          'OR' = 'OR',
-          'mlogp' = 'mlogp',
-          'Beta' = 'beta',
-          'Notes' = 'notes'
-        ),
-        options = list(
-          order = list(list(12, 'desc'), list(11, 'desc')), # order by p-value, then OR
-          columnDefs = list(
-            list(width = '70px', targets = c(2,3)), # name, notes
-            list(width = '25px', targets = c(6,7))
-            # list(width = '80px', targets = c(1)), # analysisName
-            # list(width = '80px', targets = c(4)), # domain
-            # list(width = '30px', targets = c(4)), # upIn
-            # list(width = '40px', targets = c(6,7,8, 9, 10,11)), # GROUP, nCasesYes, nControlsYes, meanCases, meanControls, sdCases, sdControls
-            # list(width = '50px', targets = c(12, 13)) # pValue, OR
-          )
-        ),
-        escape = FALSE,
-        selection = 'none',
-        rownames = FALSE
-      ) |>
-        DT::formatSignif(columns = c('mlogp', 'OR'), digits = 3) |>
-        DT::formatStyle('Covariate Name', cursor = 'pointer' )
-    }
-
-    #
-    # Table View (as reactable) ####
-    #
-    output$reactableData <- reactable::renderReactable({
-      shiny::req(r$filteredTimeCodeWASData)
-
-      df <- r$filteredTimeCodeWASData |>
         dplyr::mutate(GROUP = stringr::str_replace(GROUP, stringr::fixed("from "), "")) |>
         dplyr::mutate(code = round(code/1000)) |>
         dplyr::mutate(meanCases = round(meanCases, 3)) |>
@@ -910,6 +842,15 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
         ),
         searchable = TRUE, defaultPageSize = 10, showPageSizeOptions = TRUE
       )
+    }
+
+    #
+    # Table View (as reactable) ####
+    #
+    output$reactableData <- reactable::renderReactable({
+      shiny::req(r$filteredTimeCodeWASData)
+
+      .renderTable(r$filteredTimeCodeWASData)
     })
 
     #
@@ -941,7 +882,7 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
     #
     # download data as a plot
     #
-    output$downloadPlot <- shiny::downloadHandler(
+    output$downloadProportionsView <- shiny::downloadHandler(
       filename = function(){
         paste('timecodewas_', format(lubridate::now(), "%Y_%m_%d_%H%M"), '.pdf', sep='')
       },
@@ -965,7 +906,7 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
     #
     # download data as a plot (Plot2) ####
     #
-    output$downloadPlot2 <- shiny::downloadHandler(
+    output$downloadProgressView <- shiny::downloadHandler(
       filename = function(){
         paste('timecodewas_', format(lubridate::now(), "%Y_%m_%d_%H%M"), '.pdf', sep='')
       },
@@ -1006,8 +947,11 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
         "11" = "lightgray"
       )
 
+      # get the unique time periods, effectively dropping the unused ones
+      timePeriods <- r$filteredTimeCodeWASData$time_period |> unique()
+
       gg_data <- r$filteredTimeCodeWASData |>
-        dplyr::mutate(time_period = factor(time_period, levels = input$time_period, labels = input$time_period)) |>
+        dplyr::mutate(time_period = factor(time_period, levels = timePeriods, labels = timePeriods)) |>
         dplyr::mutate(name = factor(name, levels = unique(name))) |>
         dplyr::mutate(name = stringr::str_remove_all(name, "'")) |>
         dplyr::mutate(label = stringr::str_remove_all(label, "'")) |>
@@ -1115,67 +1059,64 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
       )
 
       return(gg_girafe)
-
     }) # renderPlot
 
+    #
+    # utility functions
+    #
 
-  })
-
-  #
-  # utility functions
-  #
-
-  .label_editor <- function(s){
-    for(i in 1:length(s)){
-      s[[i]] <- .label_editor_single(s[[i]])
+    .label_editor <- function(s){
+      for(i in 1:length(s)){
+        s[[i]] <- .label_editor_single(s[[i]])
+      }
+      return(s)
     }
-    return(s)
-  }
 
-  .label_editor_single <- function(s){
-    return(s)
-  }
-
-  #
-  # Convert days to years and months, e.g. "1 y 3 m"
-  #
-
-  .vectorized_convert_days <- Vectorize(function(d) {
-    if (is.na(d)) return(NA_character_)
-    is_negative <- d < 0
-    abs_days <- abs(d)
-    start_date <- lubridate::ymd("1900-01-01")
-    end_date <- start_date + lubridate::days(abs_days)
-    diff <- lubridate::as.period(lubridate::interval(start_date, end_date))
-    years <- diff@year
-    months <- diff@month
-    # Format the result
-    result <- case_when(
-      years == 0 & months == 0 ~ paste0("0"),
-      years == 0 & months != 0 ~ paste0(months, "m"),
-      years != 0 & months == 0 ~ paste0(years, "y"),
-      TRUE ~ paste0(years, "y ", months, "m")
-    )
-    if (is_negative) {
-      result <- paste0("-", result)
+    .label_editor_single <- function(s){
+      return(s)
     }
-    return(result)
-  })
 
-  .get_time_periods <- function(studyResults){
-    timeRange <- studyResults |>
-      dplyr::select(startDay, endDay) |>
-      dplyr::distinct() |>
-      dplyr::collect() |>
-      na.omit() |>
-      dplyr::arrange(startDay, endDay) |>
-      dplyr::mutate(startDayText = .vectorized_convert_days(as.integer(startDay))) |>
-      dplyr::mutate(endDayText = .vectorized_convert_days(as.integer(endDay))) |>
-      dplyr::mutate(timeRange = paste0(startDayText, " / ", endDayText))
+    #
+    # Convert days to years and months, e.g. "1y 3m"
+    #
 
-    return(timeRange)
-  }
+    .vectorized_convert_days <- Vectorize(function(d) {
+      if (is.na(d)) return(NA_character_)
+      is_negative <- d < 0
+      abs_days <- abs(d)
+      start_date <- lubridate::ymd("1900-01-01")
+      end_date <- start_date + lubridate::days(abs_days)
+      diff <- lubridate::as.period(lubridate::interval(start_date, end_date))
+      years <- diff@year
+      months <- diff@month
+      # Format the result
+      result <- case_when(
+        years == 0 & months == 0 ~ paste0("0"),
+        years == 0 & months != 0 ~ paste0(months, "m"),
+        years != 0 & months == 0 ~ paste0(years, "y"),
+        TRUE ~ paste0(years, "y ", months, "m")
+      )
+      if (is_negative) {
+        result <- paste0("-", result)
+      }
+      return(result)
+    })
 
+    .get_time_periods <- function(studyResults){
+      timeRange <- studyResults |>
+        dplyr::select(startDay, endDay) |>
+        dplyr::distinct() |>
+        dplyr::collect() |>
+        na.omit() |>
+        dplyr::arrange(startDay, endDay) |>
+        dplyr::mutate(startDayText = .vectorized_convert_days(as.integer(startDay))) |>
+        dplyr::mutate(endDayText = .vectorized_convert_days(as.integer(endDay))) |>
+        dplyr::mutate(timeRange = paste0(startDayText, " / ", endDayText))
+
+      return(timeRange)
+    }
+
+  }) # shinyServer
 } # mod_timeCodeWASPlot_server
 
 
