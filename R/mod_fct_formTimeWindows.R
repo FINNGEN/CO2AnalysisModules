@@ -169,7 +169,9 @@ mod_fct_formTimeWindows_server <- function(id, session) {
       shiny::req(time_windows())
 
       breaks <- time_windows()
-      if(input$zero_window && !(0 %in% breaks)) breaks <- c(0, breaks)
+      if(isTRUE(input$zero_window) && (!is.null(breaks) && !(0 %in% breaks))){
+        breaks <- c(0, breaks)
+      }
       result <- c()
       for(value in breaks) {
         if(value == 0) result <- c(result, value, value + 1, value - 1, 0)
@@ -193,7 +195,9 @@ mod_fct_formTimeWindows_server <- function(id, session) {
       shiny::req(time_windows())
 
       breaks <- time_windows()
-      if(input$zero_window && !(0 %in% breaks)) breaks <- c(0, breaks)
+      if(isTRUE(input$zero_window) && (!is.null(breaks) && !(0 %in% breaks))){
+        breaks <- c(0, breaks)
+      }
       result <- c()
       for(value in breaks) {
         if(value == 0) result <- c(result, value, value + 1, value - 1, 0)
@@ -236,7 +240,9 @@ mod_fct_formTimeWindows_server <- function(id, session) {
     #
     rf_range <- shiny::reactive({
       breaks <- time_windows()
-      if(input$zero_window && !(0 %in% breaks)) breaks <- c(0, breaks)
+      if(isTRUE(input$zero_window) && (!is.null(breaks) && !(0 %in% breaks))){
+        breaks <- c(0, breaks)
+      }
       result <- c()
       for(value in breaks) {
         if(value == 0) result <- c(result, value, value + 1, value - 1, 0)
