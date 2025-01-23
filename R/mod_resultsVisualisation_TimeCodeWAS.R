@@ -991,7 +991,7 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
       }
 
       gg_data <- gg_data |>
-        left_join(items, by = c("name", "analysisName"))
+        left_join(items, by = c("name", "analysisName")) |> dplyr::arrange(rank)
 
       gg_plot <- ggplot2::ggplot(gg_data, ggplot2::aes(x = time_period_jittered, y = pLog10_jittered,  group = data_id, fill = color_group, color = color_group)) +
         {if(input$connect_dots)
@@ -1016,7 +1016,7 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
         } +
         ggiraph::geom_point_interactive(
           aes(size = pLog10, data_id = data_id, tooltip = label),
-          color = "black", shape = 21, alpha = ifelse(gg_data$color_group == "11", 0.25, 1)
+          color = "black", shape = 21, alpha = ifelse(gg_data$color_group == "11", 0.2, 1)
         ) +
         ggplot2::theme_minimal() +
         ggplot2::theme(
