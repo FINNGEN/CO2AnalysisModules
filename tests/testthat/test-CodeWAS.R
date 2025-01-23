@@ -152,7 +152,7 @@ test_that("executeCodeWAS works with regex cohorts", {
 
   analysisRegexTibble = tibble::tribble(
         ~analysisId, ~analysisName, ~analysisRegex,
-        999, "Endpoints", "^(?!.*\\[CohortLibrary\\]).*$",
+        999, "Endpoints", "^(?!.*\\[CohortLibrary\\]).*_case$",
         998, "CohortLibrary", ".*\\[CohortLibrary\\]"
   )
 
@@ -173,6 +173,8 @@ test_that("executeCodeWAS works with regex cohorts", {
       analysisSettings = analysisSettings
     )
   )
+
+  skip_if(testingDatabase != "Eunomia-FinnGen", "Skip test, it is only for EunomiaFinnGen")
 
   # test
   expect_true(file.exists(pathToResultsDatabase))

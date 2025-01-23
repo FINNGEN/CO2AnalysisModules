@@ -79,12 +79,13 @@ execute_CodeWAS <- function(
     temporalStartDays = -99999,
     temporalEndDays = 99999
   )
-
+  
   # regex analysis setting
   if (length(regexAnalysisIds) > 0) {
+    
     cohortDefinitionTable <- HadesExtras::getCohortNamesFromCohortDefinitionTable(
       connection = connection,
-      cohortDatabaseSchema = cohortDatabaseSchema
+      cohortDatabaseSchema = cdmDatabaseSchema
     )
 
     selectedanalysisRegexTibble <- analysisRegexTibble |>
@@ -100,6 +101,11 @@ execute_CodeWAS <- function(
           cohortId = cohort_definition_id,
           cohortName = cohort_definition_name
         )
+
+      if (nrow(covariateCohorts) == 0) {
+        ParallelLogger::logInfo("No cohorts found for analysisId ", analysisId, " with regex ", analysisRegex)
+        next
+      }
 
       covariateSettingsCohortBased <- FeatureExtraction::createCohortBasedTemporalCovariateSettings(
         analysisId = analysisId,

@@ -7,7 +7,7 @@ analysisIdsToShow <- HadesExtras::getListOfAnalysis() |> dplyr::pull(analysisId)
 analysisIdsToShow <- analysisIdsToShow[1:30] 
 analysisRegexToShowTibble <- tibble::tribble(
   ~analysisId, ~analysisName, ~analysisRegex,
-  999, "Endpoints", "^(?!.*\\[CohortLibrary\\]).*$",
+  999, "Endpoints", "^(?!.*\\[CohortLibrary\\]).*_case$",
   998, "CohortLibrary", ".*\\[CohortLibrary\\]"
 )
 analysisIdsSelected <- c(analysisIdsToShow[1:3], 999) 

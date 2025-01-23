@@ -42,7 +42,7 @@ test_that("mod_analysisSettings_CodeWAS works", {
           cores = 1,
           analysisRegexTibble = tibble::tribble(
             ~analysisId, ~analysisName, ~analysisRegex,
-            999, "Endpoints", "^(?!.*\\[CohortLibrary\\]).*$",
+            999, "Endpoints", "^(?!.*\\[CohortLibrary\\]).*_case$",
             998, "CohortLibrary", ".*\\[CohortLibrary\\]"
           )
         )
@@ -75,7 +75,7 @@ test_that("mod_analysisSettings_CodeWAS works", {
           cores = 1,
           analysisRegexTibble = tibble::tribble(
             ~analysisId, ~analysisName, ~analysisRegex,
-            999, "Endpoints", "^(?!.*\\[CohortLibrary\\]).*$",
+            999, "Endpoints", "^(?!.*\\[CohortLibrary\\]).*_case$",
             998, "CohortLibrary", ".*\\[CohortLibrary\\]"
           )
         )

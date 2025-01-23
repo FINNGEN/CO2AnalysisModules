@@ -47,7 +47,7 @@ mod_analysisSettings_codeWAS_ui <- function(id) {
         910, 911 ),
         analysisRegexToShowTibble  = tibble::tribble(
           ~analysisId, ~analysisName, ~analysisRegex,
-          999, "Endpoints", "^(?!.*\\[CohortLibrary\\]).*$",
+          999, "Endpoints", "^(?!.*\\[CohortLibrary\\]).*_case$",
           998, "CohortLibrary", ".*\\[CohortLibrary\\]"
         ),
       analysisIdsSelected = c(141, 1, 2, 8, 10, 41, 641, 404, 701, 702, 841, 541, 999)
@@ -310,7 +310,7 @@ mod_analysisSettings_codeWAS_server <- function(id, r_connectionHandler) {
         cores = cores, 
         analysisRegexTibble  = tibble::tribble(
           ~analysisId, ~analysisName, ~analysisRegex,
-          999, "Endpoints", "^(?!.*\\[CohortLibrary\\]).*$",
+          999, "Endpoints", "^(?!.*\\[CohortLibrary\\]).*_case$",
           998, "CohortLibrary", ".*\\[CohortLibrary\\]"
         )
       )
