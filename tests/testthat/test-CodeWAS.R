@@ -174,7 +174,7 @@ test_that("executeCodeWAS works with regex cohorts", {
     )
   )
 
-  skip_if(testingDatabase != "Eunomia-FinnGen", "Skip test, it is only for EunomiaFinnGen")
+  skip_if(testingDatabase != "Eunomia-GiBleed", "Skip test, it is only for Eunomia-GiBleed")
 
   # test
   expect_true(file.exists(pathToResultsDatabase))
