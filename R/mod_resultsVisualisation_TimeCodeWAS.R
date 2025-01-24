@@ -471,6 +471,8 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
     #
     shiny::observe({
       shiny::req(input$time_period)
+      shiny::req(input$domain)
+      shiny::req(input$analysis)
 
       r$line_to_plot <- NULL
     })
