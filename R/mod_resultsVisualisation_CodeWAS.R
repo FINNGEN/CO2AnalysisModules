@@ -440,7 +440,7 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
           # label the top 10 values
           ggrepel::geom_text_repel(
             data =  df |>
-              dplyr::arrange(pValue, oddsRatio) |>
+              dplyr::arrange(pLog10, beta) |>
               dplyr::slice_head(n = input$label_top_n),
             ggplot2::aes(
               label = stringr::str_wrap(stringr::str_trunc(.removeDomain(covariateName), 45), 30)
@@ -458,13 +458,14 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
         ggiraph::geom_point_interactive(
           ggplot2::aes(
             data_id = data_id,
-            tooltip = paste("Analysis: ", analysisName, "<br>",
-                            "Covariate: ", covariateName, "<br>",
-                            "Concept code: ", conceptCode, "<br>",
-                            "Vocabulary: ", vocabularyId, "<br>",
-                            "beta: ", signif(beta, digits = 3), "<br>",
-                            "OR: ", signif(oddsRatio, digits = 3), "<br>",
-                            "p-value: ", signif(pValue, digits = 2), "<br>"
+            tooltip = paste(
+              "Covariate: ", covariateName, "<br>",
+              "Analysis: ", analysisName, "<br>",
+              "Concept code: ", conceptCode, "<br>",
+              "Vocabulary: ", vocabularyId, "<br>",
+              "beta: ", signif(beta, digits = 3), "<br>",
+              "OR: ", signif(oddsRatio, digits = 3), "<br>",
+              "p-value: ", signif(pValue, digits = 2), "<br>"
             ),
             fill = direction
           ),
