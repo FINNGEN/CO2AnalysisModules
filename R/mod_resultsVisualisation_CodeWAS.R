@@ -407,6 +407,15 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
       shiny::req(r$filteredCodeWASData)
       shiny::req(r$filteredCodeWASData  |>  nrow() > 0)
 
+      n_no_test <- sum(grepl("no test", r$filteredCodeWASData, ignore.case = TRUE))
+      p_limit <- -log(0.05/(nrow(r$codeWASData) - n_no_test))
+
+      color_coding <- c(
+        "cases" = "#E41A1C",
+        "controls" = "#377EB8",
+        "ns" = "lightgrey"
+      )
+
       df <- r$filteredCodeWASData |>
         dplyr::mutate(oddsRatio = ifelse(is.na(oddsRatio), 1, oddsRatio)) |>
         dplyr::mutate(pLog10 = -log10(pValue)) |>
@@ -414,16 +423,19 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
         dplyr::mutate(beta = log(oddsRatio)) |>
         dplyr::mutate(beta = ifelse(beta > 5, 5, beta)) |>
         dplyr::mutate(beta = ifelse(beta < -5, -5, beta)) |>
-        dplyr::mutate(direction = ifelse(beta > 0, "cases", "controls")) |> # n.s. = not significant
+        dplyr::mutate(direction = case_when(
+          pLog10 < p_limit ~ "ns",
+          beta > 0 ~ "cases",
+          beta < 0 ~ "controls",
+          TRUE ~ "ns"
+        )) |>
         dplyr::select(analysisName, covariateName, conceptCode, vocabularyId, pValue, oddsRatio, direction, oddsRatio, pLog10, beta, meanCases, meanControls, modelType) |>
         dplyr::mutate(data_id = dplyr::row_number())
 
-      n_no_test <- sum(grepl("no test", df$modelType, ignore.case = TRUE))
-      p_limit <- -log(0.05/(nrow(r$codeWASData) - n_no_test))
-
       p <- ggplot2::ggplot(data = df, mapping = ggplot2::aes(x = beta, y = pLog10, color = direction)) +
-        # show the p-value limit
-        ggplot2::geom_hline(aes(yintercept = p_limit), col = "red", linetype = 'dashed') +
+        # show the p-value and beta limits
+        ggplot2::geom_hline(aes(yintercept = p_limit), col = "red", linetype = 'dashed', alpha = 0.5) +
+        ggplot2::geom_vline(xintercept = 0, col = "red", linetype = 'dashed', alpha = 0.5) +
         {if(input$top_10)
           # label the top 10 values
           ggrepel::geom_text_repel(
@@ -443,7 +455,6 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
             segment.linetype = "dashed",
             segment.alpha = 0.25
           )} +
-        ggplot2::geom_vline(xintercept = 0, col = "red", linetype = 'dashed') +
         ggiraph::geom_point_interactive(
           ggplot2::aes(
             data_id = data_id,
@@ -454,24 +465,26 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
                             "beta: ", signif(beta, digits = 3), "<br>",
                             "OR: ", signif(oddsRatio, digits = 3), "<br>",
                             "p-value: ", signif(pValue, digits = 2), "<br>"
-            )
+            ),
+            fill = direction
           ),
           hover_nearest = TRUE,
+          shape = 21,
+          color = "black",
           size = 1.5,
-          alpha = 0.5,
+          alpha = 1.0,
           stroke = 0.2
         ) +
         ggplot2::scale_x_continuous() +
         ggplot2::scale_y_continuous(transform = "log10", labels = function(x)round(x,1), expand = ggplot2::expansion(mult = c(0.1, 0.3))) +
         ggplot2::coord_cartesian(xlim = c(-5, 5), ylim = range(df$pLog10)) +
+        ggplot2::scale_fill_manual(name = "Enriched in", values = color_coding) + #, guide = "none") +
         ggplot2::labs(
           x = "beta",
           y = "-log10(p-value)",
-          color = "Enriched in",
           title = paste("Multiple testing significance >", round(p_limit, 1)),
           subtitle = paste("-log( 0.05 / (number of covariates))")
         ) +
-        ggplot2::scale_color_manual(values = c("cases" = "#E41A1C", "controls" = "#377EB8", "n.s." = "lightgrey")) + #, guide = "none") +
         ggplot2::theme_minimal() +
         ggplot2::theme(
           text = ggplot2::element_text(size = 8),
