@@ -413,7 +413,7 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
       color_coding <- c(
         "cases" = "#E41A1C",
         "controls" = "#377EB8",
-        "ns" = "lightgrey"
+        "n.s." = "lightgrey"
       )
 
       df <- r$filteredCodeWASData |>
@@ -424,10 +424,10 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
         dplyr::mutate(beta = ifelse(beta > 5, 5, beta)) |>
         dplyr::mutate(beta = ifelse(beta < -5, -5, beta)) |>
         dplyr::mutate(direction = case_when(
-          pLog10 < p_limit ~ "ns",
+          pLog10 < p_limit ~ "n.s.",
           beta > 0 ~ "cases",
           beta < 0 ~ "controls",
-          TRUE ~ "ns"
+          TRUE ~ "n.s."
         )) |>
         dplyr::select(analysisName, covariateName, conceptCode, vocabularyId, pValue, oddsRatio, direction, oddsRatio, pLog10, beta, meanCases, meanControls, modelType) |>
         dplyr::mutate(data_id = dplyr::row_number())
@@ -490,6 +490,7 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
         ggplot2::theme(
           text = ggplot2::element_text(size = 8),
           plot.title = ggplot2::element_text(size = 8),
+          plot.subtitle = ggplot2::element_text(size = 6),
           plot.caption = ggplot2::element_text(size = 4),
           axis.text.x = ggplot2::element_text(size = 7),
           axis.text.y = ggplot2::element_text(size = 7),
