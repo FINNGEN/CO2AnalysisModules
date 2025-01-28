@@ -478,7 +478,7 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
         ) +
         ggplot2::scale_x_continuous() +
         ggplot2::scale_y_continuous(transform = "log10", labels = function(x)round(x,1), expand = ggplot2::expansion(mult = c(0.1, 0.3))) +
-        ggplot2::coord_cartesian(xlim = c(-5, 5), ylim = range(df$pLog10)) +
+        ggplot2::coord_cartesian(xlim = c(min(df$beta) - 1, max(df$beta) + 1), ylim = range(df$pLog10)) +
         ggplot2::scale_fill_manual(name = "Enriched in", values = color_coding) + #, guide = "none") +
         ggplot2::labs(
           x = "beta",
