@@ -819,6 +819,7 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
           resizable = TRUE
         ),
         defaultSorted = list(pLog10 = "desc", OR = "desc"),
+        sortable = TRUE,
         columns = list(
           GROUP = reactable::colDef(name = "Time ID", minWidth = 20, align = "right"),
           name = reactable::colDef(

@@ -336,6 +336,7 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
           resizable = TRUE
         ),
         defaultSorted = list(mlogp = "desc", oddsRatio = "desc"),
+        sortable = TRUE,
         columns = list(
           covariateName = reactable::colDef(
             name = "Covariate Name",
