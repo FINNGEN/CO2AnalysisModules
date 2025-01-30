@@ -99,7 +99,7 @@ execute_CodeWAS <- function(
         dplyr::filter(grepl(analysisRegex, cohort_definition_name, perl = TRUE)) |>
         dplyr::transmute(
           cohortId = cohort_definition_id,
-          cohortName = cohort_definition_name
+          cohortName = cohort_definition_description
         )
 
       if (nrow(covariateCohorts) == 0) {
@@ -488,9 +488,9 @@ execute_CodeWAS <- function(
     }
   }
 
-  # get concept_code for covariateRef
+  # Add And fix columns in covariateRef
   conceptIds <- covariateRef |>
-    dplyr::select(conceptId) |>
+    dplyr::select(conceptId) |> 
     dplyr::collect() |>
     dplyr::distinct() |>
     dplyr::rename(concept_id = conceptId)
@@ -506,6 +506,30 @@ execute_CodeWAS <- function(
   covariateRef <- covariateRef |>
     dplyr::left_join(conceptIdsAndCodes, by = "conceptId")
 
+if(length(regexAnalysisIds) > 0 && !is.null(cohortDefinitionTable) ){
+  conceptIdsAndCohortDescriptions <- cohortDefinitionTable |> 
+    dplyr::cross_join(analysisRegexTibble) |>
+    dplyr::filter(stringr::str_detect(cohort_definition_name, analysisRegex)) |> 
+    dplyr::mutate(covariateId = cohort_definition_id*1000 + analysisId) |> 
+    dplyr::transmute(
+      covariateId = as.integer(covariateId),
+      conceptCode2 = as.character(cohort_definition_name),
+      covariateName2 = as.character(cohort_definition_description),
+      vocabularyId2 = analysisName
+    ) 
+
+    covariateRef <- covariateRef |> 
+    dplyr::left_join(conceptIdsAndCohortDescriptions, by = "covariateId") |> 
+    dplyr::mutate( 
+      conceptCode = dplyr::if_else(!is.na(conceptCode2), conceptCode2, conceptCode),
+      covariateName = dplyr::if_else(!is.na(covariateName2), covariateName2, covariateName),
+      vocabularyId = dplyr::if_else(!is.na(vocabularyId2), vocabularyId2, vocabularyId)
+    ) |> 
+    dplyr::select(-conceptCode2, -covariateName2, -vocabularyId2)
+  }
+
+
+  
   analysisDuration <- Sys.time() - startAnalysisTime
 
   #
@@ -589,7 +613,7 @@ execute_CodeWAS <- function(
     dplyr::transmute(
       analysisId = as.double(analysisId),
       analysisName = as.character(analysisName),
-      domainId = as.character(domainId),
+      domainId = dplyr::if_else(domainId == "cohort", "Cohort", domainId),
       isBinary = as.character(isBinary),
       missingMeansZero = as.character(missingMeansZero)
     )
@@ -604,13 +628,6 @@ execute_CodeWAS <- function(
     covariateRef$collisions <- NA
   }
   # END TEMP
-  if(!is.null(analysisRegexTibble)){
-    covariateRef  <- covariateRef |> 
-    dplyr::left_join(
-      analysisRegexTibble,
-       by = "analysisId") |> 
-    dplyr::mutate(covariateName = dplyr::if_else(is.na(analysisName), covariateName, stringr::str_replace(covariateName, "^cohort", analysisName)))
-  }
   
   covariateRef <- covariateRef |>
     dplyr::transmute(
@@ -631,7 +648,7 @@ execute_CodeWAS <- function(
 
   analysisInfo <- tibble::tibble(
     analysisType = "codeWAS",
-    version = "1.0.0",
+    version = "1.1.0",
     analysisSettings = yaml::as.yaml(analysisSettings),
     analysisDuration = analysisDuration,
     exportDuration = exportDuration

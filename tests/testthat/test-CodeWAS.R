@@ -190,18 +190,21 @@ test_that("executeCodeWAS works with regex cohorts", {
 
   covariateRef <-
     analysisResults  |> dplyr::tbl("covariateRef")  |> dplyr::collect()
-  a <- covariateRef |> dplyr::filter(analysisId == 999) |> dplyr::pull(covariateName) 
-  expect_true(all(grepl("^Endpoints.*$", a)))
-  a <- covariateRef |> dplyr::filter(analysisId == 998) |> dplyr::pull(covariateName) 
-  expect_true(all(grepl("CohortLibrary", a)))
+  covariateRef |> dplyr::filter(analysisId == 999) |> dplyr::pull(covariateName) |> 
+    expect_equal(c("Cohort of patients diagnosed with diabetes", "Cohort of patients diagnosed with hypertension"))
+  covariateRef |> dplyr::filter(analysisId == 999) |> dplyr::pull(vocabularyId) |> 
+    expect_equal(c("Endpoints", "Endpoints"))
+  covariateRef |> dplyr::filter(analysisId == 998) |> dplyr::pull(covariateName) |> 
+    expect_equal(c("Cohort of patients diagnosed with hypertension", "Cohort of patients diagnosed with obesity"))
+  covariateRef |> dplyr::filter(analysisId == 998) |> dplyr::pull(vocabularyId) |> 
+    expect_equal(c("CohortLibrary", "CohortLibrary"))
 
   analysisRef <-
     analysisResults  |> dplyr::tbl("analysisRef")  |> dplyr::collect()
-  a <- analysisRef |> dplyr::filter(analysisId == 999) |> dplyr::pull(analysisName) 
-  expect_true(all(grepl("^Endpoints.*$", a)))
-  a <- analysisRef |> dplyr::filter(analysisId == 998) |> dplyr::pull(analysisName) 
-  expect_true(all(grepl("CohortLibrary", a)))
-
+  analysisRef |> dplyr::filter(analysisId == 999) |> dplyr::pull(analysisName)  |> 
+    expect_equal("Endpoints")
+  analysisRef |> dplyr::filter(analysisId == 998) |> dplyr::pull(analysisName)  |> 
+    expect_equal("CohortLibrary")
 })
 
 

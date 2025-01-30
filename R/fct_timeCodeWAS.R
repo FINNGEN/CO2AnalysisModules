@@ -373,7 +373,7 @@ execute_timeCodeWAS <- function(
 
   analysisInfo <- tibble::tibble(
     analysisType = "timeCodeWAS",
-    version = "1.0.0",
+    version = "1.1.0",
     analysisSettings = yaml::as.yaml(analysisSettings),
     analysisDuration = analysisDuration,
     exportDuration = exportDuration
