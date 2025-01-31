@@ -1,3 +1,9 @@
+# CO2AnalysisModules 2.2.0
+- Added endpoint and library cohorts as covariate to CodeWAS
+- Added conceptCode and VocabularyId to tables in CodeWAS and TimeCodeWAS
+- Replaced DT by reactable
+- Other minor fixes
+
 # CO2AnalysisModules 2.1.0
 - Replaced DT by reactable
 - other minor fixes
