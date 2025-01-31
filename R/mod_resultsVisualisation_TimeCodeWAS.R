@@ -263,9 +263,9 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
           sdControls = sdControls,
           controls_per = nControlsYes/nControlsInWindow,
           nCasesYes = nCasesYes,
-          nControlsYes = nControlsYes
+          nControlsYes = nControlsYes,
+          domain = domainId
         ) |>
-        tidyr::separate(name, c("domain", "name"), sep = ":", extra = "merge") |>
         dplyr::mutate(name = stringr::str_remove(name, "^[:blank:]")) |>
         dplyr::mutate(p = dplyr::if_else(p==0, 10^-323, p))
 

@@ -138,6 +138,76 @@ test_that("executeCodeWAS works spliting in chuncs", {
 })
 
 
+test_that("executeCodeWAS works with regex cohorts", {
+  # set up
+  cohortTableHandler <-
+    helper_createNewCohortTableHandler(addCohorts = "HadesExtrasFractureCohorts")
+  withr::defer({
+    rm(cohortTableHandler)
+    gc()
+  })
+
+  exportFolder <- withr::local_tempdir('testCodeWAS')
+
+
+  analysisRegexTibble = tibble::tribble(
+        ~analysisId, ~analysisName, ~analysisRegex,
+        999, "Endpoints", "^(?!.*\\[CohortLibrary\\]).*_case$",
+        998, "CohortLibrary", ".*\\[CohortLibrary\\]"
+  )
+
+  analysisSettings <- list(
+    cohortIdCases = 1,
+    cohortIdControls = 2,
+    analysisIds = c(101, 141, 1, 2, 402, 702, 41, 999, 998),
+    covariatesIds = NULL,
+    minCellCount = 1,
+    analysisRegexTibble = analysisRegexTibble
+  )
+
+  # function
+  suppressWarnings(
+    pathToResultsDatabase <- execute_CodeWAS(
+      exportFolder = exportFolder,
+      cohortTableHandler = cohortTableHandler,
+      analysisSettings = analysisSettings
+    )
+  )
+
+  skip_if(testingDatabase != "Eunomia-GiBleed", "Skip test, it is only for Eunomia-GiBleed")
+
+  # test
+  expect_true(file.exists(pathToResultsDatabase))
+  checkResults_CodeWAS(pathToResultsDatabase) |> expect_true()
+
+  analysisResults <-
+    duckdb::dbConnect(duckdb::duckdb(), pathToResultsDatabase)
+
+  codeWASResults <-
+    analysisResults  |> dplyr::tbl("codewasResults")  |> dplyr::collect()
+  codeWASResults |> dplyr::filter(covariateId %% 1000 == 999)  |> nrow() |> expect_equal(2)
+  codeWASResults |> dplyr::filter(covariateId %% 1000 == 998)  |> nrow() |> expect_equal(2)
+
+  covariateRef <-
+    analysisResults  |> dplyr::tbl("covariateRef")  |> dplyr::collect()
+  covariateRef |> dplyr::filter(analysisId == 999) |> dplyr::pull(covariateName) |> 
+    expect_equal(c("Cohort of patients diagnosed with diabetes", "Cohort of patients diagnosed with hypertension"))
+  covariateRef |> dplyr::filter(analysisId == 999) |> dplyr::pull(vocabularyId) |> 
+    expect_equal(c("Endpoints", "Endpoints"))
+  covariateRef |> dplyr::filter(analysisId == 998) |> dplyr::pull(covariateName) |> 
+    expect_equal(c("Cohort of patients diagnosed with hypertension", "Cohort of patients diagnosed with obesity"))
+  covariateRef |> dplyr::filter(analysisId == 998) |> dplyr::pull(vocabularyId) |> 
+    expect_equal(c("CohortLibrary", "CohortLibrary"))
+
+  analysisRef <-
+    analysisResults  |> dplyr::tbl("analysisRef")  |> dplyr::collect()
+  analysisRef |> dplyr::filter(analysisId == 999) |> dplyr::pull(analysisName)  |> 
+    expect_equal("Endpoints")
+  analysisRef |> dplyr::filter(analysisId == 998) |> dplyr::pull(analysisName)  |> 
+    expect_equal("CohortLibrary")
+})
+
+
 
 # test_that("executeCodeWAS works for big size", {
 #   library(ParallelLogger)

@@ -12,12 +12,19 @@ exportFolder <- file.path(tempdir(), "testCodeWAS")
 dir.create(exportFolder, showWarnings = FALSE)
 on.exit({unlink(exportFolder, recursive = TRUE)})
 
+analysisRegexTibble = tibble::tribble(
+        ~analysisId, ~analysisName, ~analysisRegex,
+        999, "Endpoints", "^(?!.*\\[CohortLibrary\\]).*_case$",
+        998, "CohortLibrary", ".*\\[CohortLibrary\\]"
+  )
+
 analysisSettings <- list(
   cohortIdCases = 1,
   cohortIdControls = 2,
-  analysisIds = c(101, 141, 1, 2, 402, 701, 702, 41),
+  analysisIds = c(101, 141, 1, 2, 402, 701, 702, 41, 999, 998),
   covariatesIds = NULL,
-  minCellCount = 1
+  minCellCount = 1,
+  analysisRegexTibble = analysisRegexTibble
 )
 
 
