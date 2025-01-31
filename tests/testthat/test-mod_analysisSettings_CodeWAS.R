@@ -29,7 +29,7 @@ test_that("mod_analysisSettings_CodeWAS works", {
         minCellCount_numericInput = 1)
 
       analysisSettings <- rf_analysisSettings()
-
+    
       analysisSettings |> assertAnalysisSettings_CodeWAS() |> expect_no_error()
       analysisSettings |> expect_equal(
         list(
@@ -39,7 +39,12 @@ test_that("mod_analysisSettings_CodeWAS works", {
           covariatesIds = NULL,
           minCellCount = 1,
           chunksSizeNOutcomes = 5000,
-          cores = 1
+          cores = 1,
+          analysisRegexTibble = tibble::tribble(
+            ~analysisId, ~analysisName, ~analysisRegex,
+            999, "Endpoints", "^(?!.*\\[CohortLibrary\\]).*_case$",
+            998, "CohortLibrary", ".*\\[CohortLibrary\\]"
+          )
         )
       )
 
@@ -67,7 +72,12 @@ test_that("mod_analysisSettings_CodeWAS works", {
           covariatesIds = c(8507001, 1041),
           minCellCount = 1,
           chunksSizeNOutcomes = 5000,
-          cores = 1
+          cores = 1,
+          analysisRegexTibble = tibble::tribble(
+            ~analysisId, ~analysisName, ~analysisRegex,
+            999, "Endpoints", "^(?!.*\\[CohortLibrary\\]).*_case$",
+            998, "CohortLibrary", ".*\\[CohortLibrary\\]"
+          )
         )
       )
 
@@ -79,6 +89,3 @@ test_that("mod_analysisSettings_CodeWAS works", {
   )
 
 })
-
-
-

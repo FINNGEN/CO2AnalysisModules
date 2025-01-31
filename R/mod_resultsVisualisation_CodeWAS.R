@@ -54,8 +54,11 @@ mod_resultsVisualisation_CodeWAS_ui <- function(id) {
                 )
             )
           ), # column
-          shiny::div(style = "height: 100%; width: 800px; margin-left:40px;",
-                     ggiraph::girafeOutput(ns("codeWASplot"))
+          shiny::div(style = "height: 100%; width: 100%; ",
+                     shinycssloaders::withSpinner(
+                       ggiraph::girafeOutput(ns("codeWASplot")),
+                       proxy.height = "400px"
+                     )
           ),
           shiny::div(
             style = "margin-top: 10px; margin-bottom: 10px;",
@@ -66,7 +69,10 @@ mod_resultsVisualisation_CodeWAS_ui <- function(id) {
           "Table",
           shiny::div(
             style = "margin-top: 10px; margin-bottom: 10px;",
-            reactable::reactableOutput(ns("codeWAStable")),
+            shinycssloaders::withSpinner(
+              reactable::reactableOutput(ns("codeWAStable")),
+              proxy.height = "400px"
+            )
           ),
           shiny::div(
             style = "margin-top: 10px; margin-bottom: 10px;",
@@ -259,7 +265,7 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
         # filter the data
         r$filteredCodeWASData <- r$codeWASData |>
           dplyr::select(
-            databaseId, domainId, analysisName, covariateId, covariateName, nCasesYes, nControlsYes,
+            databaseId, domainId, conceptCode, vocabularyId, analysisName, covariateId, covariateName, nCasesYes, nControlsYes,
             meanCases, sdCases, meanControls, sdControls, oddsRatio, pValue, beta, modelType, runNotes
           ) |>
           dplyr::filter(
@@ -313,7 +319,7 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
         dplyr::mutate(sdControls = round(sdControls, 3)) |>
         dplyr::mutate(covariateId = round(covariateId/1000)) |>
         dplyr::select(
-          covariateName, covariateId, analysisName, domainId,
+          covariateName, covariateId, conceptCode, vocabularyId, analysisName, domainId,
           nCasesYes, nControlsYes, meanCases, sdCases, meanControls, sdControls,
           oddsRatio, mlogp, beta, modelType, runNotes
         )
@@ -344,6 +350,8 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
           ),
           covariateId = reactable::colDef(show = FALSE),
           analysisName = reactable::colDef(name = "Analysis Name", minWidth = 30),
+          conceptCode = reactable::colDef(name = "Concept Code", minWidth = 15),
+          vocabularyId = reactable::colDef(name = "Vocabulary", minWidth = 15),
           domainId = reactable::colDef(name = "Domain", minWidth = 25),
           nCasesYes = reactable::colDef(name = "N cases", minWidth = 12),
           nControlsYes = reactable::colDef(name = "N ctrls", minWidth = 12),
@@ -407,26 +415,13 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
         dplyr::mutate(beta = ifelse(beta > 5, 5, beta)) |>
         dplyr::mutate(beta = ifelse(beta < -5, -5, beta)) |>
         dplyr::mutate(direction = ifelse(beta > 0, "cases", "controls")) |> # n.s. = not significant
-        dplyr::select(analysisName, covariateName, pValue, oddsRatio, direction, oddsRatio, pLog10, beta, meanCases, meanControls, modelType) |>
+        dplyr::select(analysisName, covariateName, conceptCode, vocabularyId, pValue, oddsRatio, direction, oddsRatio, pLog10, beta, meanCases, meanControls, modelType) |>
         dplyr::mutate(data_id = dplyr::row_number())
 
       n_no_test <- sum(grepl("no test", df$modelType, ignore.case = TRUE))
       p_limit <- -log(0.05/(nrow(r$codeWASData) - n_no_test))
 
       p <- ggplot2::ggplot(data = df, mapping = ggplot2::aes(x = beta, y = pLog10, color = direction)) +
-        ggiraph::geom_point_interactive(
-          ggplot2::aes(
-            data_id = data_id,
-            tooltip = paste("Analysis: ", analysisName, "<br>",
-                            "Covariate: ", covariateName, "<br>",
-                            "beta: ", signif(beta, digits = 3), "<br>",
-                            "OR: ", signif(oddsRatio, digits = 3), "<br>",
-                            "p-value: ", signif(pValue, digits = 2), "<br>"
-            )
-          ),
-          hover_nearest = TRUE,
-          size = 1.5,
-          alpha = 0.4) +
         # show the p-value limit
         ggplot2::geom_hline(aes(yintercept = p_limit), col = "red", linetype = 'dashed') +
         {if(input$top_10)
@@ -440,14 +435,34 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
             ),
             color = "black",
             max.overlaps = Inf,
-            force = 1,
-            size = grid::unit(3, "mm"),
+            force = 0.5,
+            force_pull = 0.5,
+            size = grid::unit(2.25, "mm"),
             # hjust = 0.1,
-            box.padding = grid::unit(3, "mm")
+            box.padding = grid::unit(3, "mm"),
+            segment.linetype = "dashed",
+            segment.alpha = 0.25
           )} +
         ggplot2::geom_vline(xintercept = 0, col = "red", linetype = 'dashed') +
+        ggiraph::geom_point_interactive(
+          ggplot2::aes(
+            data_id = data_id,
+            tooltip = paste("Analysis: ", analysisName, "<br>",
+                            "Covariate: ", covariateName, "<br>",
+                            "Concept code: ", conceptCode, "<br>",
+                            "Vocabulary: ", vocabularyId, "<br>",
+                            "beta: ", signif(beta, digits = 3), "<br>",
+                            "OR: ", signif(oddsRatio, digits = 3), "<br>",
+                            "p-value: ", signif(pValue, digits = 2), "<br>"
+            )
+          ),
+          hover_nearest = TRUE,
+          size = 1.5,
+          alpha = 0.5,
+          stroke = 0.2
+        ) +
         ggplot2::scale_x_continuous() +
-        ggplot2::scale_y_continuous(transform = "log10", labels = function(x)round(x,1), expand = ggplot2::expansion(mult = c(0.1, 0.2))) +
+        ggplot2::scale_y_continuous(transform = "log10", labels = function(x)round(x,1), expand = ggplot2::expansion(mult = c(0.1, 0.3))) +
         ggplot2::coord_cartesian(xlim = c(-5, 5), ylim = range(df$pLog10)) +
         ggplot2::labs(
           x = "beta",
@@ -457,7 +472,18 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
           subtitle = paste("-log( 0.05 / (number of covariates))")
         ) +
         ggplot2::scale_color_manual(values = c("cases" = "#E41A1C", "controls" = "#377EB8", "n.s." = "lightgrey")) + #, guide = "none") +
-        ggplot2::theme_minimal()
+        ggplot2::theme_minimal() +
+        ggplot2::theme(
+          text = ggplot2::element_text(size = 8),
+          plot.title = ggplot2::element_text(size = 8),
+          plot.caption = ggplot2::element_text(size = 4),
+          axis.text.x = ggplot2::element_text(size = 7),
+          axis.text.y = ggplot2::element_text(size = 7),
+          legend.key.height = grid::unit(3, "mm"),
+          legend.key.width = grid::unit(7, "mm"),
+          legend.title = ggplot2::element_text(size = 7),
+          legend.text = ggplot2::element_text(size = 7)
+        )
 
       r$lastPlot <- p
 
@@ -468,9 +494,12 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
         options = list(
           ggiraph::opts_tooltip(use_fill = FALSE),
           ggiraph::opts_zoom(min = 0.5, max = 5),
-          ggiraph::opts_sizing(rescale = FALSE, width = 1),
+          ggiraph::opts_sizing(rescale = TRUE, width = 1),
           ggiraph::opts_toolbar(saveaspng = TRUE, delay_mouseout = 2000),
-          ggiraph::opts_hover(css = "fill: black;"),
+          ggiraph::opts_hover(
+            css = "fill-opacity:1;fill:red;stroke:black;",
+            reactive = FALSE
+          ),
           ggiraph::opts_toolbar(
             saveaspng = FALSE,
             hidden = c("zoom", "reset", "zoomin", "zoomout", "pan", "lasso", "select", "lasso_select", "lasso_deselect", "box_select", "box_zoom", "reset", "saveaspng"),

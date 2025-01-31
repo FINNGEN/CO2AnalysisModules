@@ -50,6 +50,7 @@ execute_CodeWAS <- function(
   minCellCount <- analysisSettings$minCellCount
   chunksSizeNOutcomes <- analysisSettings$chunksSizeNOutcomes
   cores <- analysisSettings$cores
+  analysisRegexTibble <- analysisSettings$analysisRegexTibble
 
   covariatesNoAnalysis <- setdiff(covariatesIds %% 1000, analysisIds)
   if (length(covariatesNoAnalysis) > 0) {
@@ -64,11 +65,62 @@ execute_CodeWAS <- function(
 
   noCovariatesMode <- is.null(covariatesIds) || length(covariatesIds) == 0
 
+  regexAnalysisIds <- {
+    if (!is.null(analysisRegexTibble)) analysisRegexTibble |> dplyr::pull(analysisId) else c()
+  }
+  defaultAnalysisIds <- analysisIds |> setdiff(regexAnalysisIds)
+
+  # numeric analysis settings
+  defaultAnalysisIds <- analysisIds |> setdiff({
+    if (!is.null(analysisRegexTibble)) analysisRegexTibble |> dplyr::pull(analysisId) else c()
+  })
   covariateSettings <- HadesExtras::FeatureExtraction_createTemporalCovariateSettingsFromList(
-    analysisIds = analysisIds,
+    analysisIds = defaultAnalysisIds,
     temporalStartDays = -99999,
     temporalEndDays = 99999
   )
+  
+  # regex analysis setting
+  if (length(regexAnalysisIds) > 0) {
+    
+    cohortDefinitionTable <- HadesExtras::getCohortNamesFromCohortDefinitionTable(
+      connection = connection,
+      cohortDatabaseSchema = cdmDatabaseSchema
+    )
+
+    selectedanalysisRegexTibble <- analysisRegexTibble |>
+      dplyr::filter(analysisId %in% regexAnalysisIds)
+
+    for (i in 1:nrow(selectedanalysisRegexTibble)) {
+      analysisId <- selectedanalysisRegexTibble$analysisId[i]
+      analysisRegex <- selectedanalysisRegexTibble$analysisRegex[i]
+
+      covariateCohorts <- cohortDefinitionTable |>
+        dplyr::filter(grepl(analysisRegex, cohort_definition_name, perl = TRUE)) |>
+        dplyr::transmute(
+          cohortId = cohort_definition_id,
+          cohortName = cohort_definition_description
+        )
+
+      if (nrow(covariateCohorts) == 0) {
+        ParallelLogger::logInfo("No cohorts found for analysisId ", analysisId, " with regex ", analysisRegex)
+        next
+      }
+
+      covariateSettingsCohortBased <- FeatureExtraction::createCohortBasedTemporalCovariateSettings(
+        analysisId = analysisId,
+        covariateCohortDatabaseSchema = cdmDatabaseSchema,
+        covariateCohortTable = "cohort",
+        covariateCohorts = covariateCohorts,
+        valueType = "binary",
+        temporalStartDays = -99999,
+        temporalEndDays = 99999
+      )
+
+      covariateSettings[[length(covariateSettings) + 1]] <- covariateSettingsCohortBased
+    }
+  }
+
 
   cohortCounts <- cohortTableHandler$getCohortCounts()
   nCasesTotal <- cohortCounts$cohortSubjects[cohortCounts$cohortId == cohortIdCases]
@@ -436,9 +488,9 @@ execute_CodeWAS <- function(
     }
   }
 
-  # get concept_code for covariateRef
+  # Add And fix columns in covariateRef
   conceptIds <- covariateRef |>
-    dplyr::select(conceptId) |>
+    dplyr::select(conceptId) |> 
     dplyr::collect() |>
     dplyr::distinct() |>
     dplyr::rename(concept_id = conceptId)
@@ -452,8 +504,32 @@ execute_CodeWAS <- function(
     SqlRender::snakeCaseToCamelCaseNames()
 
   covariateRef <- covariateRef |>
-    dplyr::left_join(conceptIdsAndCodes, by = "conceptId") 
+    dplyr::left_join(conceptIdsAndCodes, by = "conceptId")
 
+if(length(regexAnalysisIds) > 0 && !is.null(cohortDefinitionTable) ){
+  conceptIdsAndCohortDescriptions <- cohortDefinitionTable |> 
+    dplyr::cross_join(analysisRegexTibble) |>
+    dplyr::filter(stringr::str_detect(cohort_definition_name, analysisRegex)) |> 
+    dplyr::mutate(covariateId = cohort_definition_id*1000 + analysisId) |> 
+    dplyr::transmute(
+      covariateId = as.integer(covariateId),
+      conceptCode2 = as.character(cohort_definition_name),
+      covariateName2 = as.character(cohort_definition_description),
+      vocabularyId2 = analysisName
+    ) 
+
+    covariateRef <- covariateRef |> 
+    dplyr::left_join(conceptIdsAndCohortDescriptions, by = "covariateId") |> 
+    dplyr::mutate( 
+      conceptCode = dplyr::if_else(!is.na(conceptCode2), conceptCode2, conceptCode),
+      covariateName = dplyr::if_else(!is.na(covariateName2), covariateName2, covariateName),
+      vocabularyId = dplyr::if_else(!is.na(vocabularyId2), vocabularyId2, vocabularyId)
+    ) |> 
+    dplyr::select(-conceptCode2, -covariateName2, -vocabularyId2)
+  }
+
+
+  
   analysisDuration <- Sys.time() - startAnalysisTime
 
   #
@@ -524,12 +600,20 @@ execute_CodeWAS <- function(
       runNotes = as.character(runNotes)
     )
   duckdb::dbWriteTable(connection, "codewasResults", codewasResults, overwrite = TRUE)
-  
+
+  if(!is.null(analysisRegexTibble)){
+    analysisRef  <- analysisRef |> 
+    dplyr::left_join(
+      analysisRegexTibble |> dplyr::rename(newAnalysisName = analysisName),
+       by = "analysisId") |> 
+    dplyr::mutate(analysisName = dplyr::if_else(is.na(newAnalysisName), analysisName, newAnalysisName))
+  }
+
   analysisRef <- analysisRef |>
     dplyr::transmute(
       analysisId = as.double(analysisId),
       analysisName = as.character(analysisName),
-      domainId = as.character(domainId),
+      domainId = dplyr::if_else(domainId == "cohort", "Cohort", domainId),
       isBinary = as.character(isBinary),
       missingMeansZero = as.character(missingMeansZero)
     )
@@ -544,6 +628,7 @@ execute_CodeWAS <- function(
     covariateRef$collisions <- NA
   }
   # END TEMP
+  
   covariateRef <- covariateRef |>
     dplyr::transmute(
       covariateId = as.double(covariateId),
@@ -563,13 +648,13 @@ execute_CodeWAS <- function(
 
   analysisInfo <- tibble::tibble(
     analysisType = "codeWAS",
-    version = "1.0.0",
+    version = "1.1.0",
     analysisSettings = yaml::as.yaml(analysisSettings),
     analysisDuration = analysisDuration,
     exportDuration = exportDuration
   )
   duckdb::dbWriteTable(connection, "analysisInfo", analysisInfo, overwrite = TRUE)
-
+  
   # close connection
   duckdb::dbDisconnect(connection)
 
@@ -585,7 +670,7 @@ execute_CodeWAS <- function(
 #' \describe{
 #'   \item{cohortIdCases}{A numeric value representing the cohort ID for cases.}
 #'   \item{cohortIdControls}{A numeric value representing the cohort ID for controls.}
-#'   \item{analysisIds}{A numeric vector of analysis IDs.}
+#'   \item{analysisIds}{A character vector of analysis IDs.}
 #'   \item{covariatesIds}{A numeric vector of covariate IDs (optional).}
 #'   \item{minCellCount}{A numeric value representing the minimum cell count, must be 0 or higher.}
 #'   \item{chunksSizeNOutcomes}{A numeric value representing the chunk size for outcomes (optional).}
@@ -623,6 +708,15 @@ assertAnalysisSettings_CodeWAS <- function(analysisSettings) {
     analysisSettings$cores <- 1
   }
   analysisSettings$cores |> checkmate::assertNumeric()
+
+  if (is.null(analysisSettings$analysisRegex)) {
+    analysisSettings$analysisRegexTibble <- NULL
+  } else {
+    analysisSettings$analysisRegexTibble |> checkmate::assertTibble()
+    analysisSettings$analysisRegexTibble |>
+      names() |>
+      checkmate::assertSetEqual(c("analysisId", "analysisName", "analysisRegex"))
+  }
 
   return(analysisSettings)
 }

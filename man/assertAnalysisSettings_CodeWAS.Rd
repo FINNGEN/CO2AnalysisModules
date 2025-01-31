@@ -11,7 +11,7 @@ assertAnalysisSettings_CodeWAS(analysisSettings)
 \describe{
 \item{cohortIdCases}{A numeric value representing the cohort ID for cases.}
 \item{cohortIdControls}{A numeric value representing the cohort ID for controls.}
-\item{analysisIds}{A numeric vector of analysis IDs.}
+\item{analysisIds}{A character vector of analysis IDs.}
 \item{covariatesIds}{A numeric vector of covariate IDs (optional).}
 \item{minCellCount}{A numeric value representing the minimum cell count, must be 0 or higher.}
 \item{chunksSizeNOutcomes}{A numeric value representing the chunk size for outcomes (optional).}
