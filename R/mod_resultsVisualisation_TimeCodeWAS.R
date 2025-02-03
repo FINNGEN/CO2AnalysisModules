@@ -14,6 +14,27 @@
 mod_resultsVisualisation_TimeCodeWAS_ui <- function(id) {
   ns <- shiny::NS(id)
 
+  # this must be in sync with the columns in the reactable table
+  tableColumns <- c(
+    "Time ID" = "GROUP",
+    "Covariate Name" = "name",
+    "Concept Code" = "conceptCode",
+    "Vocabulary" = "vocabularyId",
+    "Analysis Name" = "analysisName",
+    "Domain" = "domain",
+    "Type" = "upIn",
+    "N cases" = "nCasesYes",
+    "N ctrls" = "nControlsYes",
+    "Ratio|Mean cases" = "meanCases",
+    "SD cases" = "sdCases",
+    "Ratio|Mean ctrls" = "meanControls",
+    "SD ctrls" = "sdControls",
+    "OR" = "OR",
+    "mlogp" = "mlogp",
+    "Beta" = "beta",
+    "Notes" = "notes"
+  )
+
   shiny::fluidPage(
     title = "TimeCodeWAS",
     shiny::tagList(
@@ -123,7 +144,29 @@ mod_resultsVisualisation_TimeCodeWAS_ui <- function(id) {
         shiny::tabPanel(
           "Table",
           shiny::div(
-            style = "margin-top: 20px; margin-bottom: 10px;",
+            fluidRow(
+              column(10,
+                     tags$div(style = "display: flex; align-items: center; gap: 15px;",
+                              tags$label("Sort by:", style = "width: 50px; margin-bottom: 0;"),
+                              tags$div(style = "margin-top: 15px;",
+                                       selectInput(ns("sortFirst"), label = NULL, choices = tableColumns, width = "150px", selected = "OR"),
+                              ),
+                              tags$div(style = "width: 50px;",
+                                       checkboxInput(ns("sortFirstDesc"), "descending", value = TRUE)
+                              ),
+                              tags$label("", style = "width: 20px; margin-bottom: 0; margin-left: 10px;"),
+                              tags$div(style = "margin-top: 15px;",
+                                       selectInput(ns("sortSecond"), label = NULL, choices = tableColumns, width = "150px", selected = "mlogp"),
+                              ),
+                              tags$div(style = "width: 50px;",
+                                       checkboxInput(ns("sortSecondDesc"), "descending", value = TRUE)
+                              )
+                     )
+              ),
+            ) # fluidRow
+          ), # div
+          shiny::div(
+            style = "margin-top: 5px; margin-bottom: 10px;",
             shinycssloaders::withSpinner(
               reactable::reactableOutput(ns("reactableData")),
               proxy.height = "400px"
@@ -798,7 +841,7 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
         dplyr::mutate(sdCases = round(sdCases, 3)) |>
         dplyr::mutate(sdControls = round(sdControls, 3))|>
         dplyr::mutate(beta = round(log(OR), 3)) |>
-        dplyr::mutate(pLog10 = round(-log10(p), 3)) |>
+        dplyr::mutate(mlogp = round(-log10(p), 3)) |>
         dplyr::mutate(OR = dplyr::case_when(
           OR > 10e+100 ~ Inf,
           OR < 10e-100 ~ -Inf,
@@ -807,7 +850,19 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
         dplyr::select(
           GROUP, name, conceptCode, vocabularyId, code, analysisName, domain, upIn,
           nCasesYes, nControlsYes, meanCases, meanControls, sdCases, sdControls,
-          OR, pLog10, beta, notes)
+          OR, mlogp, beta, notes)
+
+      df <- case_when(
+        input$sortFirstDesc & input$sortSecondDesc ~
+          dplyr::arrange(df, desc(across(all_of(input$sortFirst))), desc(across(all_of(input$sortSecond)))),
+        input$sortFirstDesc & !input$sortSecondDesc ~
+          dplyr::arrange(df, desc(across(all_of(input$sortFirst))), across(all_of(input$sortSecond))),
+        !input$sortFirstDesc & input$sortSecondDesc ~
+          dplyr::arrange(df, across(all_of(input$sortFirst)), desc(across(all_of(input$sortSecond)))),
+        !input$sortFirstDesc & !input$sortSecondDesc ~
+          dplyr::arrange(df, across(all_of(input$sortFirst)), across(all_of(input$sortSecond))),
+        TRUE ~ df
+      )
 
       reactable::reactable(
         df,
@@ -818,8 +873,8 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
         defaultColDef = reactable::colDef(
           resizable = TRUE
         ),
-        defaultSorted = list(pLog10 = "desc", OR = "desc"),
-        sortable = TRUE,
+        # defaultSorted = list(pLog10 = "desc", OR = "desc"),
+        sortable = FALSE,
         columns = list(
           GROUP = reactable::colDef(name = "Time ID", minWidth = 20, align = "right"),
           name = reactable::colDef(
@@ -846,7 +901,7 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
           sdCases = reactable::colDef(name = "SD cases", minWidth = 13),
           sdControls = reactable::colDef(name = "SD ctrls", minWidth = 13),
           OR = reactable::colDef( name = "OR", minWidth = 25),
-          pLog10 = reactable::colDef(name = "mlogp", minWidth = 25),
+          mlogp = reactable::colDef(name = "mlogp", minWidth = 25),
           beta = reactable::colDef(name = "Beta", minWidth = 25),
           notes = reactable::colDef(name = "Notes", minWidth = 30)
         ),

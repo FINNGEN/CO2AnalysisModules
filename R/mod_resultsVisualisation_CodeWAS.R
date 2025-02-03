@@ -15,6 +15,25 @@
 mod_resultsVisualisation_CodeWAS_ui <- function(id) {
   ns <- shiny::NS(id)
 
+  # this must be in sync with the columns in the reactable table
+  tableColumns <- c(
+    "Analysis Name" = "analysisName",
+    "Concept Code" = "conceptCode",
+    "Vocabulary" = "vocabularyId",
+    "Domain" = "domainId",
+    "N cases" = "nCasesYes",
+    "N ctrls" = "nControlsYes",
+    "Ratio|Mean cases" = "meanCases",
+    "SD cases" = "sdCases",
+    "Ratio|Mean ctrls" = "meanControls",
+    "SD ctrls" = "sdControls",
+    "OR" = "oddsRatio",
+    "mlogp" = "mlogp",
+    "Beta" = "beta",
+    "Model" = "modelType",
+    "Notes" = "runNotes"
+  )
+
   shiny::fluidPage(
     title = "CodeWAS Results",
     shinyFeedback::useShinyFeedback(),
@@ -68,7 +87,29 @@ mod_resultsVisualisation_CodeWAS_ui <- function(id) {
         shiny::tabPanel(
           "Table",
           shiny::div(
-            style = "margin-top: 10px; margin-bottom: 10px;",
+            fluidRow(
+              column(10,
+                     tags$div(style = "display: flex; align-items: center; gap: 15px;",
+                              tags$label("Sort by:", style = "width: 50px; margin-bottom: 0;"),
+                              tags$div(style = "margin-top: 15px;",
+                                       selectInput(ns("sortFirst"), label = NULL, choices = tableColumns, width = "150px", selected = "oddsRatio"),
+                              ),
+                              tags$div(style = "width: 50px;",
+                                       checkboxInput(ns("sortFirstDesc"), "descending", value = TRUE)
+                              ),
+                              tags$label("", style = "width: 20px; margin-bottom: 0; margin-left: 10px;"),
+                              tags$div(style = "margin-top: 15px;",
+                                       selectInput(ns("sortSecond"), label = NULL, choices = tableColumns, width = "150px", selected = "mlogp"),
+                              ),
+                              tags$div(style = "width: 50px;",
+                                       checkboxInput(ns("sortSecondDesc"), "descending", value = TRUE)
+                              )
+                     )
+              ),
+            ) # fluidRow
+          ), # div
+          shiny::div(
+            style = "margin-top: 0px; margin-bottom: 10px;",
             shinycssloaders::withSpinner(
               reactable::reactableOutput(ns("codeWAStable")),
               proxy.height = "400px"
@@ -79,10 +120,10 @@ mod_resultsVisualisation_CodeWAS_ui <- function(id) {
             shiny::downloadButton(ns("downloadCodeWASFiltered"), "Download filtered", icon = shiny::icon("download")),
             shiny::downloadButton(ns("downloadCodeWASAll"), "Download all", icon = shiny::icon("download"))
           )
-        )
-      )
-    )
-  )
+        )# tabPanel
+      ) # tabsetPanel
+    ) # tagList
+  ) # fluidPage
 }
 
 
@@ -308,6 +349,8 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
     output$codeWAStable <- reactable::renderReactable({
       shiny::req(r$filteredCodeWASData)
       shiny::req(r$filteredCodeWASData  |>  nrow() > 0)
+      shiny::req(input$sortFirst)
+      shiny::req(input$sortSecond)
 
       df <- r$filteredCodeWASData |>
         dplyr::mutate(mlogp = round(-log10(pValue), 3)) |>
@@ -324,7 +367,17 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
           oddsRatio, mlogp, beta, modelType, runNotes
         )
 
-      # browser()
+      df <- case_when(
+          input$sortFirstDesc & input$sortSecondDesc ~
+            dplyr::arrange(df, desc(across(all_of(input$sortFirst))), desc(across(all_of(input$sortSecond)))),
+          input$sortFirstDesc & !input$sortSecondDesc ~
+            dplyr::arrange(df, desc(across(all_of(input$sortFirst))), across(all_of(input$sortSecond))),
+          !input$sortFirstDesc & input$sortSecondDesc ~
+            dplyr::arrange(df, across(all_of(input$sortFirst)), desc(across(all_of(input$sortSecond)))),
+          !input$sortFirstDesc & !input$sortSecondDesc ~
+            dplyr::arrange(df, across(all_of(input$sortFirst)), across(all_of(input$sortSecond))),
+          TRUE ~ df
+        )
 
       reactable::reactable(
         df,
@@ -335,8 +388,8 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
         defaultColDef = reactable::colDef(
           resizable = TRUE
         ),
-        defaultSorted = list(mlogp = "desc", oddsRatio = "desc"),
-        sortable = TRUE,
+        # defaultSorted = list(mlogp = "desc", oddsRatio = "desc"),
+        sortable = FALSE,
         columns = list(
           covariateName = reactable::colDef(
             name = "Covariate Name",
@@ -434,6 +487,17 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
         dplyr::mutate(data_id = dplyr::row_number())
 
       p <- ggplot2::ggplot(data = df, mapping = ggplot2::aes(x = beta, y = pLog10, color = direction)) +
+        # draw a gray rectangle showing the wall of beta = 5
+        ggplot2::geom_rect(
+          data = NULL,
+          xmin = 5.02, xmax = 10, ymin = 0, ymax = p_limit,
+          fill = "lightgrey", alpha = 0.02, color = "white"
+        ) +
+        ggplot2::geom_rect(
+          data = NULL,
+          xmin = -10, xmax = -5.02, ymin = 0, ymax = p_limit,
+          fill = "lightgrey", alpha = 0.02, color = "white"
+        ) +
         # show the p-value and beta limits
         ggplot2::geom_hline(aes(yintercept = p_limit), col = "red", linetype = 'dashed', alpha = 0.5) +
         ggplot2::geom_vline(xintercept = 0, col = "red", linetype = 'dashed', alpha = 0.5) +
