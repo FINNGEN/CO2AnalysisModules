@@ -501,26 +501,6 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
         # show the p-value and beta limits
         ggplot2::geom_hline(aes(yintercept = p_limit), col = "red", linetype = 'dashed', alpha = 0.5) +
         ggplot2::geom_vline(xintercept = 0, col = "red", linetype = 'dashed', alpha = 0.5) +
-        {if(input$top_10)
-          # label the top 10 values
-          ggrepel::geom_text_repel(
-            data =  df |>
-              dplyr::filter(direction == "cases") |>
-              dplyr::arrange(desc(beta), desc(pLog10)) |> # this or arrange(desc(pLog10), desc(oddsRatio))?
-              dplyr::slice_head(n = input$label_top_n),
-            ggplot2::aes(
-              label = stringr::str_wrap(stringr::str_trunc(.removeDomain(covariateName), 45), 30)
-            ),
-            color = "black",
-            max.overlaps = Inf,
-            force = 0.5,
-            force_pull = 0.5,
-            size = grid::unit(2.25, "mm"),
-            # hjust = 0.1,
-            box.padding = grid::unit(3, "mm"),
-            segment.linetype = "dashed",
-            segment.alpha = 0.25
-          )} +
         ggiraph::geom_point_interactive(
           ggplot2::aes(
             data_id = data_id,
@@ -542,6 +522,26 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
           alpha = 1.0,
           stroke = 0.2
         ) +
+        {if(input$top_10)
+          # label the top 10 values
+          ggrepel::geom_text_repel(
+            data =  df |>
+              dplyr::filter(direction == "cases") |>
+              dplyr::arrange(desc(beta), desc(pLog10)) |> # this or arrange(desc(pLog10), desc(oddsRatio))?
+              dplyr::slice_head(n = input$label_top_n),
+            ggplot2::aes(
+              label = stringr::str_wrap(stringr::str_trunc(.removeDomain(covariateName), 45), 30)
+            ),
+            color = "black",
+            max.overlaps = Inf,
+            force = 0.5,
+            force_pull = 0.5,
+            size = grid::unit(2.25, "mm"),
+            # hjust = 0.1,
+            box.padding = grid::unit(3, "mm"),
+            segment.linetype = "dashed",
+            segment.alpha = 0.25
+          )} +
         ggplot2::scale_x_continuous() +
         ggplot2::scale_y_continuous(transform = "log10", labels = function(x)round(x,1), expand = ggplot2::expansion(mult = c(0.1, 0.3))) +
         ggplot2::coord_cartesian(xlim = c(min(df$beta) - 1, max(df$beta) + 2), ylim = range(df$pLog10)) +
