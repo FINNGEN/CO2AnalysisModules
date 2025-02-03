@@ -113,7 +113,7 @@ mod_fct_formTimeWindows_ui <- function(id) {
 #' @importFrom shinyFeedback showFeedbackWarning hideFeedback
 #' @importFrom shinyWidgets noUiSliderInput updateNoUiSliderInput wNumbFormat
 #' @importFrom dplyr mutate row_number starts_with
-#' @importFrom lubridate days weeks months years
+#' @importFrom lubridate days weeks years
 #' @importFrom tibble tibble
 #' @importFrom stringr str_detect
 #'

@@ -69,7 +69,7 @@ mod_analysisSettings_GWAS_ui <- function(id) {
 #'
 #' @return A reactive expression that provides the analysis settings for the GWAS.
 #'
-#' @importFrom shiny moduleServer observe req updateTextInput updatePickerInput renderText reactive observeEvent
+#' @importFrom shiny moduleServer observe req updateTextInput renderText reactive observeEvent 
 #' @importFrom shinyWidgets updatePickerInput
 #' @importFrom shinyFeedback feedbackWarning
 #' @importFrom stringr str_detect
