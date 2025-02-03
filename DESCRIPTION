@@ -31,7 +31,6 @@ Imports:
     shinybrowser,
     tibble,
     markdown, 
-    DT,
     DatabaseConnector,
     FeatureExtraction,
     SqlRender,

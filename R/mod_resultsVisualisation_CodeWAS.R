@@ -8,12 +8,30 @@
 #' @importFrom shiny NS tagList h4 div uiOutput tabsetPanel tabPanel downloadButton
 #' @importFrom htmltools hr
 #' @importFrom ggiraph girafeOutput
-#' @importFrom DT dataTableOutput
 #'
 #' @export
 #'
 mod_resultsVisualisation_CodeWAS_ui <- function(id) {
   ns <- shiny::NS(id)
+
+  # this must be in sync with the columns in the reactable table
+  tableColumns <- c(
+    "Analysis Name" = "analysisName",
+    "Concept Code" = "conceptCode",
+    "Vocabulary" = "vocabularyId",
+    "Domain" = "domainId",
+    "N cases" = "nCasesYes",
+    "N ctrls" = "nControlsYes",
+    "Ratio|Mean cases" = "meanCases",
+    "SD cases" = "sdCases",
+    "Ratio|Mean ctrls" = "meanControls",
+    "SD ctrls" = "sdControls",
+    "OR" = "oddsRatio",
+    "mlogp" = "mlogp",
+    "Beta" = "beta",
+    "Model" = "modelType",
+    "Notes" = "runNotes"
+  )
 
   shiny::fluidPage(
     title = "CodeWAS Results",
@@ -68,7 +86,29 @@ mod_resultsVisualisation_CodeWAS_ui <- function(id) {
         shiny::tabPanel(
           "Table",
           shiny::div(
-            style = "margin-top: 10px; margin-bottom: 10px;",
+            fluidRow(
+              column(10,
+                     tags$div(style = "display: flex; align-items: center; gap: 15px;",
+                              tags$label("Sort by:", style = "width: 50px; margin-bottom: 0;"),
+                              tags$div(style = "margin-top: 15px;",
+                                       selectInput(ns("sortFirst"), label = NULL, choices = tableColumns, width = "150px", selected = "oddsRatio"),
+                              ),
+                              tags$div(style = "width: 50px;",
+                                       checkboxInput(ns("sortFirstDesc"), "descending", value = TRUE)
+                              ),
+                              tags$label("", style = "width: 20px; margin-bottom: 0; margin-left: 10px;"),
+                              tags$div(style = "margin-top: 15px;",
+                                       selectInput(ns("sortSecond"), label = NULL, choices = tableColumns, width = "150px", selected = "mlogp"),
+                              ),
+                              tags$div(style = "width: 50px;",
+                                       checkboxInput(ns("sortSecondDesc"), "descending", value = TRUE)
+                              )
+                     )
+              ),
+            ) # fluidRow
+          ), # div
+          shiny::div(
+            style = "margin-top: 0px; margin-bottom: 10px;",
             shinycssloaders::withSpinner(
               reactable::reactableOutput(ns("codeWAStable")),
               proxy.height = "400px"
@@ -79,10 +119,10 @@ mod_resultsVisualisation_CodeWAS_ui <- function(id) {
             shiny::downloadButton(ns("downloadCodeWASFiltered"), "Download filtered", icon = shiny::icon("download")),
             shiny::downloadButton(ns("downloadCodeWASAll"), "Download all", icon = shiny::icon("download"))
           )
-        )
-      )
-    )
-  )
+        )# tabPanel
+      ) # tabsetPanel
+    ) # tagList
+  ) # fluidPage
 }
 
 
@@ -101,7 +141,6 @@ mod_resultsVisualisation_CodeWAS_ui <- function(id) {
 #' @importFrom tidyr separate
 #' @importFrom stringr str_remove str_trunc str_wrap
 #' @importFrom purrr map2_chr
-#' @importFrom DT dataTableOutput renderDataTable datatable formatStyle
 #' @importFrom ggiraph renderGirafe girafeOutput geom_point_interactive girafe opts_tooltip opts_zoom opts_sizing opts_toolbar opts_hover
 #' @importFrom ggrepel geom_text_repel
 #' @importFrom ggplot2 ggplot aes geom_vline geom_hline scale_x_continuous scale_y_continuous coord_cartesian labs scale_color_manual theme_minimal
@@ -308,6 +347,8 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
     output$codeWAStable <- reactable::renderReactable({
       shiny::req(r$filteredCodeWASData)
       shiny::req(r$filteredCodeWASData  |>  nrow() > 0)
+      shiny::req(input$sortFirst)
+      shiny::req(input$sortSecond)
 
       df <- r$filteredCodeWASData |>
         dplyr::mutate(mlogp = round(-log10(pValue), 3)) |>
@@ -324,7 +365,17 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
           oddsRatio, mlogp, beta, modelType, runNotes
         )
 
-      # browser()
+      df <- case_when(
+          input$sortFirstDesc & input$sortSecondDesc ~
+            dplyr::arrange(df, desc(across(all_of(input$sortFirst))), desc(across(all_of(input$sortSecond)))),
+          input$sortFirstDesc & !input$sortSecondDesc ~
+            dplyr::arrange(df, desc(across(all_of(input$sortFirst))), across(all_of(input$sortSecond))),
+          !input$sortFirstDesc & input$sortSecondDesc ~
+            dplyr::arrange(df, across(all_of(input$sortFirst)), desc(across(all_of(input$sortSecond)))),
+          !input$sortFirstDesc & !input$sortSecondDesc ~
+            dplyr::arrange(df, across(all_of(input$sortFirst)), across(all_of(input$sortSecond))),
+          TRUE ~ df
+        )
 
       reactable::reactable(
         df,
@@ -335,7 +386,8 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
         defaultColDef = reactable::colDef(
           resizable = TRUE
         ),
-        defaultSorted = list(mlogp = "desc", oddsRatio = "desc"),
+        # defaultSorted = list(mlogp = "desc", oddsRatio = "desc"),
+        sortable = FALSE,
         columns = list(
           covariateName = reactable::colDef(
             name = "Covariate Name",
@@ -407,6 +459,15 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
       shiny::req(r$filteredCodeWASData)
       shiny::req(r$filteredCodeWASData  |>  nrow() > 0)
 
+      n_no_test <- sum(grepl("no test", r$filteredCodeWASData, ignore.case = TRUE))
+      p_limit <- -log(0.05/(nrow(r$codeWASData) - n_no_test))
+
+      color_coding <- c(
+        "cases" = "#E41A1C",
+        "controls" = "#377EB8",
+        "n.s." = "lightgrey"
+      )
+
       df <- r$filteredCodeWASData |>
         dplyr::mutate(oddsRatio = ifelse(is.na(oddsRatio), 1, oddsRatio)) |>
         dplyr::mutate(pLog10 = -log10(pValue)) |>
@@ -414,21 +475,57 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
         dplyr::mutate(beta = log(oddsRatio)) |>
         dplyr::mutate(beta = ifelse(beta > 5, 5, beta)) |>
         dplyr::mutate(beta = ifelse(beta < -5, -5, beta)) |>
-        dplyr::mutate(direction = ifelse(beta > 0, "cases", "controls")) |> # n.s. = not significant
+        dplyr::mutate(direction = case_when(
+          pLog10 < p_limit ~ "n.s.",
+          beta > 0 ~ "cases",
+          beta < 0 ~ "controls",
+          TRUE ~ "n.s."
+        )) |>
         dplyr::select(analysisName, covariateName, conceptCode, vocabularyId, pValue, oddsRatio, direction, oddsRatio, pLog10, beta, meanCases, meanControls, modelType) |>
         dplyr::mutate(data_id = dplyr::row_number())
 
-      n_no_test <- sum(grepl("no test", df$modelType, ignore.case = TRUE))
-      p_limit <- -log(0.05/(nrow(r$codeWASData) - n_no_test))
-
       p <- ggplot2::ggplot(data = df, mapping = ggplot2::aes(x = beta, y = pLog10, color = direction)) +
-        # show the p-value limit
-        ggplot2::geom_hline(aes(yintercept = p_limit), col = "red", linetype = 'dashed') +
+        # draw a gray rectangle showing the wall of beta = 5
+        ggplot2::geom_rect(
+          data = NULL,
+          xmin = 5.02, xmax = 10, ymin = 0, ymax = p_limit,
+          fill = "lightgrey", alpha = 0.02, color = "white"
+        ) +
+        ggplot2::geom_rect(
+          data = NULL,
+          xmin = -10, xmax = -5.02, ymin = 0, ymax = p_limit,
+          fill = "lightgrey", alpha = 0.02, color = "white"
+        ) +
+        # show the p-value and beta limits
+        ggplot2::geom_hline(aes(yintercept = p_limit), col = "red", linetype = 'dashed', alpha = 0.5) +
+        ggplot2::geom_vline(xintercept = 0, col = "red", linetype = 'dashed', alpha = 0.5) +
+        ggiraph::geom_point_interactive(
+          ggplot2::aes(
+            data_id = data_id,
+            tooltip = paste(
+              "Covariate: ", covariateName, "<br>",
+              "Analysis: ", analysisName, "<br>",
+              "Concept code: ", conceptCode, "<br>",
+              "Vocabulary: ", vocabularyId, "<br>",
+              "beta: ", signif(beta, digits = 3), "<br>",
+              "OR: ", signif(oddsRatio, digits = 3), "<br>",
+              "p-value: ", signif(pValue, digits = 2), "<br>"
+            ),
+            fill = direction
+          ),
+          hover_nearest = TRUE,
+          shape = 21,
+          color = "black",
+          size = 1.5,
+          alpha = 1.0,
+          stroke = 0.2
+        ) +
         {if(input$top_10)
           # label the top 10 values
           ggrepel::geom_text_repel(
             data =  df |>
-              dplyr::arrange(pValue, oddsRatio) |>
+              dplyr::filter(direction == "cases") |>
+              dplyr::arrange(desc(beta), desc(pLog10)) |> # this or arrange(desc(pLog10), desc(oddsRatio))?
               dplyr::slice_head(n = input$label_top_n),
             ggplot2::aes(
               label = stringr::str_wrap(stringr::str_trunc(.removeDomain(covariateName), 45), 30)
@@ -443,39 +540,21 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
             segment.linetype = "dashed",
             segment.alpha = 0.25
           )} +
-        ggplot2::geom_vline(xintercept = 0, col = "red", linetype = 'dashed') +
-        ggiraph::geom_point_interactive(
-          ggplot2::aes(
-            data_id = data_id,
-            tooltip = paste("Analysis: ", analysisName, "<br>",
-                            "Covariate: ", covariateName, "<br>",
-                            "Concept code: ", conceptCode, "<br>",
-                            "Vocabulary: ", vocabularyId, "<br>",
-                            "beta: ", signif(beta, digits = 3), "<br>",
-                            "OR: ", signif(oddsRatio, digits = 3), "<br>",
-                            "p-value: ", signif(pValue, digits = 2), "<br>"
-            )
-          ),
-          hover_nearest = TRUE,
-          size = 1.5,
-          alpha = 0.5,
-          stroke = 0.2
-        ) +
         ggplot2::scale_x_continuous() +
         ggplot2::scale_y_continuous(transform = "log10", labels = function(x)round(x,1), expand = ggplot2::expansion(mult = c(0.1, 0.3))) +
-        ggplot2::coord_cartesian(xlim = c(-5, 5), ylim = range(df$pLog10)) +
+        ggplot2::coord_cartesian(xlim = c(min(df$beta) - 1, max(df$beta) + 2), ylim = range(df$pLog10)) +
+        ggplot2::scale_fill_manual(name = "Enriched in", values = color_coding) + #, guide = "none") +
         ggplot2::labs(
           x = "beta",
           y = "-log10(p-value)",
-          color = "Enriched in",
           title = paste("Multiple testing significance >", round(p_limit, 1)),
           subtitle = paste("-log( 0.05 / (number of covariates))")
         ) +
-        ggplot2::scale_color_manual(values = c("cases" = "#E41A1C", "controls" = "#377EB8", "n.s." = "lightgrey")) + #, guide = "none") +
         ggplot2::theme_minimal() +
         ggplot2::theme(
           text = ggplot2::element_text(size = 8),
           plot.title = ggplot2::element_text(size = 8),
+          plot.subtitle = ggplot2::element_text(size = 6),
           plot.caption = ggplot2::element_text(size = 4),
           axis.text.x = ggplot2::element_text(size = 7),
           axis.text.y = ggplot2::element_text(size = 7),
