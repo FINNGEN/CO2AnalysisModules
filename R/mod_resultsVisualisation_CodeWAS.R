@@ -8,7 +8,6 @@
 #' @importFrom shiny NS tagList h4 div uiOutput tabsetPanel tabPanel downloadButton
 #' @importFrom htmltools hr
 #' @importFrom ggiraph girafeOutput
-#' @importFrom DT dataTableOutput
 #'
 #' @export
 #'
@@ -142,7 +141,6 @@ mod_resultsVisualisation_CodeWAS_ui <- function(id) {
 #' @importFrom tidyr separate
 #' @importFrom stringr str_remove str_trunc str_wrap
 #' @importFrom purrr map2_chr
-#' @importFrom DT dataTableOutput renderDataTable datatable formatStyle
 #' @importFrom ggiraph renderGirafe girafeOutput geom_point_interactive girafe opts_tooltip opts_zoom opts_sizing opts_toolbar opts_hover
 #' @importFrom ggrepel geom_text_repel
 #' @importFrom ggplot2 ggplot aes geom_vline geom_hline scale_x_continuous scale_y_continuous coord_cartesian labs scale_color_manual theme_minimal

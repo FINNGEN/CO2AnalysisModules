@@ -7,7 +7,6 @@
 #'
 #' @importFrom shiny NS tagList tags h4 uiOutput tabsetPanel tabPanel div downloadButton
 #' @importFrom ggiraph girafeOutput
-#' @importFrom DT DTOutput
 #'
 #' @export
 #'
@@ -197,7 +196,6 @@ mod_resultsVisualisation_TimeCodeWAS_ui <- function(id) {
 #' @importFrom shinyWidgets pickerInput pickerOptions chooseSliderSkin
 #' @importFrom ggiraph renderGirafe girafe opts_sizing opts_hover opts_selection opts_toolbar geom_point_interactive
 #' @importFrom ggrepel geom_text_repel
-#' @importFrom DT renderDataTable datatable formatSignif formatStyle
 #' @importFrom dplyr filter mutate select arrange transmute left_join pull case_when if_else inner_join row_number
 #' @importFrom tidyr separate
 #' @importFrom stringr str_remove_all str_remove str_c str_wrap str_trunc str_split str_extract_all str_sub
