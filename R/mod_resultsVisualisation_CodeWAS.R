@@ -505,6 +505,7 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
           # label the top 10 values
           ggrepel::geom_text_repel(
             data =  df |>
+              dplyr::filter(direction == "cases") |>
               dplyr::arrange(desc(beta), desc(pLog10)) |> # this or arrange(desc(pLog10), desc(oddsRatio))?
               dplyr::slice_head(n = input$label_top_n),
             ggplot2::aes(
