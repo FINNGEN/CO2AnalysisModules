@@ -484,21 +484,30 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
         dplyr::select(analysisName, covariateName, conceptCode, vocabularyId, pValue, oddsRatio, direction, oddsRatio, pLog10, beta, meanCases, meanControls, modelType) |>
         dplyr::mutate(data_id = dplyr::row_number())
 
+      cat("machine double xmax: ", .Machine$double.xmax, "\n")
+      cat("machine log10(double xmax): ", log10(.Machine$double.xmax), "\n")
+
       p <- ggplot2::ggplot(data = df, mapping = ggplot2::aes(x = beta, y = pLog10, color = direction)) +
         # draw a gray rectangle showing the wall of beta = 5
         ggplot2::geom_rect(
           data = NULL,
-          xmin = 5.02, xmax = 10, ymin = 0, ymax = p_limit,
-          fill = "lightgrey", alpha = 0.02, color = "white"
+          xmin = 5.0, xmax = 10, ymin = 0, ymax = p_limit,
+          fill = "#EFEFEF", alpha = 1, color = "#EFEFEF"
         ) +
         ggplot2::geom_rect(
           data = NULL,
-          xmin = -10, xmax = -5.02, ymin = 0, ymax = p_limit,
-          fill = "lightgrey", alpha = 0.02, color = "white"
+          xmin = -10, xmax = -5.0, ymin = 0, ymax = log10(.Machine$double.xmax),
+          fill = "#EFEFEF", alpha = 1, color = "#EFEFEF"
+        ) +
+        # draw a gray rectangle showing the highest p-value
+        ggplot2::geom_rect(
+          data = NULL,
+          xmin = -10, xmax = 10, ymin = log10(.Machine$double.xmax), ymax = 400, # ~308
+          fill = "#EFEFEF", alpha = 1, color = "#EFEFEF"
         ) +
         # show the p-value and beta limits
-        ggplot2::geom_hline(aes(yintercept = p_limit), col = "red", linetype = 'dashed', alpha = 0.5) +
-        ggplot2::geom_vline(xintercept = 0, col = "red", linetype = 'dashed', alpha = 0.5) +
+        ggplot2::geom_hline(aes(yintercept = p_limit), col = "red", linetype = 'dashed', alpha = 0.3) +
+        ggplot2::geom_vline(xintercept = 0, col = "red", linetype = 'dashed', alpha = 0.3) +
         ggiraph::geom_point_interactive(
           ggplot2::aes(
             data_id = data_id,
@@ -509,7 +518,8 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
               "Vocabulary: ", vocabularyId, "<br>",
               "beta: ", signif(beta, digits = 3), "<br>",
               "OR: ", signif(oddsRatio, digits = 3), "<br>",
-              "p-value: ", signif(pValue, digits = 2), "<br>"
+              "p-value: ", signif(pValue, digits = 2), "<br>",
+              "mlogp: ", signif(pLog10, digits = 2), "<br>"
             ),
             fill = direction
           ),
@@ -540,7 +550,7 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
             segment.linetype = "dashed",
             segment.alpha = 0.25
           )} +
-        ggplot2::scale_x_continuous() +
+        ggplot2::scale_x_continuous(breaks = function(x) unique(c(-5:-1, 1:5))) +  # Always include -5, 5
         ggplot2::scale_y_continuous(transform = "log10", labels = function(x)round(x,1), expand = ggplot2::expansion(mult = c(0.1, 0.3))) +
         ggplot2::coord_cartesian(xlim = c(min(df$beta) - 1, max(df$beta) + 2), ylim = range(df$pLog10)) +
         ggplot2::scale_fill_manual(name = "Enriched in", values = color_coding) + #, guide = "none") +
@@ -548,14 +558,17 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
           x = "beta",
           y = "-log10(p-value)",
           title = paste("Multiple testing significance >", round(p_limit, 1)),
-          subtitle = paste("-log( 0.05 / (number of covariates))")
+          subtitle = paste("-log( 0.05 / (number of covariates))"),
+          caption = "The max numerical magnitude of beta is 5",
         ) +
         ggplot2::theme_minimal() +
         ggplot2::theme(
           text = ggplot2::element_text(size = 8),
+          panel.grid.minor = ggplot2::element_blank(),
           plot.title = ggplot2::element_text(size = 8),
           plot.subtitle = ggplot2::element_text(size = 6),
-          plot.caption = ggplot2::element_text(size = 4),
+          plot.caption = ggplot2::element_text(size = 6, color = "darkgray", margin = ggplot2::margin(t = -10)),
+          plot.caption.position = "plot",
           axis.text.x = ggplot2::element_text(size = 7),
           axis.text.y = ggplot2::element_text(size = 7),
           legend.key.height = grid::unit(3, "mm"),
