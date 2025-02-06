@@ -486,12 +486,13 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
 
       cat("machine double xmax: ", .Machine$double.xmax, "\n")
       cat("machine log10(double xmax): ", log10(.Machine$double.xmax), "\n")
+      ParallelLogger::logInfo("machine double xmax: ", log10(.Machine$double.xmax))
 
       p <- ggplot2::ggplot(data = df, mapping = ggplot2::aes(x = beta, y = pLog10, color = direction)) +
         # draw a gray rectangle showing the wall of beta = 5
         ggplot2::geom_rect(
           data = NULL,
-          xmin = 5.0, xmax = 10, ymin = 0, ymax = p_limit,
+          xmin = 5.0, xmax = 10, ymin = 0, ymax = log10(.Machine$double.xmax),
           fill = "#EFEFEF", alpha = 1, color = "#EFEFEF"
         ) +
         ggplot2::geom_rect(
