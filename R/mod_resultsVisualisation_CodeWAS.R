@@ -484,10 +484,6 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
         dplyr::select(analysisName, covariateName, conceptCode, vocabularyId, pValue, oddsRatio, direction, oddsRatio, pLog10, beta, meanCases, meanControls, modelType) |>
         dplyr::mutate(data_id = dplyr::row_number())
 
-      cat("machine double xmax: ", .Machine$double.xmax, "\n")
-      cat("machine log10(double xmax): ", log10(.Machine$double.xmax), "\n")
-      ParallelLogger::logInfo("machine double xmax: ", log10(.Machine$double.xmax))
-
       p <- ggplot2::ggplot(data = df, mapping = ggplot2::aes(x = beta, y = pLog10, color = direction)) +
         # draw a gray rectangle showing the wall of beta = 5
         ggplot2::geom_rect(
@@ -503,7 +499,7 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
         # draw a gray rectangle showing the highest p-value
         ggplot2::geom_rect(
           data = NULL,
-          xmin = -10, xmax = 10, ymin = log10(308), ymax = log10(1000), # ~308, log10(.Machine$double.xmax)
+          xmin = -10, xmax = 10, ymin = log10(log10(.Machine$double.xmax)), ymax = log10(1500),
           fill = "#EFEFEF", alpha = 1, color = "#EFEFEF"
         ) +
         # show the p-value and beta limits
@@ -536,7 +532,7 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
           ggrepel::geom_text_repel(
             data =  df |>
               dplyr::filter(direction == "cases") |>
-              dplyr::arrange(desc(beta), desc(pLog10)) |> # this or arrange(desc(pLog10), desc(oddsRatio))?
+              dplyr::arrange(desc(beta), desc(pLog10)) |>
               dplyr::slice_head(n = input$label_top_n),
             ggplot2::aes(
               label = stringr::str_wrap(stringr::str_trunc(.removeDomain(covariateName), 45), 30)
@@ -560,7 +556,7 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
           y = "-log10(p-value)",
           title = paste("Multiple testing significance >", round(p_limit, 1)),
           subtitle = paste("-log( 0.05 / (number of covariates))"),
-          caption = "The max numerical magnitude of beta is 5",
+          caption = "The max numerical magnitude of beta is 5\nThe gray walls show the limits of numerical accuracy",
         ) +
         ggplot2::theme_minimal() +
         ggplot2::theme(
