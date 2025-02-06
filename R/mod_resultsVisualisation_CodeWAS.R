@@ -503,7 +503,7 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
         # draw a gray rectangle showing the highest p-value
         ggplot2::geom_rect(
           data = NULL,
-          xmin = -10, xmax = 10, ymin = log10(.Machine$double.xmax), ymax = log10(1500), # ~308
+          xmin = -10, xmax = 10, ymin = log10(.Machine$double.xmax), ymax = Inf, # ~308
           fill = "#EFEFEF", alpha = 1, color = "#EFEFEF"
         ) +
         # show the p-value and beta limits
