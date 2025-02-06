@@ -348,7 +348,8 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
           data_id = paste0(code, "@", as.character(time_period)),
           data_id_class = code
         ) |>
-        dplyr::filter(!is.na(time_period))
+        dplyr::filter(!is.na(time_period)) |>
+        dplyr::mutate(dplyr::across(where(is.character), stringr::str_to_sentence))
 
       r$timeCodeWASData <- timeCodeWASData
     })
@@ -887,10 +888,10 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
             minWidth = 50
           ),
           code = reactable::colDef(show = FALSE),
-          conceptCode = reactable::colDef(name = "Concept Code", minWidth = 15),
+          conceptCode = reactable::colDef(name = "Concept Code", minWidth = 18),
           vocabularyId = reactable::colDef(name = "Vocabulary", minWidth = 15),
           analysisName = reactable::colDef(name = "Analysis Name", minWidth = 50),
-          domain = reactable::colDef(name = "Domain", minWidth = 40),
+          domain = reactable::colDef(name = "Domain", minWidth = 20),
           upIn = reactable::colDef(name = "Type", minWidth = 15),
           nCasesYes = reactable::colDef(name = "N cases", minWidth = 12),
           nControlsYes = reactable::colDef(name = "N ctrls", minWidth = 12),

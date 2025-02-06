@@ -16,9 +16,10 @@ mod_resultsVisualisation_CodeWAS_ui <- function(id) {
 
   # this must be in sync with the columns in the reactable table
   tableColumns <- c(
-    "Analysis Name" = "analysisName",
+    "Covariate Name" = "covariateName",
     "Concept Code" = "conceptCode",
     "Vocabulary" = "vocabularyId",
+    "Analysis Name" = "analysisName",
     "Domain" = "domainId",
     "N cases" = "nCasesYes",
     "N ctrls" = "nControlsYes",
@@ -181,7 +182,8 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
         dplyr::mutate(covariateName = ifelse(is.na(name), domain, name)) |>
         dplyr::mutate(name = ifelse(is.na(name), domain, name)) |>
         dplyr::mutate(covariateName = stringr::str_remove(covariateName, "^[:blank:]")) |>
-        dplyr::mutate(domain = stringr::str_remove(domain, "^[:blank:]"))
+        dplyr::mutate(domain = stringr::str_remove(domain, "^[:blank:]")) |>
+        dplyr::mutate(dplyr::across(where(is.character), stringr::str_to_sentence))
     })
 
     #
