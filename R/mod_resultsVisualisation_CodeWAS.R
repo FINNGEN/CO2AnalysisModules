@@ -164,6 +164,14 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
       lastPlot = NULL
     )
 
+    # debounced inputs
+    domain_reactive <- shiny::reactive(input$domain)
+    domain_debounced <- shiny::debounce(domain_reactive, 1000)
+    analysis_reactive <- shiny::reactive(input$analysis)
+    analysis_debounced <- shiny::debounce(analysis_reactive, 1000)
+    model_reactive <- shiny::reactive(input$model)
+    model_debounced <- shiny::debounce(model_reactive, 1000)
+
     #
     # load the CodeWAS data
     #
@@ -310,9 +318,9 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
             meanCases, sdCases, meanControls, sdControls, oddsRatio, pValue, beta, modelType, runNotes
           ) |>
           dplyr::filter(
-            if (!is.null(input$domain)) domainId %in% input$domain else FALSE,
-            if (!is.null(input$analysis)) analysisName %in% input$analysis else FALSE,
-            if (!is.null(input$model)) modelType %in% input$model else FALSE
+            if (!is.null(domain_debounced())) domainId %in% domain_debounced() else FALSE,
+            if (!is.null(analysis_debounced())) analysisName %in% analysis_debounced() else FALSE,
+            if (!is.null(model_debounced())) modelType %in% model_debounced() else FALSE
           )  |>
           dplyr::filter(
             as.double(pValue) <= (as.double(input$p_value_threshold) + 2 * .Machine$double.eps)
