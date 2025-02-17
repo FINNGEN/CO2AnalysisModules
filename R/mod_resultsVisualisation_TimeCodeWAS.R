@@ -235,6 +235,16 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
       force_update = FALSE,
     )
 
+    # debounced inputs
+    domain_reactive <- shiny::reactive(input$domain)
+    domain_debounced <- shiny::debounce(domain_reactive, 1000)
+    analysis_reactive <- shiny::reactive(input$analysis)
+    analysis_debounced <- shiny::debounce(analysis_reactive, 1000)
+    model_reactive <- shiny::reactive(input$model)
+    model_debounced <- shiny::debounce(model_reactive, 1000)
+    time_period_reactive <- shiny::reactive(input$time_period)
+    time_period_debounced <- shiny::debounce(time_period_reactive, 1000)
+
     ParallelLogger::logInfo("TimeCodeWAS server started")
 
     #
@@ -488,9 +498,9 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
         r$filteredTimeCodeWASData <- r$timeCodeWASData |>
           dplyr::filter(
             # if (!is.null(input$database)) databaseId %in% input$database else FALSE,
-            if (!is.null(input$domain)) domain %in% input$domain else FALSE,
-            if (!is.null(input$analysis)) analysisName %in% input$analysis else FALSE,
-            if (!is.null(input$model)) model %in% input$model else FALSE
+            if (!is.null(domain_debounced())) domain %in% domain_debounced() else FALSE,
+            if (!is.null(analysis_debounced())) analysisName %in% analysis_debounced() else FALSE,
+            if (!is.null(model_debounced())) model %in% model_debounced() else FALSE
           ) |>
           dplyr::filter(
             as.double(p) <= (as.double(input$p_value_threshold) + 2 * .Machine$double.eps)
@@ -504,7 +514,7 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
           ) |>
           dplyr::filter(nCasesYes >= input$n_cases)  |>
           dplyr::filter(!dplyr::if_any(c("p", "OR"), is.na) | input$na_anywhere) |>
-          dplyr::filter(!is.null(input$time_period) & time_period %in% input$time_period)
+          dplyr::filter(!is.null(time_period_debounced()) & time_period %in% time_period_debounced())
       }
     })
 
