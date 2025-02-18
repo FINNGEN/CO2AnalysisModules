@@ -124,10 +124,13 @@ mod_analysisSettings_timeCodeWAS_server <- function(id, r_connectionHandler) {
       cohortIdAndNamesList <- cohortIdAndNamesList |>
         purrr::discard(~.x %in% input$selectCaseCohort_pickerInput)
 
+      # Add cohort 0 with 
+      cohortIdAndNamesList <- c(list(`AUTO-MATCH: Creates a control cohort from the patiens not in case cohort that matches case cohort by sex and birth year with ratio 1:10 and start date as in case cohort` = 0), cohortIdAndNamesList)
+
       shinyWidgets::updatePickerInput(
         inputId = "selectControlCohort_pickerInput",
         choices = cohortIdAndNamesList,
-        selected = character(0)
+        selected = 0
       )
     })
 
@@ -178,6 +181,11 @@ mod_analysisSettings_timeCodeWAS_server <- function(id, r_connectionHandler) {
       cohortsSumary  <- cohortTableHandler$getCohortsSummary()
 
       message <- ""
+      if(input$selectControlCohort_pickerInput == 0){
+        message <- paste0(message, "\u2139\uFE0F Analysis will create a control cohort from the patients not in case cohort that matches case cohort by sex and birth year with ratio 1:10 and start date as in case cohort\n")
+        return(message)
+      }
+
       # counts
       if( nSubjectsCase > nSubjectsControl ){
         message <- paste0(message, "There are more entries in case cohort (", nEntryCase,") that in control cohort (", nEntryControl,"). Are you sure they are correct?\n")

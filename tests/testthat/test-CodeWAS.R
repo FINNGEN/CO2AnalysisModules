@@ -488,7 +488,7 @@ test_that("executeCodeWAS works with 0 as control cohort", {
   cohortsInfo <-
     analysisResults  |> dplyr::tbl("cohortsInfo")  |> dplyr::collect()
   cohortsInfo |> nrow() |> expect_equal(4)
-  cohortsInfo |> dplyr::filter(cohortId == 3) |> pull(shortName) |> expect_equal("ALL-C1")
+  cohortsInfo |> dplyr::filter(cohortId == 3) |> pull(shortName) |> expect_equal("ALL\u2229C1")
   cohortsInfo |> dplyr::filter(cohortId == 3003) |> pull(shortName) |> expect_equal("C3003")
 
 })

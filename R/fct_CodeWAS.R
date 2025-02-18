@@ -66,7 +66,7 @@ execute_CodeWAS <- function(
     cohortDefinitionSet <- cohortTableHandler$cohortDefinitionSet
     newCohortId <- setdiff(1:1000, cohortDefinitionSet$cohortId)[1]
     newCohortName <- paste0("Any patient not in ", cohortDefinitionSet |> dplyr::filter(cohortId == cohortIdCases) |> dplyr::pull(cohortName))
-    newCohortShortName <- paste0("ALL-", substr(cohortDefinitionSet |> dplyr::filter(cohortId == cohortIdCases) |> dplyr::pull(shortName), 1, 15))
+    newCohortShortName <- paste0("ALL\u2229", substr(cohortDefinitionSet |> dplyr::filter(cohortId == cohortIdCases) |> dplyr::pull(shortName), 1, 15))
 
     ParallelLogger::logInfo("Creating no case cohort")
     cohortDefinitionSetAllMinusCase <- tibble::tibble(
