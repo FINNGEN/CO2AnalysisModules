@@ -58,6 +58,66 @@ execute_CodeWAS <- function(
   }
 
   #
+  # if cohortIdControls is 0 create the control cohort first
+  #
+  if (cohortIdControls == 0) {
+    ParallelLogger::logInfo("Creating match control cohort")
+    
+    cohortDefinitionSet <- cohortTableHandler$cohortDefinitionSet
+    newCohortId <- setdiff(1:1000, cohortDefinitionSet$cohortId)[1]
+    newCohortName <- paste0("Any patient not in ", cohortDefinitionSet |> dplyr::filter(cohortId == cohortIdCases) |> dplyr::pull(cohortName))
+    newCohortShortName <- paste0("ALL-", substr(cohortDefinitionSet |> dplyr::filter(cohortId == cohortIdCases) |> dplyr::pull(shortName), 1, 15))
+
+    ParallelLogger::logInfo("Creating no case cohort")
+    cohortDefinitionSetAllMinusCase <- tibble::tibble(
+      cohortId = newCohortId,
+      cohortName = newCohortName,
+      shortName = newCohortShortName,
+      json = "{}",
+      sql = paste0(
+        "-- This code inserts records from an external cohort table into the cohort table of the cohort database schema.
+      DELETE FROM @target_database_schema.@target_cohort_table where cohort_definition_id = @target_cohort_id;
+      INSERT INTO @target_database_schema.@target_cohort_table (cohort_definition_id, subject_id, cohort_start_date, cohort_end_date)
+      SELECT @target_cohort_id AS cohort_definition_id, op.person_id AS subject_id, op.observation_period_start_date AS cohort_start_date, op.observation_period_end_date AS cohort_end_date
+      FROM ", cdmDatabaseSchema, ".observation_period AS op
+      WHERE op.person_id NOT IN (
+        SELECT subject_id
+        FROM @target_database_schema.@target_cohort_table
+        WHERE cohort_definition_id = ", cohortIdCases, "
+      )
+      ")
+    )
+
+    cohortDefinitionSet <- dplyr::bind_rows(cohortDefinitionSet, cohortDefinitionSetAllMinusCase)
+
+    ParallelLogger::logInfo("Creating match control cohort")
+    # Match to sex and bday, match ratio 10
+    subsetDef <- CohortGenerator::createCohortSubsetDefinition(
+      name = "",
+      definitionId = newCohortId,
+      subsetOperators = list(
+        HadesExtras::createMatchingSubset(
+          matchToCohortId = cohortIdCases,
+          matchRatio = 10,
+          matchSex = TRUE,
+          matchBirthYear = TRUE,
+          matchCohortStartDateWithInDuration = FALSE,
+          newCohortStartDate = "keep",
+          newCohortEndDate = "keep"
+        )
+      )
+    )
+
+    cohortDefinitionSet <- cohortDefinitionSet |>
+      CohortGenerator::addCohortSubsetDefinition(subsetDef, targetCohortIds = newCohortId)
+
+    cohortTableHandler$insertOrUpdateCohorts(cohortDefinitionSet)
+
+    cohortIdControls <- newCohortId
+    cohortDefinitionSet  <- cohortTableHandler$cohortDefinitionSet
+  }
+
+  #
   # function
   #
   ParallelLogger::logInfo("Calculating CodeWAS")
@@ -79,10 +139,9 @@ execute_CodeWAS <- function(
     temporalStartDays = -99999,
     temporalEndDays = 99999
   )
-  
+
   # regex analysis setting
   if (length(regexAnalysisIds) > 0) {
-    
     cohortDefinitionTable <- HadesExtras::getCohortNamesFromCohortDefinitionTable(
       connection = connection,
       cohortDatabaseSchema = cdmDatabaseSchema
@@ -490,7 +549,7 @@ execute_CodeWAS <- function(
 
   # Add And fix columns in covariateRef
   conceptIds <- covariateRef |>
-    dplyr::select(conceptId) |> 
+    dplyr::select(conceptId) |>
     dplyr::collect() |>
     dplyr::distinct() |>
     dplyr::rename(concept_id = conceptId)
@@ -506,30 +565,30 @@ execute_CodeWAS <- function(
   covariateRef <- covariateRef |>
     dplyr::left_join(conceptIdsAndCodes, by = "conceptId")
 
-if(length(regexAnalysisIds) > 0 && !is.null(cohortDefinitionTable) ){
-  conceptIdsAndCohortDescriptions <- cohortDefinitionTable |> 
-    dplyr::cross_join(analysisRegexTibble) |>
-    dplyr::filter(stringr::str_detect(cohort_definition_name, analysisRegex)) |> 
-    dplyr::mutate(covariateId = cohort_definition_id*1000 + analysisId) |> 
-    dplyr::transmute(
-      covariateId = as.integer(covariateId),
-      conceptCode2 = as.character(cohort_definition_name),
-      covariateName2 = as.character(cohort_definition_description),
-      vocabularyId2 = analysisName
-    ) 
+  if (length(regexAnalysisIds) > 0 && !is.null(cohortDefinitionTable)) {
+    conceptIdsAndCohortDescriptions <- cohortDefinitionTable |>
+      dplyr::cross_join(analysisRegexTibble) |>
+      dplyr::filter(stringr::str_detect(cohort_definition_name, analysisRegex)) |>
+      dplyr::mutate(covariateId = cohort_definition_id * 1000 + analysisId) |>
+      dplyr::transmute(
+        covariateId = as.integer(covariateId),
+        conceptCode2 = as.character(cohort_definition_name),
+        covariateName2 = as.character(cohort_definition_description),
+        vocabularyId2 = analysisName
+      )
 
-    covariateRef <- covariateRef |> 
-    dplyr::left_join(conceptIdsAndCohortDescriptions, by = "covariateId") |> 
-    dplyr::mutate( 
-      conceptCode = dplyr::if_else(!is.na(conceptCode2), conceptCode2, conceptCode),
-      covariateName = dplyr::if_else(!is.na(covariateName2), covariateName2, covariateName),
-      vocabularyId = dplyr::if_else(!is.na(vocabularyId2), vocabularyId2, vocabularyId)
-    ) |> 
-    dplyr::select(-conceptCode2, -covariateName2, -vocabularyId2)
+    covariateRef <- covariateRef |>
+      dplyr::left_join(conceptIdsAndCohortDescriptions, by = "covariateId") |>
+      dplyr::mutate(
+        conceptCode = dplyr::if_else(!is.na(conceptCode2), conceptCode2, conceptCode),
+        covariateName = dplyr::if_else(!is.na(covariateName2), covariateName2, covariateName),
+        vocabularyId = dplyr::if_else(!is.na(vocabularyId2), vocabularyId2, vocabularyId)
+      ) |>
+      dplyr::select(-conceptCode2, -covariateName2, -vocabularyId2)
   }
 
 
-  
+
   analysisDuration <- Sys.time() - startAnalysisTime
 
   #
@@ -601,12 +660,13 @@ if(length(regexAnalysisIds) > 0 && !is.null(cohortDefinitionTable) ){
     )
   duckdb::dbWriteTable(connection, "codewasResults", codewasResults, overwrite = TRUE)
 
-  if(!is.null(analysisRegexTibble)){
-    analysisRef  <- analysisRef |> 
-    dplyr::left_join(
-      analysisRegexTibble |> dplyr::rename(newAnalysisName = analysisName),
-       by = "analysisId") |> 
-    dplyr::mutate(analysisName = dplyr::if_else(is.na(newAnalysisName), analysisName, newAnalysisName))
+  if (!is.null(analysisRegexTibble)) {
+    analysisRef <- analysisRef |>
+      dplyr::left_join(
+        analysisRegexTibble |> dplyr::rename(newAnalysisName = analysisName),
+        by = "analysisId"
+      ) |>
+      dplyr::mutate(analysisName = dplyr::if_else(is.na(newAnalysisName), analysisName, newAnalysisName))
   }
 
   analysisRef <- analysisRef |>
@@ -628,7 +688,7 @@ if(length(regexAnalysisIds) > 0 && !is.null(cohortDefinitionTable) ){
     covariateRef$collisions <- NA
   }
   # END TEMP
-  
+
   covariateRef <- covariateRef |>
     dplyr::transmute(
       covariateId = as.double(covariateId),
@@ -654,7 +714,7 @@ if(length(regexAnalysisIds) > 0 && !is.null(cohortDefinitionTable) ){
     exportDuration = exportDuration
   )
   duckdb::dbWriteTable(connection, "analysisInfo", analysisInfo, overwrite = TRUE)
-  
+
   # close connection
   duckdb::dbDisconnect(connection)
 
@@ -685,8 +745,8 @@ if(length(regexAnalysisIds) > 0 && !is.null(cohortDefinitionTable) ){
 assertAnalysisSettings_CodeWAS <- function(analysisSettings) {
   analysisSettings |> checkmate::assertList()
   c("cohortIdCases", "cohortIdControls", "analysisIds") |> checkmate::assertSubset(names(analysisSettings))
-  analysisSettings$cohortIdCases |> checkmate::assertNumeric()
-  analysisSettings$cohortIdControls |> checkmate::assertNumeric()
+  analysisSettings$cohortIdCases |> checkmate::assertNumeric(lower = 1, len = 1)
+  analysisSettings$cohortIdControls |> checkmate::assertNumeric(lower = 0, len = 1)
   analysisSettings$analysisIds |> checkmate::assertNumeric()
 
   if (is.null(analysisSettings$covariatesIds)) {

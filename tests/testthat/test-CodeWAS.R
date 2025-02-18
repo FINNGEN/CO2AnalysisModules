@@ -446,3 +446,49 @@ test_that("executeCodeWAS works to get lab values", {
     expect_true()
 
 })
+
+
+
+test_that("executeCodeWAS works with 0 as control cohort", {
+  
+  # set up
+  cohortTableHandler <-
+    helper_createNewCohortTableHandler(addCohorts = "HadesExtrasFractureCohorts")
+  withr::defer({
+    rm(cohortTableHandler)
+    gc()
+  })
+
+  exportFolder <- withr::local_tempdir('testCodeWAS')
+
+  analysisSettings <- list(
+    cohortIdCases = 1,
+    cohortIdControls = 0,
+    analysisIds = c(101, 141, 1, 2, 402, 701, 702, 41),
+    covariatesIds = NULL,
+    minCellCount = 1
+  )
+
+  # function
+  suppressWarnings(
+    pathToResultsDatabase <- execute_CodeWAS(
+      exportFolder = exportFolder,
+      cohortTableHandler = cohortTableHandler,
+      analysisSettings = analysisSettings
+    )
+  )
+
+  # test
+  expect_true(file.exists(pathToResultsDatabase))
+  checkResults_CodeWAS(pathToResultsDatabase) |> expect_true()
+
+  analysisResults <-
+    duckdb::dbConnect(duckdb::duckdb(), pathToResultsDatabase)
+
+  cohortsInfo <-
+    analysisResults  |> dplyr::tbl("cohortsInfo")  |> dplyr::collect()
+  cohortsInfo |> nrow() |> expect_equal(4)
+  cohortsInfo |> dplyr::filter(cohortId == 3) |> pull(shortName) |> expect_equal("ALL-C1")
+  cohortsInfo |> dplyr::filter(cohortId == 3003) |> pull(shortName) |> expect_equal("C3003")
+
+})
