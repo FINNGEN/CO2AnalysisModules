@@ -290,13 +290,14 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
           covariateName = covariateName,
           p = pValue,
           OR = oddsRatio
-        )
+        ) |>
+        tidyr::separate(covariateName, c("domain", "name"), sep = ":", extra = "merge", fill = "right")
 
       timeCodeWASData <- timeCodeWASData |>
         dplyr::transmute(
           code = covariateId,
           time_period = factor(timeRange, levels = r$timePeriods, labels = r$timePeriods),
-          name = covariateName,
+          name = name,
           conceptCode = conceptCode,
           vocabularyId = vocabularyId,
           analysisName = analysisName,
@@ -358,8 +359,7 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
           data_id = paste0(code, "@", as.character(time_period)),
           data_id_class = code
         ) |>
-        dplyr::filter(!is.na(time_period)) |>
-        dplyr::mutate(dplyr::across(where(is.character), stringr::str_to_sentence))
+        dplyr::filter(!is.na(time_period))
 
       r$timeCodeWASData <- timeCodeWASData
     })
