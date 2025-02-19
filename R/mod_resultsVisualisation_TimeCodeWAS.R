@@ -31,6 +31,7 @@ mod_resultsVisualisation_TimeCodeWAS_ui <- function(id) {
     "OR" = "OR",
     "mlogp" = "mlogp",
     "Beta" = "beta",
+    "Model" = "model",
     "Notes" = "notes"
   )
 
@@ -859,7 +860,7 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
         dplyr::select(
           GROUP, name, conceptCode, vocabularyId, code, analysisName, domain, upIn,
           nCasesYes, nControlsYes, meanCases, meanControls, sdCases, sdControls,
-          OR, mlogp, beta, notes)
+          OR, mlogp, beta, model, notes)
 
       df <- case_when(
         input$sortFirstDesc & input$sortSecondDesc ~
@@ -909,9 +910,10 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
           meanControls = reactable::colDef(name = "Ratio|Mean ctrls", minWidth = 13),
           sdCases = reactable::colDef(name = "SD cases", minWidth = 13),
           sdControls = reactable::colDef(name = "SD ctrls", minWidth = 13),
-          OR = reactable::colDef( name = "OR", minWidth = 25),
-          mlogp = reactable::colDef(name = "mlogp", minWidth = 25),
+          OR = reactable::colDef( name = "OR", minWidth = 18),
+          mlogp = reactable::colDef(name = "mlogp", minWidth = 18),
           beta = reactable::colDef(name = "Beta", minWidth = 25),
+          model = reactable::colDef(name = "Model", minWidth = 20),
           notes = reactable::colDef(name = "Notes", minWidth = 30)
         ),
         searchable = TRUE, defaultPageSize = 10, showPageSizeOptions = TRUE
