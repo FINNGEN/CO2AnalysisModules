@@ -11,6 +11,8 @@
 #' @importFrom duckdb dbConnect dbListTables dbDisconnect
 #' @importFrom DBI dbGetQuery
 #' @importFrom dplyr select as_tibble
+#' @importFrom purrr map
+#' @importFrom utils capture.output data write.csv
 #'
 .checkDatabase <- function(pathToResultsDatabase, expectedSchemas) {
 
