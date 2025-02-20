@@ -14,6 +14,18 @@
 #' @importFrom DBI dbGetQuery
 #' @importFrom tibble tibble
 #' @importFrom yaml as.yaml
+#' @importFrom HadesExtras getCohortNamesFromCohortDefinitionTable
+#' @importFrom FeatureExtraction createCohortBasedTemporalCovariateSettings getDbCovariateData
+#' @importFrom HadesExtras FeatureExtraction_createTemporalCovariateSettingsFromList
+#' @importFrom SqlRender render translate
+#' @importFrom DatabaseConnector dbExecute
+#' @importFrom tidyr spread
+#' @importFrom purrr map
+#' @importFrom utils capture.output
+#' @importFrom speedglm speedglm
+#' @importFrom stringr str_detect
+#' @importFrom HadesExtras getCohortNamesFromCohortDefinitionTable
+#' @importFrom stats binomial gaussian sd as.formula na.omit pt setNames t.test chisq.test
 #'
 #' @export
 #'
@@ -141,7 +153,7 @@ execute_CodeWAS <- function(
   )
 
   # regex analysis setting
-  if (length(regexAnalysisIds) > 0) {
+  if (length(regexAnalysisIds) > 0) { 
     cohortDefinitionTable <- HadesExtras::getCohortNamesFromCohortDefinitionTable(
       connection = connection,
       cohortDatabaseSchema = cdmDatabaseSchema
