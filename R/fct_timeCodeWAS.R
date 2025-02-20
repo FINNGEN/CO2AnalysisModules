@@ -51,6 +51,66 @@ execute_timeCodeWAS <- function(
 
 
   #
+  # if cohortIdControls is 0 create the control cohort first
+  #
+  if (cohortIdControls == 0) {
+    ParallelLogger::logInfo("Creating match control cohort")
+    
+    cohortDefinitionSet <- cohortTableHandler$cohortDefinitionSet
+    newCohortId <- setdiff(1:1000, cohortDefinitionSet$cohortId)[1]
+    newCohortName <- paste0("Any patient not in ", cohortDefinitionSet |> dplyr::filter(cohortId == cohortIdCases) |> dplyr::pull(cohortName))
+    newCohortShortName <- paste0("ALL\u2229", substr(cohortDefinitionSet |> dplyr::filter(cohortId == cohortIdCases) |> dplyr::pull(shortName), 1, 15))
+
+    ParallelLogger::logInfo("Creating no case cohort")
+    cohortDefinitionSetAllMinusCase <- tibble::tibble(
+      cohortId = newCohortId,
+      cohortName = newCohortName,
+      shortName = newCohortShortName,
+      json = "{}",
+      sql = paste0(
+        "-- This code inserts records from an external cohort table into the cohort table of the cohort database schema.
+      DELETE FROM @target_database_schema.@target_cohort_table where cohort_definition_id = @target_cohort_id;
+      INSERT INTO @target_database_schema.@target_cohort_table (cohort_definition_id, subject_id, cohort_start_date, cohort_end_date)
+      SELECT @target_cohort_id AS cohort_definition_id, op.person_id AS subject_id, op.observation_period_start_date AS cohort_start_date, op.observation_period_end_date AS cohort_end_date
+      FROM ", cdmDatabaseSchema, ".observation_period AS op
+      WHERE op.person_id NOT IN (
+        SELECT subject_id
+        FROM @target_database_schema.@target_cohort_table
+        WHERE cohort_definition_id = ", cohortIdCases, "
+      )
+      ")
+    )
+
+    cohortDefinitionSet <- dplyr::bind_rows(cohortDefinitionSet, cohortDefinitionSetAllMinusCase)
+
+    ParallelLogger::logInfo("Creating match control cohort")
+    # Match to sex and bday, match ratio 10
+    subsetDef <- CohortGenerator::createCohortSubsetDefinition(
+      name = "",
+      definitionId = newCohortId,
+      subsetOperators = list(
+        HadesExtras::createMatchingSubset(
+          matchToCohortId = cohortIdCases,
+          matchRatio = 10,
+          matchSex = TRUE,
+          matchBirthYear = TRUE,
+          matchCohortStartDateWithInDuration = FALSE,
+          newCohortStartDate = "asMatch",
+          newCohortEndDate = "keep"
+        )
+      )
+    )
+
+    cohortDefinitionSet <- cohortDefinitionSet |>
+      CohortGenerator::addCohortSubsetDefinition(subsetDef, targetCohortIds = newCohortId)
+
+    cohortTableHandler$insertOrUpdateCohorts(cohortDefinitionSet)
+
+    cohortIdControls <- newCohortId
+    cohortDefinitionSet  <- cohortTableHandler$cohortDefinitionSet
+  }
+
+  #
   # function
   #
   ParallelLogger::logInfo("Calculating timeCodeWAS")
@@ -407,8 +467,8 @@ execute_timeCodeWAS <- function(
 assertAnalysisSettings_timeCodeWAS <- function(analysisSettings) {
   analysisSettings |> checkmate::assertList()
   c("cohortIdCases", "cohortIdControls", "analysisIds", "temporalStartDays", "temporalEndDays") |> checkmate::assertSubset(names(analysisSettings))
-  analysisSettings$cohortIdCases |> checkmate::assertNumeric()
-  analysisSettings$cohortIdControls |> checkmate::assertNumeric()
+  analysisSettings$cohortIdCases |> checkmate::assertNumeric(lower = 1, len = 1)
+  analysisSettings$cohortIdControls |> checkmate::assertNumeric(lower = 0, len = 1)
   analysisSettings$analysisIds |> checkmate::assertNumeric()
   analysisSettings$temporalStartDays |> checkmate::assertNumeric()
   analysisSettings$temporalEndDays |> checkmate::assertNumeric()
