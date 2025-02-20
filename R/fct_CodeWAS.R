@@ -14,6 +14,18 @@
 #' @importFrom DBI dbGetQuery
 #' @importFrom tibble tibble
 #' @importFrom yaml as.yaml
+#' @importFrom HadesExtras getCohortNamesFromCohortDefinitionTable
+#' @importFrom FeatureExtraction createCohortBasedTemporalCovariateSettings getDbCovariateData
+#' @importFrom HadesExtras FeatureExtraction_createTemporalCovariateSettingsFromList
+#' @importFrom SqlRender render translate
+#' @importFrom DatabaseConnector dbExecute
+#' @importFrom tidyr spread
+#' @importFrom purrr map
+#' @importFrom utils capture.output
+#' @importFrom speedglm speedglm
+#' @importFrom stringr str_detect
+#' @importFrom HadesExtras getCohortNamesFromCohortDefinitionTable
+#' @importFrom stats binomial gaussian sd as.formula na.omit pt setNames t.test chisq.test
 #'
 #' @export
 #'
@@ -79,10 +91,10 @@ execute_CodeWAS <- function(
     temporalStartDays = -99999,
     temporalEndDays = 99999
   )
-  
+
   # regex analysis setting
   if (length(regexAnalysisIds) > 0) {
-    
+
     cohortDefinitionTable <- HadesExtras::getCohortNamesFromCohortDefinitionTable(
       connection = connection,
       cohortDatabaseSchema = cdmDatabaseSchema
@@ -490,7 +502,7 @@ execute_CodeWAS <- function(
 
   # Add And fix columns in covariateRef
   conceptIds <- covariateRef |>
-    dplyr::select(conceptId) |> 
+    dplyr::select(conceptId) |>
     dplyr::collect() |>
     dplyr::distinct() |>
     dplyr::rename(concept_id = conceptId)
@@ -507,29 +519,29 @@ execute_CodeWAS <- function(
     dplyr::left_join(conceptIdsAndCodes, by = "conceptId")
 
 if(length(regexAnalysisIds) > 0 && !is.null(cohortDefinitionTable) ){
-  conceptIdsAndCohortDescriptions <- cohortDefinitionTable |> 
+  conceptIdsAndCohortDescriptions <- cohortDefinitionTable |>
     dplyr::cross_join(analysisRegexTibble) |>
-    dplyr::filter(stringr::str_detect(cohort_definition_name, analysisRegex)) |> 
-    dplyr::mutate(covariateId = cohort_definition_id*1000 + analysisId) |> 
+    dplyr::filter(stringr::str_detect(cohort_definition_name, analysisRegex)) |>
+    dplyr::mutate(covariateId = cohort_definition_id*1000 + analysisId) |>
     dplyr::transmute(
       covariateId = as.integer(covariateId),
       conceptCode2 = as.character(cohort_definition_name),
       covariateName2 = as.character(cohort_definition_description),
       vocabularyId2 = analysisName
-    ) 
+    )
 
-    covariateRef <- covariateRef |> 
-    dplyr::left_join(conceptIdsAndCohortDescriptions, by = "covariateId") |> 
-    dplyr::mutate( 
+    covariateRef <- covariateRef |>
+    dplyr::left_join(conceptIdsAndCohortDescriptions, by = "covariateId") |>
+    dplyr::mutate(
       conceptCode = dplyr::if_else(!is.na(conceptCode2), conceptCode2, conceptCode),
       covariateName = dplyr::if_else(!is.na(covariateName2), covariateName2, covariateName),
       vocabularyId = dplyr::if_else(!is.na(vocabularyId2), vocabularyId2, vocabularyId)
-    ) |> 
+    ) |>
     dplyr::select(-conceptCode2, -covariateName2, -vocabularyId2)
   }
 
 
-  
+
   analysisDuration <- Sys.time() - startAnalysisTime
 
   #
@@ -602,10 +614,10 @@ if(length(regexAnalysisIds) > 0 && !is.null(cohortDefinitionTable) ){
   duckdb::dbWriteTable(connection, "codewasResults", codewasResults, overwrite = TRUE)
 
   if(!is.null(analysisRegexTibble)){
-    analysisRef  <- analysisRef |> 
+    analysisRef  <- analysisRef |>
     dplyr::left_join(
       analysisRegexTibble |> dplyr::rename(newAnalysisName = analysisName),
-       by = "analysisId") |> 
+       by = "analysisId") |>
     dplyr::mutate(analysisName = dplyr::if_else(is.na(newAnalysisName), analysisName, newAnalysisName))
   }
 
@@ -628,7 +640,7 @@ if(length(regexAnalysisIds) > 0 && !is.null(cohortDefinitionTable) ){
     covariateRef$collisions <- NA
   }
   # END TEMP
-  
+
   covariateRef <- covariateRef |>
     dplyr::transmute(
       covariateId = as.double(covariateId),
@@ -654,7 +666,7 @@ if(length(regexAnalysisIds) > 0 && !is.null(cohortDefinitionTable) ){
     exportDuration = exportDuration
   )
   duckdb::dbWriteTable(connection, "analysisInfo", analysisInfo, overwrite = TRUE)
-  
+
   # close connection
   duckdb::dbDisconnect(connection)
 
