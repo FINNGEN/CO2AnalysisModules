@@ -1,3 +1,5 @@
+# CO2AnalysisModules 2.3.1
+
 # CO2AnalysisModules 2.3.0
 - Added ATC groups as covariate to CodeWAS and TimeCodeWAS
 - Option to automatically build a matched control cohort for CodeWAS and TimeCodeWAS

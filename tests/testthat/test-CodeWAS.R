@@ -485,10 +485,15 @@ test_that("executeCodeWAS works with 0 as control cohort", {
   analysisResults <-
     duckdb::dbConnect(duckdb::duckdb(), pathToResultsDatabase)
 
-  cohortsInfo <-
+cohortsInfo <-
     analysisResults  |> dplyr::tbl("cohortsInfo")  |> dplyr::collect()
   cohortsInfo |> nrow() |> expect_equal(4)
   cohortsInfo |> dplyr::filter(cohortId == 3) |> pull(shortName) |> expect_equal("ALL\u2229C1")
-  cohortsInfo |> dplyr::filter(cohortId == 3003) |> pull(shortName) |> expect_equal("C3003")
+  cohortsInfo |> dplyr::filter(cohortId == 1) |> pull(use) |> expect_equal('cases')
+  cohortsInfo |> dplyr::filter(cohortId == 3001) |> pull(shortName) |> expect_equal("MxALL\u2229C1")
+  cohortsInfo |> dplyr::filter(cohortId == 3001) |> pull(use) |> expect_equal('controls')
+
+  # test that the cohorts have been deleted
+  cohortTableHandler$getCohortCounts() |> pull(cohortId) |> expect_equal(c(1, 2))
 
 })
