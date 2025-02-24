@@ -53,6 +53,7 @@ execute_timeCodeWAS <- function(
   #
   # if cohortIdControls is 0 create the control cohort first
   #
+  cohortsToDelete <- c()
   if (cohortIdControls == 0) {
     ParallelLogger::logInfo("Creating match control cohort")
     
