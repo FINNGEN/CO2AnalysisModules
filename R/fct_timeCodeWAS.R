@@ -87,7 +87,7 @@ execute_timeCodeWAS <- function(
     # Match to sex and bday, match ratio 10
     subsetDef <- CohortGenerator::createCohortSubsetDefinition(
       name = "",
-      definitionId = newCohortId,
+      definitionId = cohortIdCases,
       subsetOperators = list(
         HadesExtras::createMatchingSubset(
           matchToCohortId = cohortIdCases,
@@ -104,10 +104,14 @@ execute_timeCodeWAS <- function(
     cohortDefinitionSet <- cohortDefinitionSet |>
       CohortGenerator::addCohortSubsetDefinition(subsetDef, targetCohortIds = newCohortId)
 
+      cohortDefinitionSet <- cohortDefinitionSet |> 
+      dplyr::mutate(shortName = dplyr::if_else(cohortId == newCohortId*1000 + cohortIdCases, paste0("Mx", newCohortShortName), shortName))
+
     cohortTableHandler$insertOrUpdateCohorts(cohortDefinitionSet)
 
-    cohortIdControls <- newCohortId
+    cohortIdControls <- newCohortId*1000 + cohortIdCases
     cohortDefinitionSet  <- cohortTableHandler$cohortDefinitionSet
+    cohortsToDelete  <- c(newCohortId, cohortIdControls)
   }
 
   #
@@ -319,6 +323,16 @@ execute_timeCodeWAS <- function(
 
   covariateRef <- covariateRef |>
     dplyr::left_join(conceptIdsAndCodes, by = "conceptId") 
+
+  #
+  # if cohortIdControls is 0 delete the match control cohort
+  #
+  if (length(cohortsToDelete) > 0) {
+    ParallelLogger::logInfo("Deleting match control cohorts")
+    
+    cohortTableHandler$deleteCohorts(cohortsToDelete)
+   
+  }
 
   ParallelLogger::logInfo("CohortDiagnostics_runTimeCodeWAS completed")
 
