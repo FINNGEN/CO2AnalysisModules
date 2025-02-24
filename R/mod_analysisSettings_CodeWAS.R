@@ -50,7 +50,7 @@ mod_analysisSettings_codeWAS_ui <- function(id) {
           999, "Endpoints", "^(?!.*\\[CohortLibrary\\]).*_case$",
           998, "CohortLibrary", ".*\\[CohortLibrary\\]"
         ),
-      analysisIdsSelected = c(141, 1, 2, 8, 10, 41, 641, 404, 701, 702, 841, 541, 999)
+      analysisIdsSelected = c(141, 1, 2, 8, 10, 41, 641, 342, 701, 702, 841, 541, 999)
     ),
     shinyWidgets::radioGroupButtons(
       inputId = ns("statistics_type_option"),
