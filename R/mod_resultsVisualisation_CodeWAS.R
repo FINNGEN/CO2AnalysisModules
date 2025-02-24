@@ -16,9 +16,10 @@ mod_resultsVisualisation_CodeWAS_ui <- function(id) {
 
   # this must be in sync with the columns in the reactable table
   tableColumns <- c(
-    "Analysis Name" = "analysisName",
+    "Covariate Name" = "covariateName",
     "Concept Code" = "conceptCode",
     "Vocabulary" = "vocabularyId",
+    "Analysis Name" = "analysisName",
     "Domain" = "domainId",
     "N cases" = "nCasesYes",
     "N ctrls" = "nControlsYes",
@@ -163,6 +164,14 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
       lastPlot = NULL
     )
 
+    # debounced inputs
+    domain_reactive <- shiny::reactive(input$domain)
+    domain_debounced <- shiny::debounce(domain_reactive, 1000)
+    analysis_reactive <- shiny::reactive(input$analysis)
+    analysis_debounced <- shiny::debounce(analysis_reactive, 1000)
+    model_reactive <- shiny::reactive(input$model)
+    model_debounced <- shiny::debounce(model_reactive, 1000)
+
     #
     # load the CodeWAS data
     #
@@ -181,7 +190,8 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
         dplyr::mutate(covariateName = ifelse(is.na(name), domain, name)) |>
         dplyr::mutate(name = ifelse(is.na(name), domain, name)) |>
         dplyr::mutate(covariateName = stringr::str_remove(covariateName, "^[:blank:]")) |>
-        dplyr::mutate(domain = stringr::str_remove(domain, "^[:blank:]"))
+        dplyr::mutate(domain = stringr::str_remove(domain, "^[:blank:]")) |>
+        dplyr::mutate(dplyr::across(where(is.character), stringr::str_to_sentence))
     })
 
     #
@@ -308,9 +318,9 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
             meanCases, sdCases, meanControls, sdControls, oddsRatio, pValue, beta, modelType, runNotes
           ) |>
           dplyr::filter(
-            if (!is.null(input$domain)) domainId %in% input$domain else FALSE,
-            if (!is.null(input$analysis)) analysisName %in% input$analysis else FALSE,
-            if (!is.null(input$model)) modelType %in% input$model else FALSE
+            if (!is.null(domain_debounced())) domainId %in% domain_debounced() else FALSE,
+            if (!is.null(analysis_debounced())) analysisName %in% analysis_debounced() else FALSE,
+            if (!is.null(model_debounced())) modelType %in% model_debounced() else FALSE
           )  |>
           dplyr::filter(
             as.double(pValue) <= (as.double(input$p_value_threshold) + 2 * .Machine$double.eps)
@@ -488,17 +498,23 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
         # draw a gray rectangle showing the wall of beta = 5
         ggplot2::geom_rect(
           data = NULL,
-          xmin = 5.02, xmax = 10, ymin = 0, ymax = p_limit,
-          fill = "lightgrey", alpha = 0.02, color = "white"
+          xmin = 5.0, xmax = 10, ymin = 0, ymax = log10(.Machine$double.xmax),
+          fill = "#EFEFEF", alpha = 1, color = "#EFEFEF"
         ) +
         ggplot2::geom_rect(
           data = NULL,
-          xmin = -10, xmax = -5.02, ymin = 0, ymax = p_limit,
-          fill = "lightgrey", alpha = 0.02, color = "white"
+          xmin = -10, xmax = -5.0, ymin = 0, ymax = log10(.Machine$double.xmax),
+          fill = "#EFEFEF", alpha = 1, color = "#EFEFEF"
+        ) +
+        # draw a gray rectangle showing the highest p-value
+        ggplot2::geom_rect(
+          data = NULL,
+          xmin = -10, xmax = 10, ymin = log10(log10(.Machine$double.xmax)), ymax = log10(1500),
+          fill = "#EFEFEF", alpha = 1, color = "#EFEFEF"
         ) +
         # show the p-value and beta limits
-        ggplot2::geom_hline(aes(yintercept = p_limit), col = "red", linetype = 'dashed', alpha = 0.5) +
-        ggplot2::geom_vline(xintercept = 0, col = "red", linetype = 'dashed', alpha = 0.5) +
+        ggplot2::geom_hline(aes(yintercept = p_limit), col = "red", linetype = 'dashed', alpha = 0.3) +
+        ggplot2::geom_vline(xintercept = 0, col = "red", linetype = 'dashed', alpha = 0.3) +
         ggiraph::geom_point_interactive(
           ggplot2::aes(
             data_id = data_id,
@@ -509,7 +525,8 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
               "Vocabulary: ", vocabularyId, "<br>",
               "beta: ", signif(beta, digits = 3), "<br>",
               "OR: ", signif(oddsRatio, digits = 3), "<br>",
-              "p-value: ", signif(pValue, digits = 2), "<br>"
+              "p-value: ", signif(pValue, digits = 2), "<br>",
+              "mlogp: ", signif(pLog10, digits = 2), "<br>"
             ),
             fill = direction
           ),
@@ -525,7 +542,7 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
           ggrepel::geom_text_repel(
             data =  df |>
               dplyr::filter(direction == "cases") |>
-              dplyr::arrange(desc(beta), desc(pLog10)) |> # this or arrange(desc(pLog10), desc(oddsRatio))?
+              dplyr::arrange(desc(beta), desc(pLog10)) |>
               dplyr::slice_head(n = input$label_top_n),
             ggplot2::aes(
               label = stringr::str_wrap(stringr::str_trunc(.removeDomain(covariateName), 45), 30)
@@ -540,7 +557,7 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
             segment.linetype = "dashed",
             segment.alpha = 0.25
           )} +
-        ggplot2::scale_x_continuous() +
+        ggplot2::scale_x_continuous(breaks = function(x) unique(c(-5:-1, 1:5))) +  # Always include -5, 5
         ggplot2::scale_y_continuous(transform = "log10", labels = function(x)round(x,1), expand = ggplot2::expansion(mult = c(0.1, 0.3))) +
         ggplot2::coord_cartesian(xlim = c(min(df$beta) - 1, max(df$beta) + 2), ylim = range(df$pLog10)) +
         ggplot2::scale_fill_manual(name = "Enriched in", values = color_coding) + #, guide = "none") +
@@ -548,14 +565,17 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
           x = "beta",
           y = "-log10(p-value)",
           title = paste("Multiple testing significance >", round(p_limit, 1)),
-          subtitle = paste("-log( 0.05 / (number of covariates))")
+          subtitle = paste("-log( 0.05 / (number of covariates))"),
+          caption = "The max numerical magnitude of beta is 5\nThe gray walls show the limits of numerical accuracy",
         ) +
         ggplot2::theme_minimal() +
         ggplot2::theme(
           text = ggplot2::element_text(size = 8),
+          panel.grid.minor = ggplot2::element_blank(),
           plot.title = ggplot2::element_text(size = 8),
           plot.subtitle = ggplot2::element_text(size = 6),
-          plot.caption = ggplot2::element_text(size = 4),
+          plot.caption = ggplot2::element_text(size = 6, color = "darkgray", margin = ggplot2::margin(t = -10)),
+          plot.caption.position = "plot",
           axis.text.x = ggplot2::element_text(size = 7),
           axis.text.y = ggplot2::element_text(size = 7),
           legend.key.height = grid::unit(3, "mm"),

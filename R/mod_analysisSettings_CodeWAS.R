@@ -40,7 +40,7 @@ mod_analysisSettings_codeWAS_ui <- function(id) {
         101, 102, 141, 204,
         1, 2, 3, 6, 8, 9, 10, 41,
         601, 641,
-        301, 341, 404, 906,
+        301, 341, 404, 906, 342,
         701, 702, 703, 741, 908,
         801, 841, 909,
         501, 541, 907,
@@ -160,10 +160,13 @@ mod_analysisSettings_codeWAS_server <- function(id, r_connectionHandler) {
       cohortIdAndNamesList <- cohortIdAndNamesList |>
         purrr::discard(~.x %in% input$selectCaseCohort_pickerInput)
 
+      # Add cohort 0 with 
+      cohortIdAndNamesList <- c(list(`AUTO-MATCH: Creates a control cohort from the patiens not in case cohort that matches case cohort by sex and birth year with ratio 1:10` = 0), cohortIdAndNamesList)
+
       shinyWidgets::updatePickerInput(
         inputId = "selectControlCohort_pickerInput",
         choices = cohortIdAndNamesList,
-        selected = character(0)
+        selected = 0
       )
     })
 
@@ -209,6 +212,11 @@ mod_analysisSettings_codeWAS_server <- function(id, r_connectionHandler) {
 
       # cores
       message <- paste0("\u2139\uFE0F Analysis will use : ", cores, " cores\n")
+
+      if(input$selectControlCohort_pickerInput == 0){
+        message <- paste0(message, "\u2139\uFE0F Analysis will create a control cohort from the patients not in case cohort that matches case cohort by sex and birth year with ratio 1:10\n")
+        return(message)
+      }
 
       # counts
       if( nSubjectsCase > nSubjectsControl ){

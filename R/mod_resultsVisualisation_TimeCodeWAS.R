@@ -31,6 +31,7 @@ mod_resultsVisualisation_TimeCodeWAS_ui <- function(id) {
     "OR" = "OR",
     "mlogp" = "mlogp",
     "Beta" = "beta",
+    "Model" = "model",
     "Notes" = "notes"
   )
 
@@ -235,6 +236,16 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
       force_update = FALSE,
     )
 
+    # debounced inputs
+    domain_reactive <- shiny::reactive(input$domain)
+    domain_debounced <- shiny::debounce(domain_reactive, 1000)
+    analysis_reactive <- shiny::reactive(input$analysis)
+    analysis_debounced <- shiny::debounce(analysis_reactive, 1000)
+    model_reactive <- shiny::reactive(input$model)
+    model_debounced <- shiny::debounce(model_reactive, 1000)
+    time_period_reactive <- shiny::reactive(input$time_period)
+    time_period_debounced <- shiny::debounce(time_period_reactive, 1000)
+
     ParallelLogger::logInfo("TimeCodeWAS server started")
 
     #
@@ -280,13 +291,14 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
           covariateName = covariateName,
           p = pValue,
           OR = oddsRatio
-        )
+        ) |>
+        tidyr::separate(covariateName, c("domain", "name"), sep = ":", extra = "merge", fill = "right")
 
       timeCodeWASData <- timeCodeWASData |>
         dplyr::transmute(
           code = covariateId,
           time_period = factor(timeRange, levels = r$timePeriods, labels = r$timePeriods),
-          name = covariateName,
+          name = name,
           conceptCode = conceptCode,
           vocabularyId = vocabularyId,
           analysisName = analysisName,
@@ -298,8 +310,8 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
           nCasesInWindow = nCasesInWindow,
           nControlsInWindow = nControlsInWindow,
           cases_per = nCasesYes/nCasesInWindow,
-          meanCases = nCasesYes/nCasesInWindow,
-          meanControls = nControlsYes/nControlsInWindow,
+          meanCases = nCasesYes,
+          meanControls = nControlsYes,
           sdCases = sdCases,
           sdControls = sdControls,
           controls_per = nControlsYes/nControlsInWindow,
@@ -487,9 +499,9 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
         r$filteredTimeCodeWASData <- r$timeCodeWASData |>
           dplyr::filter(
             # if (!is.null(input$database)) databaseId %in% input$database else FALSE,
-            if (!is.null(input$domain)) domain %in% input$domain else FALSE,
-            if (!is.null(input$analysis)) analysisName %in% input$analysis else FALSE,
-            if (!is.null(input$model)) model %in% input$model else FALSE
+            if (!is.null(domain_debounced())) domain %in% domain_debounced() else FALSE,
+            if (!is.null(analysis_debounced())) analysisName %in% analysis_debounced() else FALSE,
+            if (!is.null(model_debounced())) model %in% model_debounced() else FALSE
           ) |>
           dplyr::filter(
             as.double(p) <= (as.double(input$p_value_threshold) + 2 * .Machine$double.eps)
@@ -503,7 +515,7 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
           ) |>
           dplyr::filter(nCasesYes >= input$n_cases)  |>
           dplyr::filter(!dplyr::if_any(c("p", "OR"), is.na) | input$na_anywhere) |>
-          dplyr::filter(!is.null(input$time_period) & time_period %in% input$time_period)
+          dplyr::filter(!is.null(time_period_debounced()) & time_period %in% time_period_debounced())
       }
     })
 
@@ -848,7 +860,7 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
         dplyr::select(
           GROUP, name, conceptCode, vocabularyId, code, analysisName, domain, upIn,
           nCasesYes, nControlsYes, meanCases, meanControls, sdCases, sdControls,
-          OR, mlogp, beta, notes)
+          OR, mlogp, beta, model, notes)
 
       df <- case_when(
         input$sortFirstDesc & input$sortSecondDesc ~
@@ -887,10 +899,10 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
             minWidth = 50
           ),
           code = reactable::colDef(show = FALSE),
-          conceptCode = reactable::colDef(name = "Concept Code", minWidth = 15),
+          conceptCode = reactable::colDef(name = "Concept Code", minWidth = 18),
           vocabularyId = reactable::colDef(name = "Vocabulary", minWidth = 15),
           analysisName = reactable::colDef(name = "Analysis Name", minWidth = 50),
-          domain = reactable::colDef(name = "Domain", minWidth = 40),
+          domain = reactable::colDef(name = "Domain", minWidth = 20),
           upIn = reactable::colDef(name = "Type", minWidth = 15),
           nCasesYes = reactable::colDef(name = "N cases", minWidth = 12),
           nControlsYes = reactable::colDef(name = "N ctrls", minWidth = 12),
@@ -898,9 +910,10 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
           meanControls = reactable::colDef(name = "Ratio|Mean ctrls", minWidth = 13),
           sdCases = reactable::colDef(name = "SD cases", minWidth = 13),
           sdControls = reactable::colDef(name = "SD ctrls", minWidth = 13),
-          OR = reactable::colDef( name = "OR", minWidth = 25),
-          mlogp = reactable::colDef(name = "mlogp", minWidth = 25),
+          OR = reactable::colDef( name = "OR", minWidth = 18),
+          mlogp = reactable::colDef(name = "mlogp", minWidth = 18),
           beta = reactable::colDef(name = "Beta", minWidth = 25),
+          model = reactable::colDef(name = "Model", minWidth = 20),
           notes = reactable::colDef(name = "Notes", minWidth = 30)
         ),
         searchable = TRUE, defaultPageSize = 10, showPageSizeOptions = TRUE
