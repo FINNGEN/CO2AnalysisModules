@@ -1,7 +1,10 @@
 # CO2AnalysisModules 2.3.0
 - Added ATC groups as covariate to CodeWAS and TimeCodeWAS
 - Option to automatically build a matched control cohort for CodeWAS and TimeCodeWAS
-- Other minor fixes
+- Filter controls wait one second before launching update, so it is possible to change several controls before (potentially lengthy) redraw
+- Table views have drop-down menus for sorting (shift-click are not passed in sandbox)
+- CodeWAS visualization indicates the limits of computation as gray areas
+
 
 # CO2AnalysisModules 2.2.0
 - Added endpoint and library cohorts as covariate to CodeWAS
