@@ -190,8 +190,7 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
         dplyr::mutate(covariateName = ifelse(is.na(name), domain, name)) |>
         dplyr::mutate(name = ifelse(is.na(name), domain, name)) |>
         dplyr::mutate(covariateName = stringr::str_remove(covariateName, "^[:blank:]")) |>
-        dplyr::mutate(domain = stringr::str_remove(domain, "^[:blank:]")) |>
-        dplyr::mutate(dplyr::across(where(is.character), stringr::str_to_sentence))
+        dplyr::mutate(domain = stringr::str_remove(domain, "^[:blank:]")) 
     })
 
     #
