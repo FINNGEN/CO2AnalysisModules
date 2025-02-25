@@ -325,16 +325,6 @@ execute_timeCodeWAS <- function(
   covariateRef <- covariateRef |>
     dplyr::left_join(conceptIdsAndCodes, by = "conceptId") 
 
-  #
-  # if cohortIdControls is 0 delete the match control cohort
-  #
-  if (length(cohortsToDelete) > 0) {
-    ParallelLogger::logInfo("Deleting match control cohorts")
-    
-    cohortTableHandler$deleteCohorts(cohortsToDelete)
-   
-  }
-
   ParallelLogger::logInfo("CohortDiagnostics_runTimeCodeWAS completed")
 
   analysisDuration <- Sys.time() - startAnalysisTime
@@ -459,6 +449,16 @@ execute_timeCodeWAS <- function(
   duckdb::dbDisconnect(connection)
 
   ParallelLogger::logInfo("Results exported")
+  
+  #
+  # if cohortIdControls is 0 delete the match control cohort
+  #
+  if (length(cohortsToDelete) > 0) {
+    ParallelLogger::logInfo("Deleting match control cohorts")
+    
+    cohortTableHandler$deleteCohorts(cohortsToDelete)
+   
+  }
 
   return(pathToResultsDatabase)
 }
