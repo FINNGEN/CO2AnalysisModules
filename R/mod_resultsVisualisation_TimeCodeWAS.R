@@ -1162,26 +1162,24 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
     # Convert days to years and months, e.g. "1y 3m"
     #
 
-    .vectorized_convert_days <- Vectorize(function(d) {
-      if (is.na(d)) return(NA_character_)
-      is_negative <- d < 0
-      abs_days <- abs(d)
-      start_date <- lubridate::ymd("1900-01-01")
-      end_date <- start_date + lubridate::days(abs_days)
-      diff <- lubridate::as.period(lubridate::interval(start_date, end_date))
-      years <- diff@year
-      months <- diff@month
-      # Format the result
-      result <- case_when(
-        years == 0 & months == 0 ~ paste0("0"),
-        years == 0 & months != 0 ~ paste0(months, "m"),
-        years != 0 & months == 0 ~ paste0(years, "y"),
-        TRUE ~ paste0(years, "y ", months, "m")
-      )
-      if (is_negative) {
-        result <- paste0("-", result)
+    .vectorized_convert_days <- Vectorize(function(days) {
+      if (is.na(days)) return(NA_character_)
+      months <- round(lubridate::days(days)/months(1), 0)
+      months_remaining <- sign(months) * (abs(months) %% 12)
+
+      if(months_remaining != 0) {
+        window_type <- "m"
+        years <- floor(lubridate::days(abs(days))/lubridate::years(1))
+      } else {
+        window_type <- "y"
+        years <- round(lubridate::days(abs(days))/lubridate::years(1))
       }
-      return(result)
+      dplyr::case_when(
+        years == 0 & months == 0 ~ paste0("0", window_type),
+        years == 0 ~ paste0(months, "m"),
+        months == 0 ~ paste0(years, "y"),
+        TRUE ~ paste0(sign(days) * years, "y", ifelse(months_remaining != 0, paste0(" ", abs(months_remaining), "m"), ""))
+      )
     })
 
     .get_time_periods <- function(studyResults){
