@@ -149,14 +149,14 @@ mod_resultsVisualisation_TimeCodeWAS_ui <- function(id) {
                      tags$div(style = "display: flex; align-items: center; gap: 15px;",
                               tags$label("Sort by:", style = "width: 50px; margin-bottom: 0;"),
                               tags$div(style = "margin-top: 15px;",
-                                       selectInput(ns("sortFirst"), label = NULL, choices = tableColumns, width = "150px", selected = "OR"),
+                                       selectInput(ns("sortFirst"), label = NULL, choices = tableColumns, width = "150px", selected = "mlogp"),
                               ),
                               tags$div(style = "width: 50px;",
                                        checkboxInput(ns("sortFirstDesc"), "descending", value = TRUE)
                               ),
                               tags$label("", style = "width: 20px; margin-bottom: 0; margin-left: 10px;"),
                               tags$div(style = "margin-top: 15px;",
-                                       selectInput(ns("sortSecond"), label = NULL, choices = tableColumns, width = "150px", selected = "mlogp"),
+                                       selectInput(ns("sortSecond"), label = NULL, choices = tableColumns, width = "150px", selected = "OR"),
                               ),
                               tags$div(style = "width: 50px;",
                                        checkboxInput(ns("sortSecondDesc"), "descending", value = TRUE)
