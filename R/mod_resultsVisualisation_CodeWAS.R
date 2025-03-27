@@ -257,9 +257,12 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
             )
           ),
           shiny::column(
-            width = 2, align = "left",
-            shiny::div(style = "height: 85px; width: 100%; margin-top: -15px; margin-right: 20px;",
-                       shiny::sliderInput(ns("n_cases"), "Minimum # of cases", min = 0, max = 1000, value = 0, step = 1),
+            2,
+            shiny::textInput(
+              inputId = ns("n_cases"),
+              label =  "Minimum # of cases",
+              value = "5",
+              width = "100%"
             ),
           ), # column
           shiny::column(
@@ -280,6 +283,33 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
       return(grepl("^[-+]?[0-9]*\\.?[0-9]+([eE][-+]?[0-9]+)?$", input_string))
     }
 
+    is_natural_number <- function(x) {
+      suppressWarnings(x <- as.numeric(x))
+      if (!is.numeric(x) || length(x) != 1 || is.na(x)) {
+        return(FALSE)  # Must be a single numeric value
+      }
+      if (x > 0 && x %% 1 == 0) {
+        return(TRUE)   # Positive integer
+      } else {
+        return(FALSE)  # Not a natural number
+      }
+    }
+
+    observe({
+      # Check if the text input is empty
+      is_empty <- nchar(trimws(input$p_value_threshold)) == 0
+      # Show or hide warning based on input
+      feedbackWarning("p_value_threshold", show = is_empty, text = "This field cannot be empty!")
+    })
+
+    observe({
+      # Check if the text input is empty
+      is_empty <- input$n_cases == ""
+      is_empty <- ifelse(is.na(is_empty), FALSE, is_empty)
+      # Show or hide warning based on input
+      feedbackWarning("n_cases", show = is_empty, text = "This field cannot be empty!")
+    })
+
     #
     # filter the data
     #
@@ -289,17 +319,12 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
       shiny::req(input$n_cases)
       shiny::isTruthy(input$na_anywhere)
 
-      if(input$p_value_threshold == "") {
+      if(!is_valid_number(input$p_value_threshold)) {
         shinyFeedback::showFeedbackWarning(
           inputId = "p_value_threshold",
-          text = "Invalid input: Please give a valid number (default is 1e-5)."
+          text = "Invalid input: Please give a valid number between 0 and 1."
         )
-        } else if(!is_valid_number(input$p_value_threshold)) {
-          shinyFeedback::showFeedbackWarning(
-            inputId = "p_value_threshold",
-            text = "Invalid input: Please give a valid number."
-          )
-        } else if(as.numeric(input$p_value_threshold) < 0) {
+      } else if(as.numeric(input$p_value_threshold) < 0) {
         shinyFeedback::showFeedbackWarning(
           inputId = "p_value_threshold",
           text = "Invalid input: Please give a number greater than 0."
@@ -309,7 +334,13 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
           inputId = "p_value_threshold",
           text = "Invalid input: Please give a number between 0 and 1."
         )
+      } else if(!is_natural_number(input$n_cases)) {
+        shinyFeedback::showFeedbackWarning(
+          inputId = "n_cases",
+          text = "Invalid input: Please give a positive whole number."
+        )
       } else {
+        shinyFeedback::hideFeedback("n_cases")
         shinyFeedback::hideFeedback("p_value_threshold")
         # filter the data
         r$filteredCodeWASData <- r$codeWASData |>

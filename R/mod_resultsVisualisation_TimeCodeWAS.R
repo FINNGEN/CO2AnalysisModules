@@ -440,9 +440,12 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
             )
           ),
           shiny::column(
-            width = 2, align = "left",
-            shiny::div(style = "height: 85px; width: 100%; margin-top: -15px; margin-right: 20px;",
-                       shiny::sliderInput(ns("n_cases"), "Minimum # of cases", min = 0, max = 1000, value = 0, step = 1),
+            2,
+            shiny::textInput(
+              inputId = ns("n_cases"),
+              label =  "Minimum # of cases",
+              value = "5",
+              width = "100%"
             ),
           ), # column
           shiny::column(
@@ -462,6 +465,33 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
       # This regex matches regular and scientific notation numbers
       return(grepl("^[-+]?[0-9]*\\.?[0-9]+([eE][-+]?[0-9]+)?$", input_string))
     }
+
+    is_natural_number <- function(x) {
+      suppressWarnings(x <- as.numeric(x))
+      if (!is.numeric(x) || length(x) != 1 || is.na(x)) {
+        return(FALSE)  # Must be a single numeric value
+      }
+      if (x > 0 && x %% 1 == 0) {
+        return(TRUE)   # Positive integer
+      } else {
+        return(FALSE)  # Not a natural number
+      }
+    }
+
+    observe({
+      # Check if the text input is empty
+      is_empty <- nchar(trimws(input$p_value_threshold)) == 0
+      # Show or hide warning based on input
+      feedbackWarning("p_value_threshold", show = is_empty, text = "This field cannot be empty!")
+    })
+
+    observe({
+      # Check if the text input is empty
+      is_empty <- input$n_cases == ""
+      is_empty <- ifelse(is.na(is_empty), FALSE, is_empty)
+      # Show or hide warning based on input
+      feedbackWarning("n_cases", show = is_empty, text = "This field cannot be empty!")
+    })
 
     #
     # filter the data ####
@@ -492,12 +522,19 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
           inputId = "p_value_threshold",
           text = "Invalid input: Please give a number between 0 and 1."
         )
+      } else if(!is_natural_number(input$n_cases)) {
+        shinyFeedback::showFeedbackWarning(
+          inputId = "n_cases",
+          text = "Invalid input: Please give a positive whole number."
+        )
       } else {
         shinyFeedback::hideFeedback("p_value_threshold")
+        shinyFeedback::hideFeedback("n_cases")
 
         # filter the data
         r$filteredTimeCodeWASData <- r$timeCodeWASData |>
           dplyr::filter(
+            # # was removing this a final decision?
             # if (!is.null(input$database)) databaseId %in% input$database else FALSE,
             if (!is.null(domain_debounced())) domain %in% domain_debounced() else FALSE,
             if (!is.null(analysis_debounced())) analysisName %in% analysis_debounced() else FALSE,
@@ -513,7 +550,7 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
             | input$or_filter_disable
             | is.na(OR)
           ) |>
-          dplyr::filter(nCasesYes >= input$n_cases)  |>
+          dplyr::filter(nCasesYes >= as.numeric(input$n_cases))  |>
           dplyr::filter(!dplyr::if_any(c("p", "OR"), is.na) | input$na_anywhere) |>
           dplyr::filter(!is.null(time_period_debounced()) & time_period %in% time_period_debounced())
       }
@@ -723,8 +760,6 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
           # turn clip off to see the line across panels
           g$layout$clip <- "off"
         }
-
-        # browser()
 
         if(!is.null(line_to_plot) & length(line_to_plot) == 1){
           selected_items <- as.character(unique(line_to_plot$code))
