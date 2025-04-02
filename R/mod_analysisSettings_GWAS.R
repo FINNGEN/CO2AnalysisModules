@@ -319,6 +319,10 @@ mod_analysisSettings_GWAS_server <- function(id, r_connectionHandler) {
 
       databaseId <- cohortTableHandler$databaseId
       release <- paste0("Regenie", gsub("[A-Za-z]", "", cohortTableHandler$databaseId))
+      # TODO: Move to settings instead of hardcoded
+      if (release == "Regenie13") {
+        release <- "Regenie12"
+      }
 
       analysisSettings <- list(
         cohortIdCases = input$selectCaseCohort_pickerInput |> as.integer(),
