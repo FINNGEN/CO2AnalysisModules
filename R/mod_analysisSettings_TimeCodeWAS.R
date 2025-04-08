@@ -39,12 +39,12 @@ mod_analysisSettings_timeCodeWAS_ui <- function(id) {
       analysisIdsToShow = c(
         101, 102, 141, 204,
         601, 641,
-        301, 341, 404,
+        301, 341, 404, 342,
         701, 702, 703, 741,
         801, 841,
         501, 541,
         910, 911 ),
-      analysisIdsSelected = c(141, 641, 404, 701, 702, 841, 541)
+      analysisIdsSelected = c(141, 641, 342, 701, 702, 841, 541)
     ),
     shiny::tags$h5("Minimum cell count:"),
     shiny::numericInput(
@@ -124,10 +124,13 @@ mod_analysisSettings_timeCodeWAS_server <- function(id, r_connectionHandler) {
       cohortIdAndNamesList <- cohortIdAndNamesList |>
         purrr::discard(~.x %in% input$selectCaseCohort_pickerInput)
 
+      # Add cohort 0 with 
+      cohortIdAndNamesList <- c(list(`AUTO-MATCH: Creates a control cohort from the patiens not in case cohort that matches case cohort by sex and birth year with ratio 1:10 and start date as in case cohort` = 0), cohortIdAndNamesList)
+
       shinyWidgets::updatePickerInput(
         inputId = "selectControlCohort_pickerInput",
         choices = cohortIdAndNamesList,
-        selected = character(0)
+        selected = 0
       )
     })
 
@@ -178,6 +181,11 @@ mod_analysisSettings_timeCodeWAS_server <- function(id, r_connectionHandler) {
       cohortsSumary  <- cohortTableHandler$getCohortsSummary()
 
       message <- ""
+      if(input$selectControlCohort_pickerInput == 0){
+        message <- paste0(message, "\u2139\uFE0F Analysis will create a control cohort from the patients not in case cohort that matches case cohort by sex and birth year with ratio 1:10 and start date as in case cohort\n")
+        return(message)
+      }
+
       # counts
       if( nSubjectsCase > nSubjectsControl ){
         message <- paste0(message, "There are more entries in case cohort (", nEntryCase,") that in control cohort (", nEntryControl,"). Are you sure they are correct?\n")

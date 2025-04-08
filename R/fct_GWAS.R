@@ -127,7 +127,7 @@ assertAnalysisSettings_GWAS <- function(analysisSettings) {
   analysisSettings$phenotype |> checkmate::assertString(min.chars = 1, pattern = "^[A-Z0-9]+$")
   analysisSettings$description |> checkmate::assertString(min.chars = 1)
   analysisSettings$analysisType |> checkmate::assertChoice(choices = c("additive", "recessive", "dominant"))
-  analysisSettings$release |> checkmate::assertChoice(choices = c("Regenie12"))
+  analysisSettings$release |> checkmate::assertChoice(choices = c("Regenie13", "Regenie12"))
   analysisSettings$connectionSandboxAPI  |> checkmate::assertList()
   return(analysisSettings)
 }
