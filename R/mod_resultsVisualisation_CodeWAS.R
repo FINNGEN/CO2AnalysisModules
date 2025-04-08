@@ -190,7 +190,7 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
         dplyr::mutate(covariateName = ifelse(is.na(name), domain, name)) |>
         dplyr::mutate(name = ifelse(is.na(name), domain, name)) |>
         dplyr::mutate(covariateName = stringr::str_remove(covariateName, "^[:blank:]")) |>
-        dplyr::mutate(domain = stringr::str_remove(domain, "^[:blank:]")) 
+        dplyr::mutate(domain = stringr::str_remove(domain, "^[:blank:]"))
     })
 
     #
@@ -294,21 +294,6 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
       }
     }
 
-    observe({
-      # Check if the text input is empty
-      is_empty <- nchar(trimws(input$p_value_threshold)) == 0
-      # Show or hide warning based on input
-      feedbackWarning("p_value_threshold", show = is_empty, text = "This field cannot be empty!")
-    })
-
-    observe({
-      # Check if the text input is empty
-      is_empty <- input$n_cases == ""
-      is_empty <- ifelse(is.na(is_empty), FALSE, is_empty)
-      # Show or hide warning based on input
-      feedbackWarning("n_cases", show = is_empty, text = "This field cannot be empty!")
-    })
-
     #
     # filter the data
     #
@@ -318,7 +303,17 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
       shiny::req(input$n_cases)
       shiny::isTruthy(input$na_anywhere)
 
-      if(!is_valid_number(input$p_value_threshold)) {
+      if(nchar(trimws(input$p_value_threshold)) == 0){
+        shinyFeedback::showFeedbackWarning(
+          inputId = "p_value_threshold",
+          text = "Invalid input: Please give a valid number between 0 and 1."
+        )
+      } else if(nchar(trimws(input$n_cases)) == 0){
+        shinyFeedback::showFeedbackWarning(
+          inputId = "n_cases",
+          text = "Invalid input: Please give a positive whole number."
+        )
+      } else if(!is_valid_number(input$p_value_threshold)) {
         shinyFeedback::showFeedbackWarning(
           inputId = "p_value_threshold",
           text = "Invalid input: Please give a valid number between 0 and 1."
@@ -362,7 +357,7 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
             | input$or_filter_disable
             | is.na(oddsRatio)
           ) |>
-          dplyr::filter(nCasesYes >= input$n_cases)  |>
+          dplyr::filter(nCasesYes >= as.numeric(input$n_cases))  |>
           dplyr::filter(!dplyr::if_any(c("pValue", "oddsRatio"), is.na) | input$na_anywhere)
       }
     })
