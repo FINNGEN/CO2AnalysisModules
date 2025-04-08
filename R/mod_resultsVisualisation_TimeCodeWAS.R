@@ -478,21 +478,6 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
       }
     }
 
-    observe({
-      # Check if the text input is empty
-      is_empty <- nchar(trimws(input$p_value_threshold)) == 0
-      # Show or hide warning based on input
-      feedbackWarning("p_value_threshold", show = is_empty, text = "This field cannot be empty!")
-    })
-
-    observe({
-      # Check if the text input is empty
-      is_empty <- input$n_cases == ""
-      is_empty <- ifelse(is.na(is_empty), FALSE, is_empty)
-      # Show or hide warning based on input
-      feedbackWarning("n_cases", show = is_empty, text = "This field cannot be empty!")
-    })
-
     #
     # filter the data ####
     #
@@ -502,7 +487,17 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
       shiny::req(input$n_cases)
       shiny::isTruthy(input$na_anywhere)
 
-      if(input$p_value_threshold == "") {
+      if(nchar(trimws(input$p_value_threshold)) == 0){
+        shinyFeedback::showFeedbackWarning(
+          inputId = "p_value_threshold",
+          text = "Invalid input: Please give a valid number (default is 1e-5)."
+        )
+      } else if(nchar(trimws(input$n_cases)) == 0){
+        shinyFeedback::showFeedbackWarning(
+          inputId = "n_cases",
+          text = "Invalid input: Please give a positive whole number."
+        )
+      } else if(input$p_value_threshold == "") {
         shinyFeedback::showFeedbackWarning(
           inputId = "p_value_threshold",
           text = "Invalid input: Please give a valid number (default is 1e-5)."
