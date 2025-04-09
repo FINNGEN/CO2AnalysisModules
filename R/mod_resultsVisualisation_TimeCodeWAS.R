@@ -149,14 +149,14 @@ mod_resultsVisualisation_TimeCodeWAS_ui <- function(id) {
                      tags$div(style = "display: flex; align-items: center; gap: 15px;",
                               tags$label("Sort by:", style = "width: 50px; margin-bottom: 0;"),
                               tags$div(style = "margin-top: 15px;",
-                                       selectInput(ns("sortFirst"), label = NULL, choices = tableColumns, width = "150px", selected = "OR"),
+                                       selectInput(ns("sortFirst"), label = NULL, choices = tableColumns, width = "150px", selected = "mlogp"),
                               ),
                               tags$div(style = "width: 50px;",
                                        checkboxInput(ns("sortFirstDesc"), "descending", value = TRUE)
                               ),
                               tags$label("", style = "width: 20px; margin-bottom: 0; margin-left: 10px;"),
                               tags$div(style = "margin-top: 15px;",
-                                       selectInput(ns("sortSecond"), label = NULL, choices = tableColumns, width = "150px", selected = "mlogp"),
+                                       selectInput(ns("sortSecond"), label = NULL, choices = tableColumns, width = "150px", selected = "OR"),
                               ),
                               tags$div(style = "width: 50px;",
                                        checkboxInput(ns("sortSecondDesc"), "descending", value = TRUE)
@@ -440,9 +440,12 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
             )
           ),
           shiny::column(
-            width = 2, align = "left",
-            shiny::div(style = "height: 85px; width: 100%; margin-top: -15px; margin-right: 20px;",
-                       shiny::sliderInput(ns("n_cases"), "Minimum # of cases", min = 0, max = 1000, value = 0, step = 1),
+            2,
+            shiny::textInput(
+              inputId = ns("n_cases"),
+              label =  "Minimum # of cases",
+              value = "5",
+              width = "100%"
             ),
           ), # column
           shiny::column(
@@ -463,6 +466,18 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
       return(grepl("^[-+]?[0-9]*\\.?[0-9]+([eE][-+]?[0-9]+)?$", input_string))
     }
 
+    is_natural_number <- function(x) {
+      suppressWarnings(x <- as.numeric(x))
+      if (!is.numeric(x) || length(x) != 1 || is.na(x)) {
+        return(FALSE)  # Must be a single numeric value
+      }
+      if (x > 0 && x %% 1 == 0) {
+        return(TRUE)   # Positive integer
+      } else {
+        return(FALSE)  # Not a natural number
+      }
+    }
+
     #
     # filter the data ####
     #
@@ -472,7 +487,17 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
       shiny::req(input$n_cases)
       shiny::isTruthy(input$na_anywhere)
 
-      if(input$p_value_threshold == "") {
+      if(nchar(trimws(input$p_value_threshold)) == 0){
+        shinyFeedback::showFeedbackWarning(
+          inputId = "p_value_threshold",
+          text = "Invalid input: Please give a valid number (default is 1e-5)."
+        )
+      } else if(nchar(trimws(input$n_cases)) == 0){
+        shinyFeedback::showFeedbackWarning(
+          inputId = "n_cases",
+          text = "Invalid input: Please give a positive whole number."
+        )
+      } else if(input$p_value_threshold == "") {
         shinyFeedback::showFeedbackWarning(
           inputId = "p_value_threshold",
           text = "Invalid input: Please give a valid number (default is 1e-5)."
@@ -492,12 +517,19 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
           inputId = "p_value_threshold",
           text = "Invalid input: Please give a number between 0 and 1."
         )
+      } else if(!is_natural_number(input$n_cases)) {
+        shinyFeedback::showFeedbackWarning(
+          inputId = "n_cases",
+          text = "Invalid input: Please give a positive whole number."
+        )
       } else {
         shinyFeedback::hideFeedback("p_value_threshold")
+        shinyFeedback::hideFeedback("n_cases")
 
         # filter the data
         r$filteredTimeCodeWASData <- r$timeCodeWASData |>
           dplyr::filter(
+            # # was removing this a final decision?
             # if (!is.null(input$database)) databaseId %in% input$database else FALSE,
             if (!is.null(domain_debounced())) domain %in% domain_debounced() else FALSE,
             if (!is.null(analysis_debounced())) analysisName %in% analysis_debounced() else FALSE,
@@ -513,7 +545,7 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
             | input$or_filter_disable
             | is.na(OR)
           ) |>
-          dplyr::filter(nCasesYes >= input$n_cases)  |>
+          dplyr::filter(nCasesYes >= as.numeric(input$n_cases))  |>
           dplyr::filter(!dplyr::if_any(c("p", "OR"), is.na) | input$na_anywhere) |>
           dplyr::filter(!is.null(time_period_debounced()) & time_period %in% time_period_debounced())
       }
@@ -723,8 +755,6 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
           # turn clip off to see the line across panels
           g$layout$clip <- "off"
         }
-
-        # browser()
 
         if(!is.null(line_to_plot) & length(line_to_plot) == 1){
           selected_items <- as.character(unique(line_to_plot$code))
@@ -1162,26 +1192,24 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
     # Convert days to years and months, e.g. "1y 3m"
     #
 
-    .vectorized_convert_days <- Vectorize(function(d) {
-      if (is.na(d)) return(NA_character_)
-      is_negative <- d < 0
-      abs_days <- abs(d)
-      start_date <- lubridate::ymd("1900-01-01")
-      end_date <- start_date + lubridate::days(abs_days)
-      diff <- lubridate::as.period(lubridate::interval(start_date, end_date))
-      years <- diff@year
-      months <- diff@month
-      # Format the result
-      result <- case_when(
-        years == 0 & months == 0 ~ paste0("0"),
-        years == 0 & months != 0 ~ paste0(months, "m"),
-        years != 0 & months == 0 ~ paste0(years, "y"),
-        TRUE ~ paste0(years, "y ", months, "m")
-      )
-      if (is_negative) {
-        result <- paste0("-", result)
+    .vectorized_convert_days <- Vectorize(function(days) {
+      if (is.na(days)) return(NA_character_)
+      months <- round(lubridate::days(days)/months(1), 0)
+      months_remaining <- sign(months) * (abs(months) %% 12)
+
+      if(months_remaining != 0) {
+        window_type <- "m"
+        years <- floor(lubridate::days(abs(days))/lubridate::years(1))
+      } else {
+        window_type <- "y"
+        years <- round(lubridate::days(abs(days))/lubridate::years(1))
       }
-      return(result)
+      dplyr::case_when(
+        years == 0 & months == 0 ~ paste0("0", window_type),
+        years == 0 ~ paste0(months, "m"),
+        months == 0 ~ paste0(years, "y"),
+        TRUE ~ paste0(sign(days) * years, "y", ifelse(months_remaining != 0, paste0(" ", abs(months_remaining), "m"), ""))
+      )
     })
 
     .get_time_periods <- function(studyResults){

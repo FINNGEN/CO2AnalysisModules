@@ -92,14 +92,14 @@ mod_resultsVisualisation_CodeWAS_ui <- function(id) {
                      tags$div(style = "display: flex; align-items: center; gap: 15px;",
                               tags$label("Sort by:", style = "width: 50px; margin-bottom: 0;"),
                               tags$div(style = "margin-top: 15px;",
-                                       selectInput(ns("sortFirst"), label = NULL, choices = tableColumns, width = "150px", selected = "oddsRatio"),
+                                       selectInput(ns("sortFirst"), label = NULL, choices = tableColumns, width = "150px", selected = "mlogp"),
                               ),
                               tags$div(style = "width: 50px;",
                                        checkboxInput(ns("sortFirstDesc"), "descending", value = TRUE)
                               ),
                               tags$label("", style = "width: 20px; margin-bottom: 0; margin-left: 10px;"),
                               tags$div(style = "margin-top: 15px;",
-                                       selectInput(ns("sortSecond"), label = NULL, choices = tableColumns, width = "150px", selected = "mlogp"),
+                                       selectInput(ns("sortSecond"), label = NULL, choices = tableColumns, width = "150px", selected = "oddsRatio"),
                               ),
                               tags$div(style = "width: 50px;",
                                        checkboxInput(ns("sortSecondDesc"), "descending", value = TRUE)
@@ -190,7 +190,7 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
         dplyr::mutate(covariateName = ifelse(is.na(name), domain, name)) |>
         dplyr::mutate(name = ifelse(is.na(name), domain, name)) |>
         dplyr::mutate(covariateName = stringr::str_remove(covariateName, "^[:blank:]")) |>
-        dplyr::mutate(domain = stringr::str_remove(domain, "^[:blank:]")) 
+        dplyr::mutate(domain = stringr::str_remove(domain, "^[:blank:]"))
     })
 
     #
@@ -256,9 +256,12 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
             )
           ),
           shiny::column(
-            width = 2, align = "left",
-            shiny::div(style = "height: 85px; width: 100%; margin-top: -15px; margin-right: 20px;",
-                       shiny::sliderInput(ns("n_cases"), "Minimum # of cases", min = 0, max = 1000, value = 0, step = 1),
+            2,
+            shiny::textInput(
+              inputId = ns("n_cases"),
+              label =  "Minimum # of cases",
+              value = "5",
+              width = "100%"
             ),
           ), # column
           shiny::column(
@@ -279,6 +282,18 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
       return(grepl("^[-+]?[0-9]*\\.?[0-9]+([eE][-+]?[0-9]+)?$", input_string))
     }
 
+    is_natural_number <- function(x) {
+      suppressWarnings(x <- as.numeric(x))
+      if (!is.numeric(x) || length(x) != 1 || is.na(x)) {
+        return(FALSE)  # Must be a single numeric value
+      }
+      if (x > 0 && x %% 1 == 0) {
+        return(TRUE)   # Positive integer
+      } else {
+        return(FALSE)  # Not a natural number
+      }
+    }
+
     #
     # filter the data
     #
@@ -288,17 +303,22 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
       shiny::req(input$n_cases)
       shiny::isTruthy(input$na_anywhere)
 
-      if(input$p_value_threshold == "") {
+      if(nchar(trimws(input$p_value_threshold)) == 0){
         shinyFeedback::showFeedbackWarning(
           inputId = "p_value_threshold",
-          text = "Invalid input: Please give a valid number (default is 1e-5)."
+          text = "Invalid input: Please give a valid number between 0 and 1."
         )
-        } else if(!is_valid_number(input$p_value_threshold)) {
-          shinyFeedback::showFeedbackWarning(
-            inputId = "p_value_threshold",
-            text = "Invalid input: Please give a valid number."
-          )
-        } else if(as.numeric(input$p_value_threshold) < 0) {
+      } else if(nchar(trimws(input$n_cases)) == 0){
+        shinyFeedback::showFeedbackWarning(
+          inputId = "n_cases",
+          text = "Invalid input: Please give a positive whole number."
+        )
+      } else if(!is_valid_number(input$p_value_threshold)) {
+        shinyFeedback::showFeedbackWarning(
+          inputId = "p_value_threshold",
+          text = "Invalid input: Please give a valid number between 0 and 1."
+        )
+      } else if(as.numeric(input$p_value_threshold) < 0) {
         shinyFeedback::showFeedbackWarning(
           inputId = "p_value_threshold",
           text = "Invalid input: Please give a number greater than 0."
@@ -308,7 +328,13 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
           inputId = "p_value_threshold",
           text = "Invalid input: Please give a number between 0 and 1."
         )
+      } else if(!is_natural_number(input$n_cases)) {
+        shinyFeedback::showFeedbackWarning(
+          inputId = "n_cases",
+          text = "Invalid input: Please give a positive whole number."
+        )
       } else {
+        shinyFeedback::hideFeedback("n_cases")
         shinyFeedback::hideFeedback("p_value_threshold")
         # filter the data
         r$filteredCodeWASData <- r$codeWASData |>
@@ -331,7 +357,7 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
             | input$or_filter_disable
             | is.na(oddsRatio)
           ) |>
-          dplyr::filter(nCasesYes >= input$n_cases)  |>
+          dplyr::filter(nCasesYes >= as.numeric(input$n_cases))  |>
           dplyr::filter(!dplyr::if_any(c("pValue", "oddsRatio"), is.na) | input$na_anywhere)
       }
     })
