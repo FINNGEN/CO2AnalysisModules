@@ -348,8 +348,7 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
             if (!is.null(model_debounced())) modelType %in% model_debounced() else FALSE
           )  |>
           dplyr::filter(
-            as.double(pValue) <= (as.double(input$p_value_threshold) + 2 * .Machine$double.eps)
-            | is.na(pValue)
+            as.double(pValue) <= (as.double(input$p_value_threshold)) | is.na(pValue)
           ) |>
           dplyr::filter(
             as.double(oddsRatio) <= as.double(input$or_range[1])
