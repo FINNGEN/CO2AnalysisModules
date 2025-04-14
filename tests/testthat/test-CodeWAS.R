@@ -497,3 +497,54 @@ cohortsInfo <-
   cohortTableHandler$getCohortCounts() |> pull(cohortId) |> expect_equal(c(1, 2))
 
 })
+
+
+
+test_that("executeCodeWAS works with only binary covariates", {
+  
+  # set up
+  cohortTableHandler <-
+    helper_createNewCohortTableHandler(addCohorts = "HadesExtrasFractureCohorts")
+  withr::defer({
+    rm(cohortTableHandler)
+    gc()
+  })
+
+  exportFolder <- withr::local_tempdir('testCodeWAS')
+
+  analysisSettings <- list(
+    cohortIdCases = 1,
+    cohortIdControls = 0,
+    analysisIds = c(101, 102, 141),
+    covariatesIds = NULL,
+    minCellCount = 1
+  )
+
+  # function
+  suppressWarnings(
+    pathToResultsDatabase <- execute_CodeWAS(
+      exportFolder = exportFolder,
+      cohortTableHandler = cohortTableHandler,
+      analysisSettings = analysisSettings
+    )
+  )
+
+  # test
+  expect_true(file.exists(pathToResultsDatabase))
+  checkResults_CodeWAS(pathToResultsDatabase) |> expect_true()
+
+  analysisResults <-
+    duckdb::dbConnect(duckdb::duckdb(), pathToResultsDatabase)
+
+cohortsInfo <-
+    analysisResults  |> dplyr::tbl("cohortsInfo")  |> dplyr::collect()
+  cohortsInfo |> nrow() |> expect_equal(4)
+  cohortsInfo |> dplyr::filter(cohortId == 3) |> pull(shortName) |> expect_equal("ALL\u2229C1")
+  cohortsInfo |> dplyr::filter(cohortId == 1) |> pull(use) |> expect_equal('cases')
+  cohortsInfo |> dplyr::filter(cohortId == 3001) |> pull(shortName) |> expect_equal("MxALL\u2229C1")
+  cohortsInfo |> dplyr::filter(cohortId == 3001) |> pull(use) |> expect_equal('controls')
+
+  # test that the cohorts have been deleted
+  cohortTableHandler$getCohortCounts() |> pull(cohortId) |> expect_equal(c(1, 2))
+
+})

@@ -87,14 +87,6 @@ mod_fct_formTimeWindows_ui <- function(id) {
           class = "custom-container"
         ), # div
       ) # fixedRow
-      # shiny::fixedRow(
-      #   shiny::div(
-      #     shiny::column(12, offset = 0, style = "margin-top: 0px;",
-      #                   shiny::tags$h5("Time windows (exact, as days)"),
-      #                   shiny::verbatimTextOutput(ns("output_window_as_days"))),
-      #     class = "custom-container"
-      #   ), # div
-      # ) # fixedRow
     ), # div
   )
 }
