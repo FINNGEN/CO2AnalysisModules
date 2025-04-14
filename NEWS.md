@@ -1,3 +1,5 @@
+# CO2AnalysisModules 2.3.2
+- Fixed bug in CodeWAS when there are no covariates
 # CO2AnalysisModules 2.3.1
 
 # CO2AnalysisModules 2.3.0
