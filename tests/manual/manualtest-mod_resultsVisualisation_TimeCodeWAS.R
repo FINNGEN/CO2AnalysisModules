@@ -25,8 +25,10 @@ analysisSettings <- list(
     910, 911 ),
   # temporalStartDays = c(   -365*2, -365*1, 0,     1,   365+1 ),
   # temporalEndDays =   c( -365*1-1,     -1, 0, 365*1,   365*2)
-  temporalStartDays = c(-609, -304, -152, -61, 0, 1, 62, 153, 305),
-  temporalEndDays =   c(-305, -153,  -62, -1, -0, 61, 152, 304, 609 )
+  # temporalStartDays = c(-609, -304, -152, -61, 0, 1, 62, 153, 305),
+  # temporalEndDays =   c(-305, -153,  -62, -1, -0, 61, 152, 304, 609 )
+  temporalStartDays = c(-365, -152, -30, 0, 1),
+  temporalEndDays =   c(-153, -31, -1, 0, 30)
 )
 
 # function
