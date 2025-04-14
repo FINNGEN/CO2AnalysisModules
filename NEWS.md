@@ -1,5 +1,6 @@
 # CO2AnalysisModules 2.3.2
 - Fixed bug in CodeWAS when there are no covariates
+- Fixed GWAS to adapt to change in the internal API
 
 # CO2AnalysisModules 2.3.1
 - log filter bug
