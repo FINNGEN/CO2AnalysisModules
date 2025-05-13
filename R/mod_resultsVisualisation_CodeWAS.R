@@ -68,54 +68,7 @@ mod_resultsVisualisation_CodeWAS_ui <- function(id) {
           $(document).on('click', '.menu-header', function () {
             $(this).next('.menu-content').slideToggle();
           });
-         ",
-         sprintf("function debounce(func, wait) {
-           var timeout;
-           return function() {
-             var context = this, args = arguments;
-             clearTimeout(timeout);
-             timeout = setTimeout(function() {
-               func.apply(context, args);
-             }, wait);
-           };
-         }
-
-         function sendWindowSize() {
-           Shiny.setInputValue('%s', {
-             w: window.innerWidth,
-             h: window.innerHeight,
-             nonce: Math.random()  // force reactivity
-           });
-         }
-
-         // Wait until Shiny is ready
-         $(document).on('shiny:connected', function() {
-           sendWindowSize();  // initial
-           $(window).on('resize', debounce(sendWindowSize, 300));
-         });
-         ", ns("window_size")), # end of sprintf
-         sprintf("
-        function debounce(func, wait) {
-          var timeout;
-          return function() {
-            clearTimeout(timeout);
-            timeout = setTimeout(func, wait);
-          };
-        }
-
-        function sendFreeSpace() {
-          const freeSpace = window.innerHeight - document.body.scrollHeight;
-          Shiny.setInputValue('%s', {
-            vertical: freeSpace,
-            nonce: Math.random()  // force reactivity
-          });
-        }
-
-        $(document).on('shiny:connected', function() {
-          sendFreeSpace();
-          $(window).on('resize', debounce(sendFreeSpace, 300));
-        });
-      ", ns("free_space")))
+         ") # end of HTML
         )# end of tags$script
       ), # end of tags$head
       shinyWidgets::chooseSliderSkin("Flat"),
@@ -196,9 +149,9 @@ mod_resultsVisualisation_CodeWAS_ui <- function(id) {
             shiny::downloadButton(ns("downloadCodeWASAll"), "Download all", icon = shiny::icon("download"))
           )
         )# tabPanel
-      ), # tabsetPanel
-      shiny::verbatimTextOutput(ns("size_out")),
-      shiny::verbatimTextOutput(ns("free_space"))
+      ) # tabsetPanel
+      # shiny::verbatimTextOutput(ns("size_out")),
+      # shiny::verbatimTextOutput(ns("free_space"))
   ) # end of tagList
   ) # end of fluidPage
 }

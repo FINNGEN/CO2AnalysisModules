@@ -60,14 +60,11 @@ mod_resultsVisualisation_ui <- function(id, resultsVisualisationModuleUi, pathTo
     ),
     shinydashboard::tabItem(
       tabName = "module",
-      shiny::tags$h4("Cohorts"),
-      shiny::div(
-        style = "margin-left: 3px; margin-top: 10px; margin-right:3px; margin-bottom: 20px;",
-        reactable::reactableOutput(ns("usedCohortsInfo"))
-      ),
-      resultsVisualisationModuleUi(ns(id)),
-    )
-  )
+      shiny::uiOutput(ns("usedCohortsInfo")),
+      resultsVisualisationModuleUi(ns(id))
+    ) # end of tabItem
+  ) # end of tabItems
+
 
   # body
   body <- shinydashboard::dashboardBody(
@@ -125,13 +122,54 @@ mod_resultsVisualisation_server <- function(id, resultsVisualisationModuleServer
         reactable::reactable(cohortsInfo)
     })
 
-    output$usedCohortsInfo <- reactable::renderReactable({
+    output$usedCohortsInfo <- shiny::renderUI({
       countsTable <- analysisResults |> dplyr::tbl('cohortsInfo') |>
         dplyr::filter(!is.na(use) & use != "") |>
         dplyr::select(use, shortName, cohortName, cohortSubjects, cohortEntries) |>
         dplyr::collect()
 
-      reactable::reactable(countsTable)
+      shiny::tagList(
+        tags$head(
+          tags$style(HTML("
+         .menu-section-top {
+           margin-bottom: 10px;
+           border: 1px solid #ccc;
+           border-radius: 4px;
+           width: 100%;
+         }
+         .menu-header-top {
+           background-color: #f8f9fa;
+           padding: 10px;
+           cursor: pointer;
+           // font-weight: bold;
+           font-size: 16px;
+           width: 100%;
+           box-sizing: border-box;
+         }
+         .menu-content-top {
+           display: none;
+           padding: 10px;
+           background-color: #fff;
+           width: 100%;
+           box-sizing: border-box;
+         }
+        .container-fluid {
+          padding: 0px;
+        }
+      "))),
+        tags$script(HTML("
+          $(document).on('click', '.menu-header-top', function () {
+            $(this).next('.menu-content-top').slideToggle();
+          });
+         ") # end of HTML
+        ), # end of tags$script
+        div(class = "menu-section-top",
+              div(class = "menu-header-top", "Cohorts"),
+              div(class = "menu-content-top",
+                  reactable::reactable(countsTable)
+              )
+          )# end of div
+      )# end of tagList
     })
 
     resultsVisualisationModuleServer(id, analysisResults)
