@@ -39,7 +39,7 @@ mod_analysisSettings_timeCodeWAS_ui <- function(id) {
       analysisIdsToShow = c(
         101, 102, 141, 204,
         601, 641,
-        301, 341, 404, 342,
+        301, 342, 343, 404, 342,
         701, 702, 703, 741,
         801, 841,
         501, 541,
