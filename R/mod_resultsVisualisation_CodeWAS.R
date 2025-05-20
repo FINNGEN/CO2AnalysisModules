@@ -522,8 +522,8 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
           overflowX = "auto"  # enable horizontal scrolling if needed
         ),
         searchable = TRUE,
-        defaultPageSize = 15,
-        showPageSizeOptions = TRUE
+        defaultPageSize = 50,
+        showPageSizeOptions = FALSE
       ) # reactable
 
     })
