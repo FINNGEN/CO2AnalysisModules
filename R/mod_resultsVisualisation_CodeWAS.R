@@ -41,118 +41,188 @@ mod_resultsVisualisation_CodeWAS_ui <- function(id) {
     shiny::tagList(
       tags$head(
         tags$style(HTML("
-         .menu-section {
-           margin-bottom: 10px;
-           border: 1px solid #ccc;
-           border-radius: 4px;
-           width: 100%;
-         }
-         .menu-header {
-           background-color: #f8f9fa;
-           padding: 10px;
-           cursor: pointer;
-           // font-weight: bold;
-           font-size: 16px;
-           width: 100%;
-           box-sizing: border-box;
-         }
-         .menu-content {
-           display: none;
-           padding: 10px;
-           background-color: #fff;
-           width: 100%;
-           box-sizing: border-box;
-         }
+          html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+          }
+          #main-container {
+            height: calc(100vh - 100px);
+            border: 0px solid #888;
+            padding: 0px;
+            box-sizing: border-box;
+            overflow: auto;
+          }
+          .collapsible-header {
+            background-color: #f8f9fa;
+            padding: 10px;
+            cursor: pointer;
+            // font-weight: bold;
+            font-size: 16px;
+            border: 1px solid #ccc;
+            box-sizing: border-box;
+          }
+          .collapsible-content {
+            display: none;
+            padding: 10px;
+            background-color: #fff;
+            border: 0px solid #999;
+            margin-bottom: 10px;
+        box-sizing: border-box;   }
       ")),
-        tags$script(HTML("
-          $(document).on('click', '.menu-header', function () {
-            $(this).next('.menu-content').slideToggle();
-          });
-         ") # end of HTML
+        tags$script(HTML(paste0("
+           const inputId = '", ns("free_space"), "';
+
+           function sendFreeSpace(containerId) {
+
+             const totalHeight = window.innerHeight;
+
+             Shiny.setInputValue(inputId, {
+               total: totalHeight,
+               nonce: Math.random()
+             }, {priority: 'event'});
+           }
+
+           function setupCollapsible() {
+             document.querySelectorAll('.collapsible-header').forEach(header => {
+               const content = header.nextElementSibling;
+
+               const newHeader = header.cloneNode(true);
+               header.parentNode.replaceChild(newHeader, header);
+
+               newHeader.addEventListener('click', () => {
+                 if (content.style.display === 'none' || content.style.display === '') {
+                   content.style.display = 'block';
+                 } else {
+                   content.style.display = 'none';
+                 }
+               });
+             });
+           }
+
+           window.addEventListener('resize', () => {
+             sendFreeSpace('main-container');
+           });
+
+           document.addEventListener('DOMContentLoaded', () => {
+             setupCollapsible();
+             setTimeout(() => {
+               sendFreeSpace('main-container');
+             }, 500);
+           });
+
+           Shiny.addCustomMessageHandler('setupCollapsiblesAgain', function(message) {
+             setTimeout(() => {
+               setupCollapsible();
+             }, 0);
+           });
+
+           Shiny.addCustomMessageHandler('sendFreeSpace', function(message) {
+             sendFreeSpace('main-container');
+           });
+
+          const rows_to_show_id = '", ns("rows_to_show"), "';
+
+          //
+          // Send the number of rows to Shiny when the app loads or resizes
+          //
+          function updateTableRows() {
+              const rowHeight = 36.3; // Approximate row height in px
+              const padding = 510;  // Space for header/footer/other elements
+              const availableHeight = window.innerHeight - padding;
+              const rowCount = Math.floor(availableHeight / rowHeight);
+              Shiny.setInputValue(rows_to_show_id, rowCount, {priority: 'event'});
+            }
+          $(document).on('shiny:connected', updateTableRows);
+          $(window).on('resize', updateTableRows);
+          ") # end of paste0
+        ) # end of HTML
         )# end of tags$script
       ), # end of tags$head
       shinyWidgets::chooseSliderSkin("Flat"),
-      shiny::uiOutput(ns("codeWASFilter")),
-      htmltools::hr(style = "margin-top: 10px; margin-bottom: 10px;"),
-      shiny::tabsetPanel(
-        id = ns("tabset"),
-        shiny::tabPanel(
-          "Plot",
-          # shiny::div(style = "height: 20px;"),
-          tags$style(HTML("
+      shiny::div(id = "main-container",
+                 shiny::uiOutput(ns("codeWASFilter")),
+                 htmltools::hr(style = "margin-top: 10px; margin-bottom: 10px;"),
+                 shiny::tabsetPanel(
+                   id = ns("tabset"),
+                   shiny::tabPanel(
+                     "Plot",
+                     # shiny::div(style = "height: 20px;"),
+                     tags$style(HTML("
                          .slider-animate-container,
                           .irs-min, .irs-max, .irs-single {
                               display: none !important;
                           }
                       ")),
-          shiny::column(
-            width = 2, align = "left",
-            shiny::div(style = "margin-top: 30px; ",
-                       shiny::checkboxInput(ns("top_10"), "Show labels", value = TRUE),
-            ),
-          ), # column
-          shiny::column(
-            width = 2,
-            div(style = "margin-top: 10px;",
-                div(style = "margin-top: 2px; margin-right: 5px;", "Label top n"),
-                div(style = "margin-top: -20px;",
-                    shiny::sliderInput(
-                      ns("label_top_n"), label = NULL, ticks = FALSE, min = 1, max = 20, value = 10, step = 1)
-                )
-            )
-          ), # column
-          shiny::div(style = "height: 100%; width: 100%; ",
-                     shinycssloaders::withSpinner(
-                       ggiraph::girafeOutput(ns("codeWASplot")),
-                       proxy.height = "400px"
+                     shiny::column(
+                       width = 2, align = "left",
+                       shiny::div(style = "margin-top: 30px; ",
+                                  shiny::checkboxInput(ns("top_10"), "Show labels", value = TRUE),
+                       ),
+                     ), # column
+                     shiny::column(
+                       width = 2,
+                       div(style = "margin-top: 10px;",
+                           div(style = "margin-top: 2px; margin-right: 5px;", "Label top n"),
+                           div(style = "margin-top: -20px;",
+                               shiny::sliderInput(
+                                 ns("label_top_n"), label = NULL, ticks = FALSE, min = 1, max = 20, value = 10, step = 1)
+                           )
+                       )
+                     ), # column
+                     shiny::div(style = "height: 100%; width: 100%; ",
+                                shinycssloaders::withSpinner(
+                                  ggiraph::girafeOutput(ns("codeWASplot")),
+                                  proxy.height = "400px"
+                                )
+                     ),
+                     shiny::div(
+                       style = "margin-top: 10px; margin-bottom: 10px;",
+                       shiny::downloadButton(ns("downloadPlot"), "Download")
                      )
-          ),
-          shiny::div(
-            style = "margin-top: 10px; margin-bottom: 10px;",
-            shiny::downloadButton(ns("downloadPlot"), "Download")
-          )
-        ),
-        shiny::tabPanel(
-          "Table",
-          shiny::div(
-            fluidRow(
-              column(10,
-                     tags$div(style = "display: flex; align-items: center; gap: 15px;",
-                              tags$label("Sort by:", style = "width: 50px; margin-bottom: 0;"),
-                              tags$div(style = "margin-top: 15px;",
-                                       selectInput(ns("sortFirst"), label = NULL, choices = tableColumns, width = "150px", selected = "mlogp"),
-                              ),
-                              tags$div(style = "width: 50px;",
-                                       checkboxInput(ns("sortFirstDesc"), "descending", value = TRUE)
-                              ),
-                              tags$label("", style = "width: 20px; margin-bottom: 0; margin-left: 10px;"),
-                              tags$div(style = "margin-top: 15px;",
-                                       selectInput(ns("sortSecond"), label = NULL, choices = tableColumns, width = "150px", selected = "oddsRatio"),
-                              ),
-                              tags$div(style = "width: 50px;",
-                                       checkboxInput(ns("sortSecondDesc"), "descending", value = TRUE)
-                              )
+                   ),
+                   shiny::tabPanel(
+                     "Table",
+                     shiny::div(
+                       fluidRow(
+                         column(10,
+                                tags$div(style = "display: flex; align-items: center; gap: 15px;",
+                                         tags$label("Sort by:", style = "width: 50px; margin-bottom: 0;"),
+                                         tags$div(style = "margin-top: 15px;",
+                                                  selectInput(ns("sortFirst"), label = NULL, choices = tableColumns, width = "150px", selected = "mlogp"),
+                                         ),
+                                         tags$div(style = "width: 50px;",
+                                                  checkboxInput(ns("sortFirstDesc"), "descending", value = TRUE)
+                                         ),
+                                         tags$label("", style = "width: 20px; margin-bottom: 0; margin-left: 10px;"),
+                                         tags$div(style = "margin-top: 15px;",
+                                                  selectInput(ns("sortSecond"), label = NULL, choices = tableColumns, width = "150px", selected = "oddsRatio"),
+                                         ),
+                                         tags$div(style = "width: 50px;",
+                                                  checkboxInput(ns("sortSecondDesc"), "descending", value = TRUE)
+                                         )
+                                )
+                         ),
+                       ) # fluidRow
+                     ), # div
+                     shiny::div(
+                       style = "margin-top: 0px; margin-bottom: 10px;",
+                       shinycssloaders::withSpinner(
+                         reactable::reactableOutput(ns("codeWAStable")),
+                         proxy.height = "400px"
+                       )
+                     ),
+                     shiny::div(
+                       style = "margin-top: 10px; margin-bottom: 10px;",
+                       shiny::downloadButton(ns("downloadCodeWASFiltered"), "Download filtered", icon = shiny::icon("download")),
+                       shiny::downloadButton(ns("downloadCodeWASAll"), "Download all", icon = shiny::icon("download"))
                      )
-              ),
-            ) # fluidRow
-          ), # div
-          shiny::div(
-            style = "margin-top: 0px; margin-bottom: 10px;",
-            shinycssloaders::withSpinner(
-              reactable::reactableOutput(ns("codeWAStable")),
-              proxy.height = "400px"
-            )
-          ),
-          shiny::div(
-            style = "margin-top: 10px; margin-bottom: 10px;",
-            shiny::downloadButton(ns("downloadCodeWASFiltered"), "Download filtered", icon = shiny::icon("download")),
-            shiny::downloadButton(ns("downloadCodeWASAll"), "Download all", icon = shiny::icon("download"))
-          )
-        )# tabPanel
-      ) # tabsetPanel
-      # shiny::verbatimTextOutput(ns("size_out")),
-      # shiny::verbatimTextOutput(ns("free_space"))
-  ) # end of tagList
+                   )# tabPanel
+                 ), # tabsetPanel
+                 # shiny::verbatimTextOutput(ns("size_out")),
+                 # shiny::verbatimTextOutput(ns("free_space"))
+      ) # end of tagList
+    ) # end of div
   ) # end of fluidPage
 }
 
@@ -202,14 +272,7 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
     model_reactive <- shiny::reactive(input$model)
     model_debounced <- shiny::debounce(model_reactive, 1000)
 
-    output$size_out <- renderPrint({
-      req(input$window_size)
-      input$window_size
-    })
-    output$free_space <- renderPrint({
-      req(input$free_space)
-      input$free_space
-    })
+    rows_to_show_debounced <- shiny::debounce(shiny::reactive(input$rows_to_show), 500)
 
     #
     # load the CodeWAS data
@@ -238,10 +301,12 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
     output$codeWASFilter <- shiny::renderUI({
       req(r$codeWASData)
 
-      shiny::tagList(
-        div(class = "menu-section",
-            div(class = "menu-header", "Filters"),
-            div(class = "menu-content",
+      # div(class = "collapsible-header", "Component 1"),
+      # div(class = "collapsible-content", style = "height: 100px;", "This is the content of Component 1."),
+
+      ui <- shiny::tagList(
+            div(class = "collapsible-header", "Filters"),
+            div(class = "collapsible-content",
                 shiny::fluidRow(
                   shiny::column(
                     width = 3,
@@ -317,9 +382,14 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
                   ) # column
                 ) # fluidRow
             ) # tagList
-        ) # div
       ) # div
-    })
+
+      session$onFlushed(function() {
+        session$sendCustomMessage("setupCollapsiblesAgain", list())
+      }, once = TRUE)
+
+      ui
+    }) # renderUI
 
     is_valid_number <- function(input_string) {
       # This regex matches regular and scientific notation numbers
@@ -522,7 +592,7 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
           overflowX = "auto"  # enable horizontal scrolling if needed
         ),
         searchable = TRUE,
-        defaultPageSize = 20,
+        defaultPageSize = rows_to_show_debounced(),
         showPageSizeOptions = FALSE
       ) # reactable
 

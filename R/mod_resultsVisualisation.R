@@ -141,7 +141,6 @@ mod_resultsVisualisation_server <- function(id, resultsVisualisationModuleServer
            background-color: #f8f9fa;
            padding: 10px;
            cursor: pointer;
-           // font-weight: bold;
            font-size: 16px;
            width: 100%;
            box-sizing: border-box;
