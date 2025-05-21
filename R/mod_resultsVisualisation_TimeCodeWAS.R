@@ -141,7 +141,7 @@ mod_resultsVisualisation_TimeCodeWAS_ui <- function(id) {
       shinyWidgets::chooseSliderSkin("Flat"),
       shiny::div(id = "main-container",
       shiny::uiOutput(ns("outputUI")),
-      shiny::tags$h4("Data"),
+      htmltools::hr(style = "margin-top: 10px; margin-bottom: 10px;"),
       shiny::tabsetPanel(
         id = ns("tabset"),
         shiny::tabPanel(
@@ -1027,6 +1027,7 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
         # ),
         defaultColDef = reactable::colDef(
           minWidth = 80,
+          headerStyle = list(whiteSpace = "nowrap"),
           style = list(
             whiteSpace = "nowrap",
             textOverflow = "ellipsis"
@@ -1066,15 +1067,15 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
             minWidth = 150
           ),
           code = reactable::colDef(show = FALSE),
-          conceptCode = reactable::colDef(name = "Concept Code", minWidth = 80),
+          conceptCode = reactable::colDef(name = "Concept Code", minWidth = 100),
           vocabularyId = reactable::colDef(name = "Vocabulary", minWidth = 86),
           analysisName = reactable::colDef(name = "Analysis Name", minWidth = 120, maxWidth = 120),
           domain = reactable::colDef(name = "Domain", minWidth = 120, maxWidth = 120),
           upIn = reactable::colDef(name = "Type", minWidth = 50),
           nCasesYes = reactable::colDef(name = "N cases", minWidth = 70, maxWidth = 70),
           nControlsYes = reactable::colDef(name = "N ctrls", minWidth = 70, maxWidth = 70),
-          meanCases = reactable::colDef(name = "Ratio|Mean cases", minWidth = 90, maxWidth = 90),
-          meanControls = reactable::colDef(name = "Ratio|Mean ctrls", minWidth = 90, maxWidth = 90),
+          meanCases = reactable::colDef(name = "Ratio|Mean cases", minWidth = 120),
+          meanControls = reactable::colDef(name = "Ratio|Mean ctrls", minWidth = 120),
           sdCases = reactable::colDef(name = "SD cases", minWidth = 90, maxWidth = 90),
           sdControls = reactable::colDef(name = "SD ctrls", minWidth = 90, maxWidth = 90),
           OR = reactable::colDef( name = "OR", minWidth = 80),

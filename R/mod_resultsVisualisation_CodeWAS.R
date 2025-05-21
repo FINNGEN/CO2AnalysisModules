@@ -532,6 +532,7 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
         striped = FALSE,
         defaultColDef = reactable::colDef(
           minWidth = 80,
+          headerStyle = list(whiteSpace = "nowrap"),
           style = list(
             whiteSpace = "nowrap",
             textOverflow = "ellipsis"
@@ -561,7 +562,7 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
           conceptCode = reactable::colDef(
             name = "Concept Code",
             sticky = "left",
-            minWidth = 80,
+            minWidth = 160,
             style = list(
               whiteSpace = "nowrap",
               overflow = "hidden",
@@ -570,14 +571,14 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
             ),
           ),
           covariateId = reactable::colDef(show = FALSE),
-          analysisName = reactable::colDef(name = "Analysis Name", minWidth = 120, maxWidth = 160),
+          analysisName = reactable::colDef(name = "Analysis Name", minWidth = 160),
           vocabularyId = reactable::colDef(name = "Vocabulary", minWidth = 86, maxWidth = 86),
           domainId = reactable::colDef(name = "Domain", minWidth = 120, maxWidth = 120),
           nCasesYes = reactable::colDef(name = "N cases", minWidth = 70, maxWidth = 70),
           nControlsYes = reactable::colDef(name = "N ctrls", minWidth = 70, maxWidth = 70),
-          meanCases = reactable::colDef(name = "Ratio|Mean cases", minWidth = 90, maxWidth = 90),
+          meanCases = reactable::colDef(name = "Ratio|Mean cases", minWidth = 120),
           sdCases = reactable::colDef(name = "SD cases", minWidth = 90, maxWidth = 90),
-          meanControls = reactable::colDef(name = "Ratio| Mean ctrls", minWidth = 90, maxWidth = 90),
+          meanControls = reactable::colDef(name = "Ratio| Mean ctrls", minWidth = 120),
           sdControls = reactable::colDef(name = "SD ctrls", minWidth = 90, maxWidth = 90),
           oddsRatio = reactable::colDef(name = "OR", maxWidth = 80),
           mlogp = reactable::colDef(name = "mlogp", maxWidth = 80),
