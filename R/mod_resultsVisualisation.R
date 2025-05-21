@@ -163,7 +163,7 @@ mod_resultsVisualisation_server <- function(id, resultsVisualisationModuleServer
          ") # end of HTML
         ), # end of tags$script
         div(class = "menu-section-top",
-              div(class = "menu-header-top", "Cohorts"),
+              div(class = "menu-header-top", "\u25B6 Cohorts"),
               div(class = "menu-content-top",
                   reactable::reactable(countsTable)
               )

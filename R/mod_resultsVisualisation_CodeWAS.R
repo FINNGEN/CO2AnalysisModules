@@ -61,6 +61,7 @@ mod_resultsVisualisation_CodeWAS_ui <- function(id) {
             font-size: 16px;
             border: 1px solid #ccc;
             box-sizing: border-box;
+            transition: max-height 0.6s ease;
           }
           .collapsible-content {
             display: none;
@@ -68,7 +69,8 @@ mod_resultsVisualisation_CodeWAS_ui <- function(id) {
             background-color: #fff;
             border: 0px solid #999;
             margin-bottom: 10px;
-        box-sizing: border-box;   }
+            box-sizing: border-box;
+        }
       ")),
         tags$script(HTML(paste0("
            const inputId = '", ns("free_space"), "';
@@ -302,7 +304,7 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
       req(r$codeWASData)
 
       ui <- shiny::tagList(
-            div(class = "collapsible-header", "Filters"),
+            div(class = "collapsible-header", "\u25B6 Filters"),
             div(class = "collapsible-content",
                 shiny::fluidRow(
                   shiny::column(
