@@ -301,9 +301,6 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
     output$codeWASFilter <- shiny::renderUI({
       req(r$codeWASData)
 
-      # div(class = "collapsible-header", "Component 1"),
-      # div(class = "collapsible-content", style = "height: 100px;", "This is the content of Component 1."),
-
       ui <- shiny::tagList(
             div(class = "collapsible-header", "Filters"),
             div(class = "collapsible-content",
