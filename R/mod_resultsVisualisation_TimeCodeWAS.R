@@ -50,7 +50,7 @@ mod_resultsVisualisation_TimeCodeWAS_ui <- function(id) {
             border: 0px solid #888;
             padding: 0px;
             box-sizing: border-box;
-            overflow: auto;
+            overflow: hidden;
           }
          .menu-section {
            margin-bottom: 10px;

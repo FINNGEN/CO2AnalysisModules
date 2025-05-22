@@ -51,7 +51,7 @@ mod_resultsVisualisation_CodeWAS_ui <- function(id) {
             border: 0px solid #888;
             padding: 0px;
             box-sizing: border-box;
-            overflow: auto;
+            overflow: hidden;
           }
 
          .menu-section {
@@ -585,20 +585,20 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
             ),
           ),
           covariateId = reactable::colDef(show = FALSE),
-          analysisName = reactable::colDef(name = "Analysis Name", minWidth = 160),
-          vocabularyId = reactable::colDef(name = "Vocabulary", minWidth = 86, maxWidth = 86),
-          domainId = reactable::colDef(name = "Domain", minWidth = 120, maxWidth = 120),
-          nCasesYes = reactable::colDef(name = "N cases", minWidth = 70, maxWidth = 70),
-          nControlsYes = reactable::colDef(name = "N ctrls", minWidth = 70, maxWidth = 70),
-          meanCases = reactable::colDef(name = "Ratio|Mean cases", minWidth = 120),
-          sdCases = reactable::colDef(name = "SD cases", minWidth = 90, maxWidth = 90),
-          meanControls = reactable::colDef(name = "Ratio| Mean ctrls", minWidth = 120),
-          sdControls = reactable::colDef(name = "SD ctrls", minWidth = 90, maxWidth = 90),
-          oddsRatio = reactable::colDef(name = "OR", maxWidth = 80),
-          mlogp = reactable::colDef(name = "mlogp", maxWidth = 80),
-          beta = reactable::colDef(name = "Beta", maxWidth = 80),
-          modelType = reactable::colDef(name = "Model"),
-          runNotes = reactable::colDef(name = "Notes", maxWidth = 200)
+          analysisName = reactable::colDef(name = "Analysis Name", width = 160),
+          vocabularyId = reactable::colDef(name = "Vocabulary", width = 86, maxWidth = 86),
+          domainId = reactable::colDef(name = "Domain", width = 120, maxWidth = 120),
+          nCasesYes = reactable::colDef(name = "N cases", width = 70, maxWidth = 70),
+          nControlsYes = reactable::colDef(name = "N ctrls", width = 70, maxWidth = 70),
+          meanCases = reactable::colDef(name = "Ratio|Mean cases", width = 120, maxWidth = 120),
+          sdCases = reactable::colDef(name = "SD cases", width = 90, maxWidth = 90),
+          meanControls = reactable::colDef(name = "Ratio| Mean ctrls", width = 120, maxWidth = 120),
+          sdControls = reactable::colDef(name = "SD ctrls", width = 90, maxWidth = 90),
+          oddsRatio = reactable::colDef(name = "OR", width = 80, maxWidth = 80),
+          mlogp = reactable::colDef(name = "mlogp", width = 80, maxWidth = 80),
+          beta = reactable::colDef(name = "Beta", width = 80, maxWidth = 80),
+          modelType = reactable::colDef(name = "Model", width = 80, maxWidth = 80),
+          runNotes = reactable::colDef(name = "Notes", width = 200, maxWidth = 200)
         ),
         style = list(
           overflowX = "auto"  # enable horizontal scrolling if needed
