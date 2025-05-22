@@ -552,7 +552,8 @@ cohortsInfo <-
 
 
 test_that("executeCodeWAS works with ATC groups and DDDs", {
-  
+  skip_if(testingDatabase != "AtlasDevelopment-DBI",
+          "Skip test, it is only for AtlasDevelopment-DBI")
   # set up
   cohortTableHandler <-
     helper_createNewCohortTableHandler(addCohorts = "HadesExtrasAsthmaCohorts")
