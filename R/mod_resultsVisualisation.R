@@ -131,41 +131,66 @@ mod_resultsVisualisation_server <- function(id, resultsVisualisationModuleServer
       shiny::tagList(
         tags$head(
           tags$style(HTML("
-         .menu-section-top {
+         .menu-section {
            margin-bottom: 10px;
            border: 1px solid #ccc;
            border-radius: 4px;
            width: 100%;
          }
-         .menu-header-top {
-           background-color: #f8f9fa;
-           padding: 10px;
+
+         .collapsible-header {
            cursor: pointer;
-           font-size: 16px;
-           width: 100%;
-           box-sizing: border-box;
+           align-items: center;
+           font-weight: normal;
+           margin-top: 0px;
+          box-sizing: border-box;
+           padding: 0px;
+           background-color: #f8f9fa;
          }
-         .menu-content-top {
+         .triangle {
+           display: inline-block;
+           margin-right: 10px;
+           transition: transform 0.3s ease;
+         }
+
+         .rotate {
+           transform: rotate(90deg);
+         }
+
+         .collapsible-content {
            display: none;
            padding: 10px;
-           background-color: #fff;
-           width: 100%;
-           box-sizing: border-box;
+           // border-left: 1px solid #ccc;
+           background-color: #f8f9fa;
          }
         .container-fluid {
           padding: 0px;
         }
       "))),
         tags$script(HTML("
-          $(document).on('click', '.menu-header-top', function () {
-            $(this).next('.menu-content-top').slideToggle();
-          });
+           function toggleSection(header) {
+             const triangle = header.querySelector('.triangle');
+             const content = header.nextElementSibling;
+
+             triangle.classList.toggle('rotate');
+
+             if (content.style.display === 'block') {
+               content.style.display = 'none';
+             } else {
+               content.style.display = 'block';
+             }
+           }
          ") # end of HTML
         ), # end of tags$script
-        div(class = "menu-section-top",
-              div(class = "menu-header-top", "\u25B6 Cohorts"),
-              div(class = "menu-content-top",
-                  reactable::reactable(countsTable)
+        div(class = "menu-section",
+            div(class = "collapsible-header",
+                onclick = "toggleSection(this)",
+                tags$span(class = "triangle", "\u25B6"),  # ▶
+                style = "font-size: 16px; font-weight: normal; padding: 10px; ",
+                "Cohorts"
+            ),
+            div(class = "collapsible-content",
+                reactable::reactable(countsTable)
               )
           )# end of div
       )# end of tagList

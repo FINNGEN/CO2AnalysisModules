@@ -52,22 +52,39 @@ mod_resultsVisualisation_TimeCodeWAS_ui <- function(id) {
             box-sizing: border-box;
             overflow: auto;
           }
-          .collapsible-header {
-            background-color: #f8f9fa;
-            padding: 10px;
-            cursor: pointer;
-            // font-weight: bold;
-            font-size: 16px;
-            border: 1px solid #ccc;
-            box-sizing: border-box;
-          }
-          .collapsible-content {
-            display: none;
-            padding: 10px;
-            background-color: #fff;
-            border: 0px solid #999;
-            margin-bottom: 10px;
-        box-sizing: border-box;   }
+         .menu-section {
+           margin-bottom: 10px;
+           border: 1px solid #ccc;
+           border-radius: 4px;
+           width: 100%;
+         }
+
+         .collapsible-header {
+           cursor: pointer;
+           align-items: center;
+           font-weight: normal;
+           margin-top: 0px;
+          box-sizing: border-box;
+           padding: 0px;
+           background-color: #f8f9fa;
+         }
+
+         .triangle {
+           display: inline-block;
+           margin-right: 10px;
+           transition: transform 0.3s ease;
+         }
+
+         .rotate {
+           transform: rotate(90deg);
+         }
+
+         .collapsible-content {
+           display: none;
+           padding: 10px;
+           // border-left: 1px solid #ccc;
+           background-color: #f8f9fa;
+         }
       ")),
         tags$script(HTML(paste0("
            const inputId = '", ns("free_space"), "';
@@ -82,21 +99,17 @@ mod_resultsVisualisation_TimeCodeWAS_ui <- function(id) {
              }, {priority: 'event'});
            }
 
-           function setupCollapsible() {
-             document.querySelectorAll('.collapsible-header').forEach(header => {
-               const content = header.nextElementSibling;
+           function toggleSection(header) {
+             const triangle = header.querySelector('.triangle');
+             const content = header.nextElementSibling;
 
-               const newHeader = header.cloneNode(true);
-               header.parentNode.replaceChild(newHeader, header);
+             triangle.classList.toggle('rotate');
 
-               newHeader.addEventListener('click', () => {
-                 if (content.style.display === 'none' || content.style.display === '') {
-                   content.style.display = 'block';
-                 } else {
-                   content.style.display = 'none';
-                 }
-               });
-             });
+             if (content.style.display === 'block') {
+               content.style.display = 'none';
+             } else {
+               content.style.display = 'block';
+             }
            }
 
            window.addEventListener('resize', () => {
@@ -104,16 +117,9 @@ mod_resultsVisualisation_TimeCodeWAS_ui <- function(id) {
            });
 
            document.addEventListener('DOMContentLoaded', () => {
-             setupCollapsible();
              setTimeout(() => {
                sendFreeSpace('main-container');
              }, 500);
-           });
-
-           Shiny.addCustomMessageHandler('setupCollapsiblesAgain', function(message) {
-             setTimeout(() => {
-               setupCollapsible();
-             }, 0);
            });
 
            Shiny.addCustomMessageHandler('sendFreeSpace', function(message) {
@@ -475,8 +481,14 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
       shiny::req(r$timeCodeWASData)
 
       ui <- shiny::tagList(
-        div(class = "collapsible-header", "Filters"),
-        div(class = "collapsible-content",
+        div(class = "menu-section",
+            div(class = "collapsible-header",
+                onclick = "toggleSection(this)",
+                tags$span(class = "triangle", "\u25B6"),  # ▶
+                style = "font-size: 16px; font-weight: normal; padding: 10px; ",
+                "Filters"
+            ),
+            div(class = "collapsible-content",
             shinyFeedback::useShinyFeedback(),
         shiny::fluidRow(
           shiny::column(
@@ -564,6 +576,7 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
           ) # column
         ) # fluidRow
       ) # tagList
+        ) # div
       ) # div
 
       session$onFlushed(function() {
