@@ -548,3 +548,68 @@ cohortsInfo <-
   cohortTableHandler$getCohortCounts() |> pull(cohortId) |> expect_equal(c(1, 2))
 
 })
+
+
+
+test_that("executeCodeWAS works with ATC groups and DDDs", {
+  skip_if(testingDatabase != "AtlasDevelopment-DBI",
+          "Skip test, it is only for AtlasDevelopment-DBI")
+  # set up
+  cohortTableHandler <-
+    helper_createNewCohortTableHandler(addCohorts = "HadesExtrasAsthmaCohorts")
+  withr::defer({
+    rm(cohortTableHandler)
+    gc()
+  })
+
+  exportFolder <- withr::local_tempdir('testCodeWAS')
+
+  analysisSettings <- list(
+    cohortIdCases = 1,
+    cohortIdControls = 0,
+    analysisIds = c(342, 343),
+    covariatesIds = NULL,
+    minCellCount = 1
+  )
+
+  # function
+  suppressWarnings(
+    pathToResultsDatabase <- execute_CodeWAS(
+      exportFolder = exportFolder,
+      cohortTableHandler = cohortTableHandler,
+      analysisSettings = analysisSettings
+    )
+  )
+
+  # test
+  expect_true(file.exists(pathToResultsDatabase))
+  checkResults_CodeWAS(pathToResultsDatabase) |> expect_true()
+
+  analysisResults <-
+    duckdb::dbConnect(duckdb::duckdb(), pathToResultsDatabase)
+
+cohortsInfo <-
+    analysisResults  |> dplyr::tbl("cohortsInfo")  |> dplyr::collect()
+  cohortsInfo |> nrow() |> expect_equal(4)
+  cohortsInfo |> dplyr::filter(cohortId == 3) |> pull(shortName) |> expect_equal("ALL\u2229C1")
+  cohortsInfo |> dplyr::filter(cohortId == 1) |> pull(use) |> expect_equal('cases')
+  cohortsInfo |> dplyr::filter(cohortId == 3001) |> pull(shortName) |> expect_equal("MxALL\u2229C1")
+  cohortsInfo |> dplyr::filter(cohortId == 3001) |> pull(use) |> expect_equal('controls')
+
+  # test that the cohorts have been deleted
+  cohortTableHandler$getCohortCounts() |> pull(cohortId) |> expect_equal(c(1, 2))
+
+  codewasResults <-
+    analysisResults  |> dplyr::tbl("codewasResults")  |> dplyr::collect()
+  if (Sys.getenv("HADESEXTAS_TESTING_ENVIRONMENT") == "AtlasDevelopment-DBI") {
+    codewasResults |> dplyr::filter(covariateId %% 1000 == 342) |> nrow() |> expect_gt(0)
+    codewasResults |> dplyr::filter(covariateId %% 1000 == 343) |> nrow() |> expect_gt(0)
+  }
+
+  analysisRef <-
+    analysisResults  |> dplyr::tbl("analysisRef")  |> dplyr::collect()
+  analysisRef |> nrow() |> expect_equal(2)
+  analysisRef |> dplyr::filter(analysisId == 342) |> pull(analysisName) |> expect_equal("ATCgroups")
+  analysisRef |> dplyr::filter(analysisId == 343) |> pull(analysisName) |> expect_equal("DDDATCgroups")
+
+})
