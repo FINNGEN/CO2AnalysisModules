@@ -148,9 +148,11 @@ mod_analysisSettings_timeCodeWAS_server <- function(id, r_connectionHandler) {
     # Create advice message
     #
     output$info_text <- shiny::renderText({
-      shiny::req(r_connectionHandler$hasChangeCounter)
-      shiny::req(input$selectCaseCohort_pickerInput)
-      shiny::req(input$selectControlCohort_pickerInput)
+       if (!shiny::isTruthy(r_connectionHandler$hasChangeCounter) || 
+      !shiny::isTruthy(input$selectCaseCohort_pickerInput) || 
+      !shiny::isTruthy(input$selectControlCohort_pickerInput)) {
+        return("")
+      }
 
       cohortTableHandler <- r_connectionHandler$cohortTableHandler
 

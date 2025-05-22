@@ -180,8 +180,10 @@ mod_analysisSettings_GWAS_server <- function(id, r_connectionHandler) {
     # render info text
     #
     output$info_text <- shiny::renderText({
-      shiny::req(input$selectCaseCohort_pickerInput)
-      shiny::req(input$selectControlCohort_pickerInput)
+      if ( !shiny::isTruthy(input$selectCaseCohort_pickerInput) || 
+      !shiny::isTruthy(input$selectControlCohort_pickerInput)) {
+        return("")
+      }
 
       cohortsOverlap <- r_connectionHandler$cohortTableHandler$getCohortsOverlap()
       cohortCounts <- r_connectionHandler$cohortTableHandler$getCohortCounts()
