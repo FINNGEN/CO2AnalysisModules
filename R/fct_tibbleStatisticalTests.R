@@ -16,6 +16,15 @@
     stop("case_controls_counts is missing the following columns: ", missingCollumns)
   }
 
+  if(nrow(tibbleWithCodeCounts) == 0){
+    tibbleWithCodeCounts <- tibbleWithCodeCounts |> dplyr::mutate(
+      countsPValue = NA_real_,
+      countsOddsRatio = NA_real_,
+      countsTest = NA_character_
+    )
+    return(tibbleWithCodeCounts)
+  }
+
   tibbleWithCodeCounts <- tibbleWithCodeCounts |>
     dplyr::bind_cols(
       tibbleWithCodeCounts |>

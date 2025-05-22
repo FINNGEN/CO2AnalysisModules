@@ -257,7 +257,7 @@ execute_CodeWAS <- function(
 
     # binary
     covariateCountsBinary <- tibble::tibble()
-    if (!is.null(covariateCasesControls$covariates) && covariateCasesControls$covariates |> dplyr::count() |> dplyr::pull(n) != 0) {
+    if (!is.null(covariateCasesControls$covariates)) {
       ParallelLogger::logInfo("Running statistical test for binary covariates")
 
       covariateCountsBinary <- dplyr::full_join(
