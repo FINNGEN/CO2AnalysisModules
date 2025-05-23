@@ -60,14 +60,11 @@ mod_resultsVisualisation_ui <- function(id, resultsVisualisationModuleUi, pathTo
     ),
     shinydashboard::tabItem(
       tabName = "module",
-      shiny::tags$h4("Cohorts"),
-      shiny::div(
-        style = "margin-left: 3px; margin-top: 10px; margin-right:3px; margin-bottom: 20px;",
-        reactable::reactableOutput(ns("usedCohortsInfo"))
-      ),
-      resultsVisualisationModuleUi(ns(id)),
-    )
-  )
+      shiny::uiOutput(ns("usedCohortsInfo")),
+      resultsVisualisationModuleUi(ns(id))
+    ) # end of tabItem
+  ) # end of tabItems
+
 
   # body
   body <- shinydashboard::dashboardBody(
@@ -125,13 +122,78 @@ mod_resultsVisualisation_server <- function(id, resultsVisualisationModuleServer
         reactable::reactable(cohortsInfo)
     })
 
-    output$usedCohortsInfo <- reactable::renderReactable({
+    output$usedCohortsInfo <- shiny::renderUI({
       countsTable <- analysisResults |> dplyr::tbl('cohortsInfo') |>
         dplyr::filter(!is.na(use) & use != "") |>
         dplyr::select(use, shortName, cohortName, cohortSubjects, cohortEntries) |>
         dplyr::collect()
 
-      reactable::reactable(countsTable)
+      shiny::tagList(
+        tags$head(
+          tags$style(HTML("
+         .menu-section {
+           margin-bottom: 10px;
+           border: 1px solid #ccc;
+           border-radius: 4px;
+           width: 100%;
+         }
+
+         .collapsible-header {
+           cursor: pointer;
+           align-items: center;
+           font-weight: normal;
+           margin-top: 0px;
+          box-sizing: border-box;
+           padding: 0px;
+           background-color: #f8f9fa;
+         }
+         .triangle {
+           display: inline-block;
+           margin-right: 10px;
+           transition: transform 0.3s ease;
+         }
+
+         .rotate {
+           transform: rotate(90deg);
+         }
+
+         .collapsible-content {
+           display: none;
+           padding: 10px;
+           // border-left: 1px solid #ccc;
+           background-color: #f8f9fa;
+         }
+        .container-fluid {
+          padding: 0px;
+        }
+      "))),
+        tags$script(HTML("
+           function toggleSection(header) {
+             const triangle = header.querySelector('.triangle');
+             const content = header.nextElementSibling;
+
+             triangle.classList.toggle('rotate');
+
+             if (content.style.display === 'block') {
+               content.style.display = 'none';
+             } else {
+               content.style.display = 'block';
+             }
+           }
+         ") # end of HTML
+        ), # end of tags$script
+        div(class = "menu-section",
+            div(class = "collapsible-header",
+                onclick = "toggleSection(this)",
+                tags$span(class = "triangle", "\u25B6"),  # ▶
+                style = "font-size: 16px; font-weight: normal; padding: 10px; ",
+                "Cohorts"
+            ),
+            div(class = "collapsible-content",
+                reactable::reactable(countsTable)
+              )
+          )# end of div
+      )# end of tagList
     })
 
     resultsVisualisationModuleServer(id, analysisResults)
