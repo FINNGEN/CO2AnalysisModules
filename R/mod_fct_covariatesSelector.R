@@ -48,6 +48,7 @@ mod_fct_covariateSelector_ui <- function(inputId, label = NULL, analysisIdsToSho
     "DrugExposure", "Drugs",
     "DrugEraGroupOverlap", "Drugs Ingredient Group",
     "ATCgroups", "Drugs ATC Group",
+    "DDDATCgroups", "Drugs ATC Group total DDDs",
     "ProcedureOccurrence", "Procedures",
     "DeviceExposure", "Device Exposure",
     "Measurement", "Measurement",

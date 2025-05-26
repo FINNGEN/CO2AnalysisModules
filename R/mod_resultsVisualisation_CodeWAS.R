@@ -39,91 +39,198 @@ mod_resultsVisualisation_CodeWAS_ui <- function(id) {
     shinyFeedback::useShinyFeedback(),
     shinyjs::useShinyjs(),
     shiny::tagList(
+      tags$head(
+        tags$style(HTML("
+          html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+          }
+          #main-container {
+            height: calc(100vh - 100px);
+            border: 0px solid #888;
+            padding: 0px;
+            box-sizing: border-box;
+            overflow: hidden;
+          }
+
+         .menu-section {
+           margin-bottom: 10px;
+           border: 1px solid #ccc;
+           border-radius: 4px;
+           width: 100%;
+         }
+
+         .collapsible-header {
+           cursor: pointer;
+           align-items: center;
+           font-weight: normal;
+           margin-top: 0px;
+          box-sizing: border-box;
+           padding: 0px;
+           background-color: #f8f9fa;
+         }
+
+         .triangle {
+           display: inline-block;
+           margin-right: 10px;
+           transition: transform 0.3s ease;
+         }
+
+         .rotate {
+           transform: rotate(90deg);
+         }
+
+         .collapsible-content {
+           display: none;
+           padding: 10px;
+           // border-left: 1px solid #ccc;
+           background-color: #f8f9fa;
+         }
+      ")),
+        tags$script(HTML(paste0("
+           const inputId = '", ns("free_space"), "';
+
+           function sendFreeSpace(containerId) {
+
+             const totalHeight = window.innerHeight;
+
+             Shiny.setInputValue(inputId, {
+               total: totalHeight,
+               nonce: Math.random()
+             }, {priority: 'event'});
+           }
+
+           function toggleSection(header) {
+             const triangle = header.querySelector('.triangle');
+             const content = header.nextElementSibling;
+
+             triangle.classList.toggle('rotate');
+
+             if (content.style.display === 'block') {
+               content.style.display = 'none';
+             } else {
+               content.style.display = 'block';
+             }
+           }
+
+           window.addEventListener('resize', () => {
+             sendFreeSpace('main-container');
+           });
+
+           document.addEventListener('DOMContentLoaded', () => {
+             setTimeout(() => {
+               sendFreeSpace('main-container');
+             }, 500);
+           });
+
+           Shiny.addCustomMessageHandler('sendFreeSpace', function(message) {
+             sendFreeSpace('main-container');
+           });
+
+          const rows_to_show_id = '", ns("rows_to_show"), "';
+
+          //
+          // Send the number of rows to Shiny when the app loads or resizes
+          //
+          function updateTableRows() {
+              const rowHeight = 36.3; // Approximate row height in px
+              const padding = 510;  // Space for header/footer/other elements
+              const availableHeight = window.innerHeight - padding;
+              const rowCount = Math.floor(availableHeight / rowHeight);
+              Shiny.setInputValue(rows_to_show_id, rowCount, {priority: 'event'});
+            }
+          $(document).on('shiny:connected', updateTableRows);
+          $(window).on('resize', updateTableRows);
+          ") # end of paste0
+        ) # end of HTML
+        )# end of tags$script
+      ), # end of tags$head
       shinyWidgets::chooseSliderSkin("Flat"),
-      shiny::h4("Filters"),
-      shiny::div(
-        style = "margin-top: 10px; margin-bottom: 20px;"
-      ),
-      shiny::uiOutput(ns("codeWASFilter")),
-      htmltools::hr(style = "margin-top: 10px; margin-bottom: 10px;"),
-      shiny::tabsetPanel(
-        id = ns("tabset"),
-        shiny::tabPanel(
-          "Plot",
-          # shiny::div(style = "height: 20px;"),
-          tags$style(HTML("
+      shiny::div(id = "main-container",
+                 shiny::uiOutput(ns("codeWASFilter")),
+                 htmltools::hr(style = "margin-top: 10px; margin-bottom: 10px;"),
+                 shiny::tabsetPanel(
+                   id = ns("tabset"),
+                   shiny::tabPanel(
+                     "Plot",
+                     # shiny::div(style = "height: 20px;"),
+                     tags$style(HTML("
                          .slider-animate-container,
                           .irs-min, .irs-max, .irs-single {
                               display: none !important;
                           }
                       ")),
-          shiny::column(
-            width = 2, align = "left",
-            shiny::div(style = "margin-top: 30px; ",
-                       shiny::checkboxInput(ns("top_10"), "Show labels", value = TRUE),
-            ),
-          ), # column
-          shiny::column(
-            width = 2,
-            div(style = "margin-top: 10px;",
-                div(style = "margin-top: 2px; margin-right: 5px;", "Label top n"),
-                div(style = "margin-top: -20px;",
-                    shiny::sliderInput(
-                      ns("label_top_n"), label = NULL, ticks = FALSE, min = 1, max = 20, value = 10, step = 1)
-                )
-            )
-          ), # column
-          shiny::div(style = "height: 100%; width: 100%; ",
-                     shinycssloaders::withSpinner(
-                       ggiraph::girafeOutput(ns("codeWASplot")),
-                       proxy.height = "400px"
+                     shiny::column(
+                       width = 2, align = "left",
+                       shiny::div(style = "margin-top: 30px; ",
+                                  shiny::checkboxInput(ns("top_10"), "Show labels", value = TRUE),
+                       ),
+                     ), # column
+                     shiny::column(
+                       width = 2,
+                       div(style = "margin-top: 10px;",
+                           div(style = "margin-top: 2px; margin-right: 5px;", "Label top n"),
+                           div(style = "margin-top: -20px;",
+                               shiny::sliderInput(
+                                 ns("label_top_n"), label = NULL, ticks = FALSE, min = 1, max = 20, value = 10, step = 1)
+                           )
+                       )
+                     ), # column
+                     shiny::div(style = "height: 100%; width: 100%; ",
+                                shinycssloaders::withSpinner(
+                                  ggiraph::girafeOutput(ns("codeWASplot")),
+                                  proxy.height = "400px"
+                                )
+                     ),
+                     shiny::div(
+                       style = "margin-top: 10px; margin-bottom: 10px;",
+                       shiny::downloadButton(ns("downloadPlot"), "Download")
                      )
-          ),
-          shiny::div(
-            style = "margin-top: 10px; margin-bottom: 10px;",
-            shiny::downloadButton(ns("downloadPlot"), "Download")
-          )
-        ),
-        shiny::tabPanel(
-          "Table",
-          shiny::div(
-            fluidRow(
-              column(10,
-                     tags$div(style = "display: flex; align-items: center; gap: 15px;",
-                              tags$label("Sort by:", style = "width: 50px; margin-bottom: 0;"),
-                              tags$div(style = "margin-top: 15px;",
-                                       selectInput(ns("sortFirst"), label = NULL, choices = tableColumns, width = "150px", selected = "mlogp"),
-                              ),
-                              tags$div(style = "width: 50px;",
-                                       checkboxInput(ns("sortFirstDesc"), "descending", value = TRUE)
-                              ),
-                              tags$label("", style = "width: 20px; margin-bottom: 0; margin-left: 10px;"),
-                              tags$div(style = "margin-top: 15px;",
-                                       selectInput(ns("sortSecond"), label = NULL, choices = tableColumns, width = "150px", selected = "oddsRatio"),
-                              ),
-                              tags$div(style = "width: 50px;",
-                                       checkboxInput(ns("sortSecondDesc"), "descending", value = TRUE)
-                              )
+                   ),
+                   shiny::tabPanel(
+                     "Table",
+                     shiny::div(
+                       fluidRow(
+                         column(10,
+                                tags$div(style = "display: flex; align-items: center; gap: 15px;",
+                                         tags$label("Sort by:", style = "width: 50px; margin-bottom: 0;"),
+                                         tags$div(style = "margin-top: 15px;",
+                                                  selectInput(ns("sortFirst"), label = NULL, choices = tableColumns, width = "150px", selected = "mlogp"),
+                                         ),
+                                         tags$div(style = "width: 50px;",
+                                                  checkboxInput(ns("sortFirstDesc"), "descending", value = TRUE)
+                                         ),
+                                         tags$label("", style = "width: 20px; margin-bottom: 0; margin-left: 10px;"),
+                                         tags$div(style = "margin-top: 15px;",
+                                                  selectInput(ns("sortSecond"), label = NULL, choices = tableColumns, width = "150px", selected = "oddsRatio"),
+                                         ),
+                                         tags$div(style = "width: 50px;",
+                                                  checkboxInput(ns("sortSecondDesc"), "descending", value = TRUE)
+                                         )
+                                )
+                         ),
+                       ) # fluidRow
+                     ), # div
+                     shiny::div(
+                       style = "margin-top: 0px; margin-bottom: 10px;",
+                       shinycssloaders::withSpinner(
+                         reactable::reactableOutput(ns("codeWAStable")),
+                         proxy.height = "400px"
+                       )
+                     ),
+                     shiny::div(
+                       style = "margin-top: 10px; margin-bottom: 10px;",
+                       shiny::downloadButton(ns("downloadCodeWASFiltered"), "Download filtered", icon = shiny::icon("download")),
+                       shiny::downloadButton(ns("downloadCodeWASAll"), "Download all", icon = shiny::icon("download"))
                      )
-              ),
-            ) # fluidRow
-          ), # div
-          shiny::div(
-            style = "margin-top: 0px; margin-bottom: 10px;",
-            shinycssloaders::withSpinner(
-              reactable::reactableOutput(ns("codeWAStable")),
-              proxy.height = "400px"
-            )
-          ),
-          shiny::div(
-            style = "margin-top: 10px; margin-bottom: 10px;",
-            shiny::downloadButton(ns("downloadCodeWASFiltered"), "Download filtered", icon = shiny::icon("download")),
-            shiny::downloadButton(ns("downloadCodeWASAll"), "Download all", icon = shiny::icon("download"))
-          )
-        )# tabPanel
-      ) # tabsetPanel
-    ) # tagList
-  ) # fluidPage
+                   )# tabPanel
+                 ), # tabsetPanel
+                 # shiny::verbatimTextOutput(ns("size_out")),
+                 # shiny::verbatimTextOutput(ns("free_space"))
+      ) # end of tagList
+    ) # end of div
+  ) # end of fluidPage
 }
 
 
@@ -172,6 +279,8 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
     model_reactive <- shiny::reactive(input$model)
     model_debounced <- shiny::debounce(model_reactive, 1000)
 
+    rows_to_show_debounced <- shiny::debounce(shiny::reactive(input$rows_to_show), 500)
+
     #
     # load the CodeWAS data
     #
@@ -199,83 +308,99 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
     output$codeWASFilter <- shiny::renderUI({
       req(r$codeWASData)
 
-      shiny::tagList(
-        shiny::fluidRow(
-          shiny::column(
-            width = 2,
-            shinyWidgets::pickerInput(
-              ns("domain"),
-              "Domain",
-              choices = unique(r$codeWASData$domainId),
-              selected = unique(r$codeWASData$domainId),
-              multiple = TRUE,
-              options = list(
-                `actions-box` = TRUE,
-                `selected-text-format` = "count > 3",
-                `count-selected-text` = "{0} domains selected"
-              )
-            )),
-          shiny::column(
-            width = 2,
-            shinyWidgets::pickerInput(
-              ns("analysis"),
-              "Analysis",
-              choices = unique(r$codeWASData$analysisName),
-              selected = unique(r$codeWASData$analysisName),
-              multiple = TRUE,
-              options = list(`actions-box` = TRUE, `selected-text-format` = "count > 3", `count-selected-text` = "{0} analyses selected")
-            )),
-          shiny::column(
-            width = 2,
-            shinyWidgets::pickerInput(
-              ns("model"),
-              "Model",
-              choices = unique(r$codeWASData$modelType),
-              selected = unique(r$codeWASData$modelType),
-              multiple = TRUE,
-              options = list(`actions-box` = TRUE, `selected-text-format` = "count > 3", `count-selected-text` = "{0} model types selected")
-            )),
-        ), # fluidRow
+      ui <- shiny::tagList(
+        div(class = "menu-section",
+            div(class = "collapsible-header",
+                onclick = "toggleSection(this)",
+                tags$span(class = "triangle", "\u25B6"),  # ▶
+                style = "font-size: 16px; font-weight: normal; padding: 10px;",
+                "Filters"
+            ),
+            div(class = "collapsible-content",
+                shiny::fluidRow(
+                  shiny::column(
+                    width = 3,
+                    shinyWidgets::pickerInput(
+                      ns("domain"),
+                      "Domain",
+                      choices = unique(r$codeWASData$domainId),
+                      selected = unique(r$codeWASData$domainId),
+                      multiple = TRUE,
+                      options = list(
+                        `actions-box` = TRUE,
+                        `selected-text-format` = "count > 3",
+                        `count-selected-text` = "{0} domains selected"
+                      )
+                    )),
+                  shiny::column(
+                    width = 3,
+                    shinyWidgets::pickerInput(
+                      ns("analysis"),
+                      "Analysis",
+                      choices = unique(r$codeWASData$analysisName),
+                      selected = unique(r$codeWASData$analysisName),
+                      multiple = TRUE,
+                      options = list(`actions-box` = TRUE, `selected-text-format` = "count > 3", `count-selected-text` = "{0} analyses selected")
+                    )),
+                  shiny::column(
+                    width = 3,
+                    shinyWidgets::pickerInput(
+                      ns("model"),
+                      "Model",
+                      choices = unique(r$codeWASData$modelType),
+                      selected = unique(r$codeWASData$modelType),
+                      multiple = TRUE,
+                      options = list(`actions-box` = TRUE, `selected-text-format` = "count > 3", `count-selected-text` = "{0} model types selected")
+                    )),
+                ), # fluidRow
 
-        shiny::hr(style = "margin-top: 10px; margin-bottom: 5px;"),
-        shiny::fluidRow(
-          shiny::column(
-            2,
-            shiny::textInput(
-              inputId = ns("p_value_threshold"),
-              label =  "p-value threshold",
-              value = "1e-5",
-              width = "100%"
-            ),
-          ), # column
-          shinyWidgets::chooseSliderSkin("Flat"),
-          shiny::column(
-            width = 2, align = "left",
-            shiny::div(style = "height: 85px; width: 100%; margin-top: -15px;",
-                       shiny::sliderInput(ns("or_range"), "OR range filtered out", min = 0.0, max = 2, value = c(0.8,1.2), step = 0.1),
-            )
-          ),
-          shiny::column(
-            2,
-            shiny::textInput(
-              inputId = ns("n_cases"),
-              label =  "Minimum # of cases",
-              value = "5",
-              width = "100%"
-            ),
-          ), # column
-          shiny::column(
-            width = 2, align = "left",
-            shiny::div(style = "width: 100%; margin-top: 20px; margin-right: 20px;",
-                       shiny::checkboxInput(ns("na_anywhere"), "Allow NA", value = FALSE),
-            ),
-            shiny::div(style = "width: 100%; margin-top: -5px; margin-right: 20px;",
-                       shiny::checkboxInput(ns("or_filter_disable"), "Disable OR filter", value = FALSE),
-            ),
-          ) # column
-        ) # fluidRow
-      ) # tagList
-    })
+                shiny::hr(style = "margin-top: 10px; margin-bottom: 20px;"),
+                shiny::fluidRow(
+                  shiny::column(
+                    3,
+                    shiny::textInput(
+                      inputId = ns("p_value_threshold"),
+                      label =  "p-value threshold",
+                      value = "1e-5",
+                      width = "100%"
+                    ),
+                  ), # column
+                  shinyWidgets::chooseSliderSkin("Flat"),
+                  shiny::column(
+                    width = 2, align = "left",
+                    shiny::div(style = "height: 85px; width: 100%; margin-top: -15px;",
+                               shiny::sliderInput(ns("or_range"), "OR removed", min = 0.0, max = 2, value = c(0.8,1.2), step = 0.1),
+                    )
+                  ),
+                  shiny::column(
+                    3,
+                    shiny::textInput(
+                      inputId = ns("n_cases"),
+                      label =  "Minimum # of cases",
+                      value = "5",
+                      width = "100%"
+                    ),
+                  ), # column
+                  shiny::column(
+                    width = 3, align = "left",
+                    shiny::div(style = "width: 100%; margin-top: 20px; margin-right: 20px;",
+                               shiny::checkboxInput(ns("na_anywhere"), "Allow NA", value = FALSE),
+                    ),
+                    shiny::div(style = "width: 100%; margin-top: -5px; margin-right: 20px;",
+                               shiny::checkboxInput(ns("or_filter_disable"), "Disable OR filter", value = FALSE),
+                    ),
+                  ) # column
+                ) # fluidRow
+            ) # tagList
+        ) # div
+      ) # div
+
+      session$onFlushed(function() {
+        session$sendCustomMessage("setupCollapsiblesAgain", list())
+      }, once = TRUE)
+
+      ui
+    }) # renderUI
 
     is_valid_number <- function(input_string) {
       # This regex matches regular and scientific notation numbers
@@ -411,47 +536,76 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
           TRUE ~ df
         )
 
+      sticky_style <- list(backgroundColor = "#f7f7f7")
+
       reactable::reactable(
         df,
         filterable = TRUE,
         bordered = TRUE,
         # highlight = TRUE,
-        striped = TRUE,
+        striped = FALSE,
         defaultColDef = reactable::colDef(
-          resizable = TRUE
+          minWidth = 80,
+          headerStyle = list(whiteSpace = "nowrap"),
+          style = list(
+            whiteSpace = "nowrap",
+            textOverflow = "ellipsis"
+          )
         ),
         # defaultSorted = list(mlogp = "desc", oddsRatio = "desc"),
         sortable = FALSE,
         columns = list(
           covariateName = reactable::colDef(
             name = "Covariate Name",
+            sticky = "left",
+            style = list(
+              whiteSpace = "nowrap",
+              overflow = "hidden",
+              textOverflow = "ellipsis",
+              backgroundColor = "#f7f7f7"
+            ),
+            minWidth = 220,
             cell = function(name, rowIndex) {
               htmltools::tags$a(
                 href = paste0(atlasUrl, "/#/concept/", df$covariateId[ rowIndex ]),
                 target = "_blank", df$covariateName[ rowIndex ],
                 content = name
               )
-            },
-            minWidth = 50
+            }
+          ),
+          conceptCode = reactable::colDef(
+            name = "Concept Code",
+            sticky = "left",
+            minWidth = 160,
+            style = list(
+              whiteSpace = "nowrap",
+              overflow = "hidden",
+              textOverflow = "ellipsis",
+              backgroundColor = "#f7f7f7"
+            ),
           ),
           covariateId = reactable::colDef(show = FALSE),
-          analysisName = reactable::colDef(name = "Analysis Name", minWidth = 30),
-          conceptCode = reactable::colDef(name = "Concept Code", minWidth = 15),
-          vocabularyId = reactable::colDef(name = "Vocabulary", minWidth = 15),
-          domainId = reactable::colDef(name = "Domain", minWidth = 25),
-          nCasesYes = reactable::colDef(name = "N cases", minWidth = 12),
-          nControlsYes = reactable::colDef(name = "N ctrls", minWidth = 12),
-          meanCases = reactable::colDef(name = "Ratio|Mean cases", minWidth = 13),
-          sdCases = reactable::colDef(name = "SD cases", minWidth = 13),
-          meanControls = reactable::colDef(name = "Ratio|Mean ctrls", minWidth = 13),
-          sdControls = reactable::colDef(name = "SD ctrls", minWidth = 13),
-          oddsRatio = reactable::colDef(name = "OR", minWidth = 25),
-          mlogp = reactable::colDef(name = "mlogp", minWidth = 25),
-          beta = reactable::colDef(name = "Beta", minWidth = 25),
-          modelType = reactable::colDef(name = "Model", minWidth = 30),
-          runNotes = reactable::colDef(name = "Notes", minWidth = 30)
+          analysisName = reactable::colDef(name = "Analysis Name", width = 160),
+          vocabularyId = reactable::colDef(name = "Vocabulary", width = 86, maxWidth = 86),
+          domainId = reactable::colDef(name = "Domain", width = 120, maxWidth = 120),
+          nCasesYes = reactable::colDef(name = "N cases", width = 70, maxWidth = 70),
+          nControlsYes = reactable::colDef(name = "N ctrls", width = 70, maxWidth = 70),
+          meanCases = reactable::colDef(name = "Ratio|Mean cases", width = 120, maxWidth = 120),
+          sdCases = reactable::colDef(name = "SD cases", width = 90, maxWidth = 90),
+          meanControls = reactable::colDef(name = "Ratio| Mean ctrls", width = 120, maxWidth = 120),
+          sdControls = reactable::colDef(name = "SD ctrls", width = 90, maxWidth = 90),
+          oddsRatio = reactable::colDef(name = "OR", width = 80, maxWidth = 80),
+          mlogp = reactable::colDef(name = "mlogp", width = 80, maxWidth = 80),
+          beta = reactable::colDef(name = "Beta", width = 80, maxWidth = 80),
+          modelType = reactable::colDef(name = "Model", width = 80, maxWidth = 80),
+          runNotes = reactable::colDef(name = "Notes", width = 200, maxWidth = 200)
         ),
-        searchable = TRUE, defaultPageSize = 10, showPageSizeOptions = TRUE
+        style = list(
+          overflowX = "auto"  # enable horizontal scrolling if needed
+        ),
+        searchable = TRUE,
+        defaultPageSize = rows_to_show_debounced(),
+        showPageSizeOptions = FALSE
       ) # reactable
 
     })

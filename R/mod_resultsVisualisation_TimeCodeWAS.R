@@ -38,10 +38,116 @@ mod_resultsVisualisation_TimeCodeWAS_ui <- function(id) {
   shiny::fluidPage(
     title = "TimeCodeWAS",
     shiny::tagList(
+      tags$head(
+        tags$style(HTML("
+          html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+          }
+          #main-container {
+            height: calc(100vh - 100px);
+            border: 0px solid #888;
+            padding: 0px;
+            box-sizing: border-box;
+            overflow: hidden;
+          }
+         .menu-section {
+           margin-bottom: 10px;
+           border: 1px solid #ccc;
+           border-radius: 4px;
+           width: 100%;
+         }
+
+         .collapsible-header {
+           cursor: pointer;
+           align-items: center;
+           font-weight: normal;
+           margin-top: 0px;
+          box-sizing: border-box;
+           padding: 0px;
+           background-color: #f8f9fa;
+         }
+
+         .triangle {
+           display: inline-block;
+           margin-right: 10px;
+           transition: transform 0.3s ease;
+         }
+
+         .rotate {
+           transform: rotate(90deg);
+         }
+
+         .collapsible-content {
+           display: none;
+           padding: 10px;
+           // border-left: 1px solid #ccc;
+           background-color: #f8f9fa;
+         }
+      ")),
+        tags$script(HTML(paste0("
+           const inputId = '", ns("free_space"), "';
+
+           function sendFreeSpace(containerId) {
+
+             const totalHeight = window.innerHeight;
+
+             Shiny.setInputValue(inputId, {
+               total: totalHeight,
+               nonce: Math.random()
+             }, {priority: 'event'});
+           }
+
+           function toggleSection(header) {
+             const triangle = header.querySelector('.triangle');
+             const content = header.nextElementSibling;
+
+             triangle.classList.toggle('rotate');
+
+             if (content.style.display === 'block') {
+               content.style.display = 'none';
+             } else {
+               content.style.display = 'block';
+             }
+           }
+
+           window.addEventListener('resize', () => {
+             sendFreeSpace('main-container');
+           });
+
+           document.addEventListener('DOMContentLoaded', () => {
+             setTimeout(() => {
+               sendFreeSpace('main-container');
+             }, 500);
+           });
+
+           Shiny.addCustomMessageHandler('sendFreeSpace', function(message) {
+             sendFreeSpace('main-container');
+           });
+
+          const rows_to_show_id = '", ns("rows_to_show"), "';
+
+          //
+          // Send the number of rows to Shiny when the app loads or resizes
+          //
+          function updateTableRows() {
+              const rowHeight = 36.3; // Approximate row height in px
+              const padding = 510;  // Space for header/footer/other elements
+              const availableHeight = window.innerHeight - padding;
+              const rowCount = Math.floor(availableHeight / rowHeight);
+              Shiny.setInputValue(rows_to_show_id, rowCount, {priority: 'event'});
+            }
+          $(document).on('shiny:connected', updateTableRows);
+          $(window).on('resize', updateTableRows);
+          ") # end of paste0
+        ) # end of HTML
+        )# end of tags$script
+      ), # end of tags$head
       shinyWidgets::chooseSliderSkin("Flat"),
-      shiny::tags$h4("Filters"),
+      shiny::div(id = "main-container",
       shiny::uiOutput(ns("outputUI")),
-      shiny::tags$h4("Data"),
+      htmltools::hr(style = "margin-top: 10px; margin-bottom: 10px;"),
       shiny::tabsetPanel(
         id = ns("tabset"),
         shiny::tabPanel(
@@ -180,6 +286,7 @@ mod_resultsVisualisation_TimeCodeWAS_ui <- function(id) {
         ) # tabPanel
       ) # tabsetPanel
     ) # tagList
+    ) # div
   ) # fluidPage
 
 }
@@ -245,6 +352,8 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
     model_debounced <- shiny::debounce(model_reactive, 1000)
     time_period_reactive <- shiny::reactive(input$time_period)
     time_period_debounced <- shiny::debounce(time_period_reactive, 1000)
+
+    rows_to_show_debounced <- shiny::debounce(shiny::reactive(input$rows_to_show), 500)
 
     ParallelLogger::logInfo("TimeCodeWAS server started")
 
@@ -371,8 +480,16 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
     output$outputUI <- shiny::renderUI({
       shiny::req(r$timeCodeWASData)
 
-      shiny::tagList(
-        shinyFeedback::useShinyFeedback(),
+      ui <- shiny::tagList(
+        div(class = "menu-section",
+            div(class = "collapsible-header",
+                onclick = "toggleSection(this)",
+                tags$span(class = "triangle", "\u25B6"),  # ▶
+                style = "font-size: 16px; font-weight: normal; padding: 10px; ",
+                "Filters"
+            ),
+            div(class = "collapsible-content",
+            shinyFeedback::useShinyFeedback(),
         shiny::fluidRow(
           shiny::column(
             width = 2,
@@ -459,6 +576,14 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
           ) # column
         ) # fluidRow
       ) # tagList
+        ) # div
+      ) # div
+
+      session$onFlushed(function() {
+        session$sendCustomMessage("setupCollapsiblesAgain", list())
+      }, once = TRUE)
+
+      ui
     })
 
     is_valid_number <- function(input_string) {
@@ -909,16 +1034,42 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
         filterable = TRUE,
         bordered = TRUE,
         # highlight = TRUE,
-        striped = TRUE,
+        # striped = TRUE,
+        # defaultColDef = reactable::colDef(
+        #   resizable = TRUE
+        # ),
         defaultColDef = reactable::colDef(
-          resizable = TRUE
+          minWidth = 80,
+          headerStyle = list(whiteSpace = "nowrap"),
+          style = list(
+            whiteSpace = "nowrap",
+            textOverflow = "ellipsis"
+          )
         ),
         # defaultSorted = list(pLog10 = "desc", OR = "desc"),
         sortable = FALSE,
         columns = list(
-          GROUP = reactable::colDef(name = "Time ID", minWidth = 20, align = "right"),
+          GROUP = reactable::colDef(
+            name = "Time ID",
+            sticky = "left",
+            style = list(
+              whiteSpace = "nowrap",
+              overflow = "hidden",
+              textOverflow = "ellipsis",
+              backgroundColor = "#f7f7f7"
+            ),
+            minWidth = 80,
+            align = "right"
+          ),
           name = reactable::colDef(
             name = "Covariate Name",
+            sticky = "left",
+            style = list(
+              whiteSpace = "nowrap",
+              overflow = "hidden",
+              textOverflow = "ellipsis",
+              backgroundColor = "#f7f7f7"
+            ),
             cell = function(name, rowIndex) {
               htmltools::tags$a(
                 href = paste0(atlasUrl, "/#/concept/", df$code[ rowIndex ]),
@@ -926,27 +1077,32 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
                 content = name
               )
             },
-            minWidth = 50
+            minWidth = 150
           ),
           code = reactable::colDef(show = FALSE),
-          conceptCode = reactable::colDef(name = "Concept Code", minWidth = 18),
-          vocabularyId = reactable::colDef(name = "Vocabulary", minWidth = 15),
-          analysisName = reactable::colDef(name = "Analysis Name", minWidth = 50),
-          domain = reactable::colDef(name = "Domain", minWidth = 20),
-          upIn = reactable::colDef(name = "Type", minWidth = 15),
-          nCasesYes = reactable::colDef(name = "N cases", minWidth = 12),
-          nControlsYes = reactable::colDef(name = "N ctrls", minWidth = 12),
-          meanCases = reactable::colDef(name = "Ratio|Mean cases", minWidth = 13),
-          meanControls = reactable::colDef(name = "Ratio|Mean ctrls", minWidth = 13),
-          sdCases = reactable::colDef(name = "SD cases", minWidth = 13),
-          sdControls = reactable::colDef(name = "SD ctrls", minWidth = 13),
-          OR = reactable::colDef( name = "OR", minWidth = 18),
-          mlogp = reactable::colDef(name = "mlogp", minWidth = 18),
-          beta = reactable::colDef(name = "Beta", minWidth = 25),
-          model = reactable::colDef(name = "Model", minWidth = 20),
-          notes = reactable::colDef(name = "Notes", minWidth = 30)
+          conceptCode = reactable::colDef(name = "Concept Code", minWidth = 100),
+          vocabularyId = reactable::colDef(name = "Vocabulary", minWidth = 86),
+          analysisName = reactable::colDef(name = "Analysis Name", minWidth = 120, maxWidth = 120),
+          domain = reactable::colDef(name = "Domain", minWidth = 120, maxWidth = 120),
+          upIn = reactable::colDef(name = "Type", minWidth = 50),
+          nCasesYes = reactable::colDef(name = "N cases", minWidth = 70, maxWidth = 70),
+          nControlsYes = reactable::colDef(name = "N ctrls", minWidth = 70, maxWidth = 70),
+          meanCases = reactable::colDef(name = "Ratio|Mean cases", minWidth = 120),
+          meanControls = reactable::colDef(name = "Ratio|Mean ctrls", minWidth = 120),
+          sdCases = reactable::colDef(name = "SD cases", minWidth = 90, maxWidth = 90),
+          sdControls = reactable::colDef(name = "SD ctrls", minWidth = 90, maxWidth = 90),
+          OR = reactable::colDef( name = "OR", minWidth = 80),
+          mlogp = reactable::colDef(name = "mlogp", minWidth = 80),
+          beta = reactable::colDef(name = "Beta", minWidth = 80),
+          model = reactable::colDef(name = "Model", minWidth = 80),
+          notes = reactable::colDef(name = "Notes", minWidth = 100)
         ),
-        searchable = TRUE, defaultPageSize = 10, showPageSizeOptions = TRUE
+        searchable = TRUE,
+        style = list(
+          overflowX = "auto"  # enable horizontal scrolling if needed
+        ),
+        defaultPageSize = rows_to_show_debounced(),
+        showPageSizeOptions = FALSE
       )
     }
 

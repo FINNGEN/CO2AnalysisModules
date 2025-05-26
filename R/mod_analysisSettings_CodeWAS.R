@@ -40,7 +40,7 @@ mod_analysisSettings_codeWAS_ui <- function(id) {
         101, 102, 141, 204,
         1, 2, 3, 6, 8, 9, 10, 41,
         601, 641,
-        301, 341, 404, 906, 342,
+        301, 342, 343, 404, 906, 342,
         701, 702, 703, 741, 908,
         801, 841, 909,
         501, 541, 907,
@@ -186,9 +186,11 @@ mod_analysisSettings_codeWAS_server <- function(id, r_connectionHandler) {
     # Create advice message
     #
     output$info_text <- shiny::renderText({
-      shiny::req(r_connectionHandler$hasChangeCounter)
-      shiny::req(input$selectCaseCohort_pickerInput)
-      shiny::req(input$selectControlCohort_pickerInput)
+      if (!shiny::isTruthy(r_connectionHandler$hasChangeCounter) || 
+      !shiny::isTruthy(input$selectCaseCohort_pickerInput) || 
+      !shiny::isTruthy(input$selectControlCohort_pickerInput)) {
+        return("")
+      }
 
       cohortTableHandler <- r_connectionHandler$cohortTableHandler
 

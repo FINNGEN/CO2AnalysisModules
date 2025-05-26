@@ -141,16 +141,16 @@ execute_CodeWAS <- function(
   startAnalysisTime <- Sys.time()
 
   noCovariatesMode <- is.null(covariatesIds) || length(covariatesIds) == 0
-
-  regexAnalysisIds <- {
+  
+  allRegexAnalysisIds <- {
     if (!is.null(analysisRegexTibble)) analysisRegexTibble |> dplyr::pull(analysisId) else c()
   }
-  defaultAnalysisIds <- analysisIds |> setdiff(regexAnalysisIds)
+
+  # separate analysisIds into default and regex, default are the ones that are not in the regex
+  defaultAnalysisIds <- analysisIds |> setdiff(allRegexAnalysisIds)
+  regexAnalysisIds <- analysisIds |> intersect(allRegexAnalysisIds)
 
   # numeric analysis settings
-  defaultAnalysisIds <- analysisIds |> setdiff({
-    if (!is.null(analysisRegexTibble)) analysisRegexTibble |> dplyr::pull(analysisId) else c()
-  })
   covariateSettings <- HadesExtras::FeatureExtraction_createTemporalCovariateSettingsFromList(
     analysisIds = defaultAnalysisIds,
     temporalStartDays = -99999,
@@ -257,7 +257,7 @@ execute_CodeWAS <- function(
 
     # binary
     covariateCountsBinary <- tibble::tibble()
-    if (!is.null(covariateCasesControls$covariates) && covariateCasesControls$covariates |> dplyr::count() |> dplyr::pull(n) != 0) {
+    if (!is.null(covariateCasesControls$covariates)) {
       ParallelLogger::logInfo("Running statistical test for binary covariates")
 
       covariateCountsBinary <- dplyr::full_join(

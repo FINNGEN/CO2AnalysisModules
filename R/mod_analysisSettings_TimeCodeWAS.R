@@ -39,7 +39,7 @@ mod_analysisSettings_timeCodeWAS_ui <- function(id) {
       analysisIdsToShow = c(
         101, 102, 141, 204,
         601, 641,
-        301, 341, 404, 342,
+        301, 342, 343, 404, 342,
         701, 702, 703, 741,
         801, 841,
         501, 541,
@@ -148,9 +148,11 @@ mod_analysisSettings_timeCodeWAS_server <- function(id, r_connectionHandler) {
     # Create advice message
     #
     output$info_text <- shiny::renderText({
-      shiny::req(r_connectionHandler$hasChangeCounter)
-      shiny::req(input$selectCaseCohort_pickerInput)
-      shiny::req(input$selectControlCohort_pickerInput)
+       if (!shiny::isTruthy(r_connectionHandler$hasChangeCounter) || 
+      !shiny::isTruthy(input$selectCaseCohort_pickerInput) || 
+      !shiny::isTruthy(input$selectControlCohort_pickerInput)) {
+        return("")
+      }
 
       cohortTableHandler <- r_connectionHandler$cohortTableHandler
 
