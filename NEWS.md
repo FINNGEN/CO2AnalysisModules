@@ -1,4 +1,6 @@
 # CO2AnalysisModules 2.3.3
+- Added ATC DDD to CodeWAS and TimeCodeWAS
+- Chages in UI for small screens
 
 # CO2AnalysisModules 2.3.2
 - Fixed bug in CodeWAS when there are no covariates
