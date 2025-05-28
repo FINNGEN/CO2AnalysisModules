@@ -1,0 +1,127 @@
+# Synthea 10
+S10:
+  cohortTableHandler:
+    database:
+      databaseId: S10
+      databaseName: Synthea 10
+      databaseDescription: Synthea 10 database
+    connection:
+      connectionDetailsSettings:
+          dbms: postgresql
+          server: localhost/synthea
+          user: syntheauser
+          password: mypass
+    cdm:
+        cdmDatabaseSchema: cdm_synthea10
+        vocabularyDatabaseSchema: cdm_synthea10
+    cohortTable:
+        cohortDatabaseSchema: cdm_synthea10_result
+        cohortTableName: test_cohort_table_<timestamp>
+  atlasConfig:
+    webapiurl: https://api.ohdsi.org/WebAPI
+    sourcekey:
+    resultsshchema:
+    regexPersonSourceValue: ^00[0-9a-f]{6}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12} 
+
+# Synthea 10k
+S10k:
+  cohortTableHandler:
+    database:
+      databaseId: S10k
+      databaseName: Synthea 10k
+      databaseDescription: Synthea 10k database
+    connection:
+      connectionDetailsSettings:
+          dbms: postgresql
+          server: localhost/synthea
+          user: syntheauser
+          password: mypass
+    cdm:
+        cdmDatabaseSchema: cdm_synthea10k
+        vocabularyDatabaseSchema: cdm_synthea10k
+    cohortTable:
+        cohortDatabaseSchema: cdm_synthea10_result
+        cohortTableName: test_cohort_table_<timestamp>
+  atlasConfig:
+    webapiurl: https://api.ohdsi.org/WebAPI
+    sourcekey:
+    resultsshchema:
+    regexPersonSourceValue: ^00[0-9a-f]{6}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12} 
+
+# sandbox
+DF13:
+  cohortTableHandler:
+    database:
+      databaseId: DF13
+      databaseName: FinnGen DF13
+      databaseDescription: FinnGen database 13
+    connection:
+      connectionDetailsSettings:
+        dbms: bigquery
+        drv: bigrquery::bigquery()
+        project: <sandboxProject>
+        billing: <sandboxProject>
+        bigint: integer64
+      tempEmulationSchema: <sandboxProject>.sandbox #needed for creating tmp table in BigQuery
+    cdm:
+      cdmDatabaseSchema: finngen-production-library.finngen_omop_r13
+      vocabularyDatabaseSchema: finngen-production-library.finngen_omop_r13
+    cohortTable:
+      cohortDatabaseSchema: <sandboxProject>.sandbox
+      cohortTableName: co2_d13_<sessionManager>_<timestamp>
+  atlasConfig:
+    webapiurl: https://ohdsi-webapi.app.finngen.fi/WebAPI
+    sourcekey: FINNGEN_CDM_R13
+    resultsshchema: finngen-production-library.finngen_omop_result_r13
+    regexPersonSourceValue: ^FG[A-Z0-9]{8}$
+# Atlas dev
+BQ5k:
+  cohortTableHandler:
+    database:
+      databaseId: BQ5K
+      databaseName: bigquery5k
+      databaseDescription: BigQuery database
+    connection:
+      connectionDetailsSettings:
+          dbms: bigquery
+          drv: bigrquery::bigquery()
+          project: atlas-development-270609
+          billing: atlas-development-270609
+          bigint: integer64
+      tempEmulationSchema: atlas-development-270609.sandbox
+    cdm:
+        cdmDatabaseSchema: atlas-development-270609.etl_sam_r12_5k_omop
+        vocabularyDatabaseSchema: atlas-development-270609.etl_sam_r12_5k_omop
+    cohortTable:
+        cohortDatabaseSchema: atlas-development-270609.sandbox
+        cohortTableName: hadesextras_test_cohort_table_<timestamp>
+  atlasConfig:
+    webapiurl: https://api.ohdsi.org/WebAPI
+    sourcekey:
+    resultsshchema:
+    regexPersonSourceValue: ^FG[A-Z0-9]{8}$
+BQ500k:
+  cohortTableHandler:
+    database:
+      databaseId: BQ500k
+      databaseName: bigquery500k
+      databaseDescription: BigQuery database with 500k patients
+    connection:
+      connectionDetailsSettings:
+          dbms: bigquery
+          drv: bigrquery::bigquery()
+          project: atlas-development-270609
+          billing: atlas-development-270609
+          bigint: integer64
+      tempEmulationSchema: atlas-development-270609.sandbox
+    cdm:
+        cdmDatabaseSchema: atlas-development-270609.etl_sam_dev_omop
+        vocabularyDatabaseSchema: atlas-development-270609.etl_sam_dev_omop
+    cohortTable:
+        cohortDatabaseSchema: atlas-development-270609.sandbox
+        cohortTableName: hadesextras_test_cohort_table_<timestamp>
+  atlasConfig:
+    webapiurl: https://api.ohdsi.org/WebAPI
+    sourcekey:
+    resultsshchema:
+    regexPersonSourceValue: ^FG[A-Z0-9]{8}$

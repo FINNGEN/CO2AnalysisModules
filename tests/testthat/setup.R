@@ -5,12 +5,14 @@
 # Sys.setenv(HADESEXTAS_TESTING_ENVIRONMENT = "Eunomia-GiBleed")
 # Sys.setenv(HADESEXTAS_TESTING_ENVIRONMENT = "AtlasDevelopment-DBI")
 # Sys.setenv(HADESEXTAS_TESTING_ENVIRONMENT = "Eunomia-FinnGen")
+#Sys.setenv(HADESEXTAS_TESTING_ENVIRONMENT = "Synthea-S10")
+#Sys.setenv(HADESEXTAS_TESTING_ENVIRONMENT = "Synthea-S10k")
 testingDatabase <- Sys.getenv("HADESEXTAS_TESTING_ENVIRONMENT")
 
 testingCO2AnalysisModulesConfig <- "AtlasDemo"
 
 # check correct settings
-possibleDatabases <- c("Eunomia-GiBleed", "Eunomia-MIMIC", "Eunomia-FinnGen", "AtlasDevelopment", "AtlasDevelopment-DBI")
+possibleDatabases <- c("Eunomia-GiBleed", "Eunomia-MIMIC", "Eunomia-FinnGen", "AtlasDevelopment", "AtlasDevelopment-DBI", "Synthea-S10", "Synthea-S10k")
 if( !(testingDatabase %in% possibleDatabases) ){
   message("Please select a valid database from: ", paste(possibleDatabases, collapse = ", "))
   stop()
@@ -118,6 +120,23 @@ if(testingCO2AnalysisModulesConfig == "PrivateAtlas"){
   pathToCO2AnalysisModulesConfigYalm  <-  testthat::test_path("config", "privateAtlas_CO2AnalysisModulesConfig.yml")
   test_CO2AnalysisModulesConfig <- readAndParseYalm(pathToCO2AnalysisModulesConfigYalm)
 }
+
+#
+# Synthea Database
+#
+if (testingDatabase |> stringr::str_detect("Synthea")) {
+  test_databasesConfig <- HadesExtras::readAndParseYaml(
+    pathToYalmFile = testthat::test_path("config", "databasesConfig.yml")
+  )
+
+  if (testingDatabase |> stringr::str_ends("S10")) {    
+    test_cohortTableHandlerConfig <- test_databasesConfig$S10$cohortTableHandler
+  }
+  if (testingDatabase |> stringr::str_ends("S10k")) {
+    test_cohortTableHandlerConfig <- test_databasesConfig$S10k$cohortTableHandler
+  }
+}
+
 
 #
 # INFORM USER
