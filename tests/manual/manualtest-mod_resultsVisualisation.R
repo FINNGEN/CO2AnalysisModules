@@ -43,10 +43,10 @@ logshref  <- fcr_setUpLogger(logsFolder = logsFolder)
 
 app <- shiny::shinyApp(
   shiny::fluidPage(
-      mod_resultsVisualisation_ui("test", mod_resultsVisualisation_CohortsOverlaps_ui, pathAboutModule, "Title", logshref)
+      mod_resultsVisualisation_ui("test", mod_resultsVisualisation_PhenotypeScoring_ui, pathAboutModule, "Title", logshref)
   ),
   function(input,output,session){
-     mod_resultsVisualisation_server("test", mod_resultsVisualisation_CohortsOverlaps_server, analysisResults)
+     mod_resultsVisualisation_server("test", mod_resultsVisualisation_PhenotypeScoring_server, analysisResults)
   },
   options = list(launch.browser=TRUE)
 )

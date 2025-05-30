@@ -39,6 +39,10 @@ test_that("executePhenotypeScoring works", {
     analysisResults  |> dplyr::tbl("covariatesPerPerson")  |> dplyr::collect()
   PhenotypeScoringResults |> 
   dplyr::count(covariateId)  |> nrow() |> expect_gt(0)
+
+
+  
+
 })
 
 

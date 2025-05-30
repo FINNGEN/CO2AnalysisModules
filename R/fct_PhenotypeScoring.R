@@ -94,7 +94,6 @@ execute_PhenotypeScoring <- function(
     analysisResults |>
     dplyr::tbl("analysisRef")
 
-
   #
   # Get counts
   #
@@ -117,7 +116,6 @@ execute_PhenotypeScoring <- function(
     dplyr::filter(pValue < pValueThreshold) |>
     dplyr::filter(oddsRatio > oddRatioThreshold) |>
     dplyr::filter(nCasesYes > nCasesThreshold) |>
-    dplyr::filter(!(vocabularyId == "ATC" & nchar(conceptCode) < ATCLevelThreshold)) |>
     dplyr::distinct(analysisId, covariateId, conceptId) |>
     dplyr::collect() |>
     dplyr::left_join(

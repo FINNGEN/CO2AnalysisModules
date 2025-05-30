@@ -53,7 +53,8 @@ Imports:
     FinnGenUtilsR,
     httr,
     jsonlite,
-    ggh4x
+    ggh4x,
+    ggupset
 Remotes: 
     FINNGEN/HadesExtras,
     FINNGEN/FinnGenUtilsR,
