@@ -276,7 +276,8 @@ checkResults_PhenotypeScoring <- function(pathToResultsDatabase) {
     domainId = c("Condition", "Drug", "Procedure"),
     domainTable = c("condition_occurrence", "drug_exposure", "procedure_occurrence"),
     domainConceptId = c("condition_concept_id", "drug_concept_id", "procedure_concept_id"),
-    domainSourceConceptId = c("condition_source_concept_id", "drug_source_concept_id", "procedure_source_concept_id")
+    domainSourceConceptId = c("condition_source_concept_id", "drug_source_concept_id", "procedure_source_concept_id"),
+    domainEndDate = c("condition_end_date", "drug_exposure_end_date", "procedure_end_date")
   )
 
   covariatesTableTemp <- covariatesTable |>
@@ -309,12 +310,14 @@ checkResults_PhenotypeScoring <- function(pathToResultsDatabase) {
     # Binary covariates no drugs
     #
     if (isBinary && domainId != "Drug") {
+    
       ParallelLogger::logInfo(paste0("Binary covariates no drugs"))
 
       tableInfo <- domainTablesInfo |>
         dplyr::filter(domainId == {{ domainId }})
 
       domainTable <- tableInfo$domainTable
+      domainEndDate <- tableInfo$domainEndDate
       domainConceptId <- ifelse(isSourceConcept, tableInfo$domainSourceConceptId, tableInfo$domainConceptId)
 
       sql <- "
@@ -331,7 +334,8 @@ checkResults_PhenotypeScoring <- function(pathToResultsDatabase) {
       INNER JOIN #covariates_table cov
           ON events.@domain_concept_id = cov.concept_id
       WHERE cohort.cohort_definition_id = @cohort_id AND
-          cov.analysis_id = @analysis_id
+          cov.analysis_id = @analysis_id AND
+          events.@domain_end_date IS NOT NULL -- Feature extraction does not include events with null end date
       GROUP BY
           person.person_source_value,
           cov.covariate_id
@@ -345,6 +349,7 @@ checkResults_PhenotypeScoring <- function(pathToResultsDatabase) {
         analysis_id = analysisId,
         domain_table = domainTable,
         domain_concept_id = domainConceptId,
+        domain_end_date = domainEndDate,
         warnOnMissingParameters = TRUE
       )
 
@@ -368,7 +373,7 @@ checkResults_PhenotypeScoring <- function(pathToResultsDatabase) {
 
       domainTable <- tableInfo$domainTable
       domainConceptId <- tableInfo$domainConceptId
-
+      domainEndDate <- tableInfo$domainEndDate
       sql <- "
       SELECT DISTINCT
           person.person_source_value as person_source_value,
@@ -385,7 +390,8 @@ checkResults_PhenotypeScoring <- function(pathToResultsDatabase) {
       INNER JOIN #covariates_table cov
           ON ca.ancestor_concept_id = cov.concept_id
       WHERE cohort.cohort_definition_id = @cohort_id AND
-          cov.analysis_id = @analysis_id
+          cov.analysis_id = @analysis_id AND
+          events.@domain_end_date IS NOT NULL -- Feature extraction does not include events with null end date
       GROUP BY
           person.person_source_value,
           cov.covariate_id
@@ -399,6 +405,7 @@ checkResults_PhenotypeScoring <- function(pathToResultsDatabase) {
         analysis_id = analysisId,
         domain_table = domainTable,
         domain_concept_id = domainConceptId,
+        domain_end_date = domainEndDate,
         warnOnMissingParameters = TRUE
       )
 
@@ -411,6 +418,11 @@ checkResults_PhenotypeScoring <- function(pathToResultsDatabase) {
       covariatesPerPerson <- dplyr::bind_rows(covariatesPerPerson, covariates)
     }
   }
+
+  # TEMP: visit with null values result in 0 counts, make them at least 1
+  covariatesPerPerson <- covariatesPerPerson |>
+    dplyr::mutate(value = dplyr::if_else(value == 0, 1, value))
+
 
   return(covariatesPerPerson)
 }
