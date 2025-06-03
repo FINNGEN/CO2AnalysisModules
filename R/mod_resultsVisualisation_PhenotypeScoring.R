@@ -137,8 +137,8 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
     output$codeGroupsTable <- reactable::renderReactable({
       shiny::req(r$groupOfCovariatesObject$groupsTibble |> nrow() > 0)
 
-      toPlot <- r$groupOfCovariatesObject$groupsTibble |> 
-      dplyr::mutate(deleteButton = NA)
+      toPlot <- r$groupOfCovariatesObject$groupsTibble |>
+        dplyr::mutate(deleteButton = NA)
 
       columns <- list(
         groupId = reactable::colDef(show = FALSE),
@@ -188,23 +188,19 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
     output$groupsOverlapPlot <- shiny::renderPlot({
       shiny::req(r$groupOfCovariatesObject$groupsTibble |> nrow() > 0)
 
-      r$groupOfCovariatesObject$personGroupsTibble |> 
-      dplyr::mutate(dplyr::across(!personSourceValue, ~ifelse(.x == 0, NA, paste("Group", dplyr::cur_column()))))  |> 
-      dplyr::filter(!dplyr::if_all(-personSourceValue, is.na)) |>
-      tidyr::unite(
-        "Genres",
-        -personSourceValue,
-        na.rm = TRUE,
-        remove = FALSE
-      )  |> 
-      dplyr::mutate(Genres = list(Genres))  |> 
-      ggplot2::ggplot(aes(x=Genres)) +
-      ggplot2::geom_bar() +
-      ggupset::scale_x_upset(n_intersections = 20)
-      
+      columnNames <- r$groupOfCovariatesObject$personGroupsTibble |>
+        names() |>
+        setdiff("personSourceValue")
 
-      
-      
+      r$groupOfCovariatesObject$personGroupsTibble |>
+        dplyr::mutate(dplyr::across(columnNames, ~ ifelse(.x == 0, NA, paste("Group", dplyr::cur_column())))) |>
+        dplyr::filter(!dplyr::if_all(columnNames, is.na)) |>
+        dplyr::mutate(groups = purrr::pmap(.l = dplyr::across(columnNames), .f = ~ na.omit(c(...)))) |>
+        ggplot2::ggplot(aes(x = groups)) +
+        ggplot2::geom_bar() +
+        ggplot2::geom_text(stat = "count", aes(label = ggplot2::after_stat(count)), vjust = -1) +
+        ggupset::scale_x_upset(n_intersections = 20) +
+        ggplot2::theme_minimal()
     })
   })
 }

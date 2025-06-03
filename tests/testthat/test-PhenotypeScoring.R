@@ -43,19 +43,15 @@ test_that("executePhenotypeScoring works", {
   covariatesPerPerson |> dplyr::filter(is.na(unit)) |> nrow() |> expect_equal(0)
 
   covariatesPerPerson |> dplyr::filter(value <= 0) |> 
-  dplyr::mutate(a= covariateId%%1000)  |> dplyr::arrange(a)  |> View() 
   nrow() |> expect_equal(0)
 
   # same number of subjects in covariatesPerPerson and gwasResults
   covariatesPerPerson |>
   dplyr::count(covariateId)   |> 
   dplyr::left_join(gwasResults |> dplyr::select(covariateId, nCasesYes), by = "covariateId")  |> 
-  dplyr::filter(nCasesYes != n) |> dplyr::mutate(a= covariateId%%1000)  |> dplyr::arrange(a)  |> View()
+  dplyr::filter(nCasesYes != n) |> 
   nrow() |> 
   expect_equal(0)
- 
-
- # discrepancy in analysis 141 is due to condition_occurrence.condition_end_date being null
  
  
  })
@@ -88,6 +84,7 @@ test_that(".extractCovariatesPerPerson works", {
     cohortId = 1,
     covariatesTable = covariatesTable
   )
+
     
   covariatesTable |>
   dplyr::select(analysisId, domainId, covariateId, conceptId, nCasesYes) |>

@@ -105,7 +105,7 @@ execute_PhenotypeScoring <- function(
   nCasesThreshold <- 10
 
   ATCLevelThreshold <- 7
-
+  
   covariatesTable <- codewasResultsTbl |>
     dplyr::select(covariateId, covariateType, nCasesYes, pValue, oddsRatio) |>
     dplyr::left_join(
@@ -116,15 +116,14 @@ execute_PhenotypeScoring <- function(
     dplyr::filter(pValue < pValueThreshold) |>
     dplyr::filter(oddsRatio > oddRatioThreshold) |>
     dplyr::filter(nCasesYes > nCasesThreshold) |>
+    dplyr::filter(!(vocabularyId == "ATC" & nchar(conceptCode) < ATCLevelThreshold)) |>
     dplyr::distinct(analysisId, covariateId, conceptId) |>
     dplyr::collect() |>
     dplyr::left_join(
       HadesExtras::getListOfAnalysis(),
       by = c("analysisId" = "analysisId")
     ) |>
-    dplyr::select(analysisId, domainId, covariateId, conceptId, isBinary, isSourceConcept) |>
-    # TEMP: to fix in HadesExtras
-    dplyr::mutate(isBinary = if_else(analysisId == 342, TRUE, isBinary))
+    dplyr::select(analysisId, domainId, covariateId, conceptId, isBinary, isSourceConcept) 
 
   ParallelLogger::logInfo("Extracting covariates per person")
   covariatesPerPerson <- .extractCovariatesPerPerson(
@@ -144,7 +143,7 @@ execute_PhenotypeScoring <- function(
   startExportTime <- Sys.time()
 
   connection <- duckdb::dbConnect(duckdb::duckdb(), pathToResultsDatabase)
-
+  
   # covariatesPerPerson ------------------------------------------------
   covariatesPerPerson <- covariatesPerPerson |>
     dplyr::mutate(
@@ -418,7 +417,7 @@ checkResults_PhenotypeScoring <- function(pathToResultsDatabase) {
       covariatesPerPerson <- dplyr::bind_rows(covariatesPerPerson, covariates)
     }
   }
-
+  
   # TEMP: visit with null values result in 0 counts, make them at least 1
   covariatesPerPerson <- covariatesPerPerson |>
     dplyr::mutate(value = dplyr::if_else(value == 0, 1, value))
