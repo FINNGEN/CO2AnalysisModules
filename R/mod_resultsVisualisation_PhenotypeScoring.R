@@ -23,11 +23,41 @@ mod_resultsVisualisation_PhenotypeScoring_ui <- function(id) {
         "Create Group From Selected"
       ),
       shiny::hr(),
+      shiny::hr(),
+      shiny::hr(),
       shiny::h4("Code Groups"),
       reactable::reactableOutput(ns("codeGroupsTable"), height = 500),
       shiny::hr(),
+      shiny::hr(),
+      shiny::hr(),
       shiny::h4("Groups Overlap"),
-      shiny::plotOutput(ns("groupsOverlapPlot"), height = 500)
+      shiny::plotOutput(ns("groupsOverlapPlot"), height = 500),
+      shiny::hr(),
+      shiny::hr(),
+      shiny::hr(),
+      shiny::h4("Formula:"),
+      shiny::h6("Total = Group1 * 1 + Group2 * 2 + Group3 * 3 + ..."),
+      shiny::hr(),
+      shiny::hr(),
+      shiny::hr(),
+      shiny::h4("Total Score Distribution"),
+      shiny::plotOutput(ns("totalScoreDistributionPlot"), height = 500),
+      shiny::sliderInput(
+        ns("scoreRange"),
+        "Score Range",
+        width = "100%",
+        min = 0,
+        max = 10,  # This will be updated dynamically
+        value = c(0, 10),
+        step = 1
+      ),
+      shiny::textOutput(ns("selectedPatientsCount")),
+      shiny::downloadButton(
+        ns("exportSelectedSubjects"),
+        "Export Selected Subjects"
+      ),
+      shiny::hr(),
+      shiny::hr(),
     )
   ) # end of fluidPage
 }
@@ -202,6 +232,116 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
         ggupset::scale_x_upset(n_intersections = 20) +
         ggplot2::theme_minimal()
     })
+
+    #
+    # When r$groupOfCovariatesObject is ready, update the slider range
+    #
+    shiny::observe({
+      shiny::req(r$groupOfCovariatesObject$personGroupsTibble |> nrow() > 0)
+
+         columnNames <- r$groupOfCovariatesObject$personGroupsTibble |>
+        names() |>
+        setdiff("personSourceValue")
+
+      # Calculate total scores
+      totalScores <- r$groupOfCovariatesObject$personGroupsTibble |>
+        dplyr::mutate(total = rowSums(dplyr::across(columnNames)))
+
+      shiny::updateSliderInput(
+        session,
+        "scoreRange",
+        min = 0,
+        max = max(totalScores$total, na.rm = TRUE),
+        value = c(0, max(totalScores$total, na.rm = TRUE))
+      )
+    })
+
+    #
+    # When r$groupOfCovariatesObject is ready or slider is changed, plot it total score distribution
+    #
+    output$totalScoreDistributionPlot <- shiny::renderPlot({
+      shiny::req(r$groupOfCovariatesObject$personGroupsTibble |> nrow() > 0, input$scoreRange)
+
+      columnNames <- r$groupOfCovariatesObject$personGroupsTibble |>
+        names() |>
+        setdiff("personSourceValue")
+
+      # Calculate total scores
+      totalScores <- r$groupOfCovariatesObject$personGroupsTibble |>
+        dplyr::mutate(total = rowSums(dplyr::across(columnNames)))
+
+
+      # Create the plot
+      p <- totalScores |>
+        ggplot2::ggplot(aes(x = total)) +
+        ggplot2::geom_bar() +
+        ggplot2::theme_minimal()
+
+      # Add box overlay if slider values are set
+      if (!is.null(input$scoreRange)) {
+        p <- p + 
+          ggplot2::annotate(
+            "rect",
+            xmin = input$scoreRange[1],
+            xmax = input$scoreRange[2],
+            ymin = -Inf,
+            ymax = Inf,
+            alpha = 0.2,
+            fill = "blue"
+          )
+      }
+
+      p
+    })
+
+    #
+    # When r$groupOfCovariatesObject is ready or slider is changed, update the selected patients count
+    #
+    output$selectedPatientsCount <- shiny::renderText({
+      shiny::req(r$groupOfCovariatesObject$personGroupsTibble |> nrow() > 0, input$scoreRange)
+
+      columnNames <- r$groupOfCovariatesObject$personGroupsTibble |>
+        names() |>
+        setdiff("personSourceValue")
+
+      # Calculate total scores
+      totalScores <- r$groupOfCovariatesObject$personGroupsTibble |>
+        dplyr::mutate(total = rowSums(dplyr::across(columnNames)))
+
+      # Count subjects in the selected range
+      nSelected <- totalScores |>
+        dplyr::filter(total >= input$scoreRange[1] & total <= input$scoreRange[2]) |>
+        nrow()
+
+      paste("Number of patients selected:", nSelected)
+    })
+
+    #
+    # When input$exportSelectedSubjects is clicked, export subjects with total score in the range of the slider
+    #
+    output$exportSelectedSubjects <- shiny::downloadHandler(
+      filename = function() {
+        paste0("selected_subjects_", input$scoreRange[1], "_to_", input$scoreRange[2], ".csv")
+      },
+      content = function(file) {
+        shiny::req(r$groupOfCovariatesObject$personGroupsTibble |> nrow() > 0)
+
+        columnNames <- r$groupOfCovariatesObject$personGroupsTibble |>
+          names() |>
+          setdiff("personSourceValue")
+
+        # Calculate total scores
+        totalScores <- r$groupOfCovariatesObject$personGroupsTibble |>
+          dplyr::mutate(total = rowSums(dplyr::across(columnNames)))
+
+        # Get the subjects with total score in the range of the slider
+        selectedSubjects <- totalScores |>
+          dplyr::filter(total >= input$scoreRange[1] & total <= input$scoreRange[2])
+
+        # Write the selected subjects to the file
+        write.csv(selectedSubjects, file, row.names = FALSE, na = "")
+      }
+    )
   })
 }
 
