@@ -203,7 +203,7 @@ execute_CodeWAS <- function(
   nControlsTotal <- cohortCounts$cohortSubjects[cohortCounts$cohortId == cohortIdControls]
   nCasesEntries <- cohortCounts$cohortEntries[cohortCounts$cohortId == cohortIdCases]
   nControlsEntries <- cohortCounts$cohortEntries[cohortCounts$cohortId == cohortIdControls]
-
+  
   # if the number of entries is different that the number of subjects, cohort needs to be distinct
   if (nCasesEntries != nCasesTotal | nControlsEntries != nControlsTotal) {
     ParallelLogger::logInfo("Number of entries is different than number of subjects, cohort needs to be distinct in a temp table")

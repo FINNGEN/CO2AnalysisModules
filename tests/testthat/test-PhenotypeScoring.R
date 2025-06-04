@@ -1,8 +1,8 @@
 #
 # With covariates
 #
-
 test_that("executePhenotypeScoring works", {
+
   # set up
   cohortTableHandler <-
     helper_createNewCohortTableHandler(addCohorts = "DiabetesSyntheaCohorts")
@@ -92,3 +92,60 @@ test_that(".extractCovariatesPerPerson works", {
       covariatesPerPerson |> dplyr::count(covariateId) , 
       by = "covariateId") 
 })
+
+
+
+test_that("executePhenotypeScoring works", {
+ skip_if_not(Sys.getenv("HADESEXTAS_TESTING_ENVIRONMENT") == "Eunomia-GiBleed")
+  # set up
+  cohortTableHandler <-
+    helper_createNewCohortTableHandler(addCohorts = "HadesExtrasAsthmaCohorts")
+  withr::defer({
+    rm(cohortTableHandler)
+    gc()
+  })
+
+  exportFolder <- withr::local_tempdir("testPhenotypeScoring")
+
+  analysisSettings <- list(
+    cohortIdCases = 1,
+    cohortIdControls = 0,
+    analysisIds = c(141, 342)
+  )
+
+  # function
+  suppressWarnings(
+    pathToResultsDatabase <- execute_PhenotypeScoring(
+      exportFolder = exportFolder,
+      cohortTableHandler = cohortTableHandler,
+      analysisSettings = analysisSettings
+    )
+  )
+
+  # test
+  expect_true(file.exists(pathToResultsDatabase))
+  checkResults_PhenotypeScoring(pathToResultsDatabase) |> expect_true()
+
+  analysisResults <-
+    duckdb::dbConnect(duckdb::duckdb(), pathToResultsDatabase)
+
+  covariatesPerPerson <- analysisResults |> dplyr::tbl("covariatesPerPerson")  |> dplyr::collect()
+  gwasResults <- analysisResults |> dplyr::tbl("codewasResults") |> dplyr::collect()
+
+  covariatesPerPerson |> dplyr::filter(is.na(value)) |> nrow() |> expect_equal(0)
+  covariatesPerPerson |> dplyr::filter(is.na(covariateId)) |> nrow() |> expect_equal(0)
+  covariatesPerPerson |> dplyr::filter(is.na(unit)) |> nrow() |> expect_equal(0)
+
+  covariatesPerPerson |> dplyr::filter(value <= 0) |> 
+  nrow() |> expect_equal(0)
+
+  # same number of subjects in covariatesPerPerson and gwasResults
+  covariatesPerPerson |>
+  dplyr::count(covariateId)   |> 
+  dplyr::left_join(gwasResults |> dplyr::select(covariateId, nCasesYes), by = "covariateId")  |> 
+  dplyr::filter(nCasesYes != n) |> 
+  nrow() |> 
+  expect_equal(0)
+ 
+ 
+ })
