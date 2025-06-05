@@ -47,7 +47,7 @@ mod_resultsVisualisation_PhenotypeScoring_ui <- function(id) {
         "Score Range",
         width = "100%",
         min = 0,
-        max = 10,  # This will be updated dynamically
+        max = 10, # This will be updated dynamically
         value = c(0, 10),
         step = 1
       ),
@@ -153,7 +153,8 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
         selectedRows <- r$allCovariatesTibble[selected, ]
 
         # Update the list of groups with selected rows
-        r$groupOfCovariatesObject <- .appendCovariateGroup(analysisResults, selectedRows$covariateId, r$groupOfCovariatesObject)
+        groupOfCovariatesObject <- .appendCovariateGroup(analysisResults, selectedRows$covariateId, r$groupOfCovariatesObject)
+        r$groupOfCovariatesObject <- .calculateTotalScores(groupOfCovariatesObject)
       }
 
       # clear selection
@@ -162,7 +163,7 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
 
 
     #
-    # When r$groupOfCovariatesObject is ready, plot it
+    # When r$groupOfCovariatesObject is ready, plot table of groups
     #
     output$codeGroupsTable <- reactable::renderReactable({
       shiny::req(r$groupOfCovariatesObject$groupsTibble |> nrow() > 0)
@@ -213,7 +214,7 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
     })
 
     #
-    # When r$groupOfCovariatesObject is ready, plot it
+    # When r$groupOfCovariatesObject is ready, plot the upset plot of groups
     #
     output$groupsOverlapPlot <- shiny::renderPlot({
       shiny::req(r$groupOfCovariatesObject$groupsTibble |> nrow() > 0)
@@ -239,47 +240,34 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
     shiny::observe({
       shiny::req(r$groupOfCovariatesObject$personGroupsTibble |> nrow() > 0)
 
-         columnNames <- r$groupOfCovariatesObject$personGroupsTibble |>
-        names() |>
-        setdiff("personSourceValue")
-
-      # Calculate total scores
-      totalScores <- r$groupOfCovariatesObject$personGroupsTibble |>
-        dplyr::mutate(total = rowSums(dplyr::across(columnNames)))
+      personGroupsTibble <- r$groupOfCovariatesObject$personGroupsTibble
 
       shiny::updateSliderInput(
         session,
         "scoreRange",
         min = 0,
-        max = max(totalScores$total, na.rm = TRUE),
-        value = c(0, max(totalScores$total, na.rm = TRUE))
+        max = max(personGroupsTibble$totalBin |> as.integer(), na.rm = TRUE),
+        value = c(0, max(personGroupsTibble$totalBin |> as.integer(), na.rm = TRUE))
       )
     })
 
     #
-    # When r$groupOfCovariatesObject is ready or slider is changed, plot it total score distribution
+    # When r$groupOfCovariatesObject is ready or slider is changed, plot the total score distribution
     #
     output$totalScoreDistributionPlot <- shiny::renderPlot({
       shiny::req(r$groupOfCovariatesObject$personGroupsTibble |> nrow() > 0, input$scoreRange)
 
-      columnNames <- r$groupOfCovariatesObject$personGroupsTibble |>
-        names() |>
-        setdiff("personSourceValue")
-
-      # Calculate total scores
-      totalScores <- r$groupOfCovariatesObject$personGroupsTibble |>
-        dplyr::mutate(total = rowSums(dplyr::across(columnNames)))
-
-
+       personGroupsTibble <- r$groupOfCovariatesObject$personGroupsTibble
+ 
       # Create the plot
-      p <- totalScores |>
-        ggplot2::ggplot(aes(x = total)) +
+      p <- personGroupsTibble |>
+        ggplot2::ggplot(aes(x = totalBin)) +
         ggplot2::geom_bar() +
         ggplot2::theme_minimal()
 
       # Add box overlay if slider values are set
       if (!is.null(input$scoreRange)) {
-        p <- p + 
+        p <- p +
           ggplot2::annotate(
             "rect",
             xmin = input$scoreRange[1],
@@ -291,7 +279,7 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
           )
       }
 
-      p
+      return(p)
     })
 
     #
@@ -300,17 +288,12 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
     output$selectedPatientsCount <- shiny::renderText({
       shiny::req(r$groupOfCovariatesObject$personGroupsTibble |> nrow() > 0, input$scoreRange)
 
-      columnNames <- r$groupOfCovariatesObject$personGroupsTibble |>
-        names() |>
-        setdiff("personSourceValue")
-
-      # Calculate total scores
-      totalScores <- r$groupOfCovariatesObject$personGroupsTibble |>
-        dplyr::mutate(total = rowSums(dplyr::across(columnNames)))
+        personGroupsTibble <- r$groupOfCovariatesObject$personGroupsTibble
+ 
 
       # Count subjects in the selected range
-      nSelected <- totalScores |>
-        dplyr::filter(total >= input$scoreRange[1] & total <= input$scoreRange[2]) |>
+      nSelected <- personGroupsTibble |>
+        dplyr::filter(totalBin |> as.integer() >= input$scoreRange[1] & totalBin |> as.integer() <= input$scoreRange[2]) |>
         nrow()
 
       paste("Number of patients selected:", nSelected)
@@ -326,17 +309,11 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
       content = function(file) {
         shiny::req(r$groupOfCovariatesObject$personGroupsTibble |> nrow() > 0)
 
-        columnNames <- r$groupOfCovariatesObject$personGroupsTibble |>
-          names() |>
-          setdiff("personSourceValue")
-
-        # Calculate total scores
-        totalScores <- r$groupOfCovariatesObject$personGroupsTibble |>
-          dplyr::mutate(total = rowSums(dplyr::across(columnNames)))
+        personGroupsTibble <- r$groupOfCovariatesObject$personGroupsTibble
 
         # Get the subjects with total score in the range of the slider
-        selectedSubjects <- totalScores |>
-          dplyr::filter(total >= input$scoreRange[1] & total <= input$scoreRange[2])
+        selectedSubjects <- personGroupsTibble |>
+          dplyr::filter(totalBin |> as.integer() >= input$scoreRange[1] & totalBin |> as.integer() <= input$scoreRange[2])
 
         # Write the selected subjects to the file
         write.csv(selectedSubjects, file, row.names = FALSE, na = "")
@@ -423,6 +400,34 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
   return(groupOfCovariatesObject)
 }
 
+.calculateTotalScores <- function(groupOfCovariatesObject) {
+  personGroupsTibble <- groupOfCovariatesObject$personGroupsTibble
+
+  columnNames <- groupOfCovariatesObject$personGroupsTibble |>
+    names() |>
+    setdiff(c("personSourceValue", "totalBin"))
+
+  # Calculate total scores
+  breaks <- c(
+    0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
+    12, 14, 16, 18,
+    20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95,
+    100, 120, 140, 160, 180,
+    200, 250, 300, 350, 400, 450, 500, 550, 600, 650, 700, 750, 800, 850, 900, 950,
+    1000, 1200, 1400, 1600, 1800,
+    2000, 2500, 3000, 3500, 4000, 4500, 5000, 5500, 6000, 6500, 7000, 7500, 8000, 8500, 9000, 9500,
+    10000, 12000, 14000, 16000, 18000,
+    20000, 25000, 30000, 35000, 40000, 45000, 50000, 55000, 60000, 65000, 70000, 75000, 80000, 85000, 90000, 95000,
+    100000, 120000, 140000, 160000, 180000,
+    200000, 250000, 300000, 350000, 400000, 450000, 500000, 550000, 600000, 650000, 700000, 750000, 800000, 850000, 900000, 950000
+  )
+  personGroupsTibble <- personGroupsTibble |>
+    dplyr::mutate(total = rowSums(dplyr::across(columnNames))) |>
+    dplyr::mutate(totalBin = cut(total, breaks = breaks, include.lowest = TRUE))
+
+  groupOfCovariatesObject$personGroupsTibble <- personGroupsTibble
+  return(groupOfCovariatesObject)
+}
 
 .renderCovariatesDistribution <- function(covariatesDistribution) {
   if (is.null(covariatesDistribution)) {
