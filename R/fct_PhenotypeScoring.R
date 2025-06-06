@@ -159,7 +159,7 @@ execute_PhenotypeScoring <- function(
   exportDuration <- Sys.time() - startExportTime
 
   analysisInfo <- tibble::tibble(
-    analysisType = "PhenotypeScoring",
+    analysisType = "phenotypeScoring",
     version = "1.1.0",
     analysisSettings = yaml::as.yaml(analysisSettings),
     analysisDuration = analysisDuration,
