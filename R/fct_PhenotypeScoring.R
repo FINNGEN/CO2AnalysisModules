@@ -272,11 +272,11 @@ checkResults_PhenotypeScoring <- function(pathToResultsDatabase) {
   cohortTable <- cohortTableHandler$cohortTableNames$cohortTable
 
   domainTablesInfo <- tibble::tibble(
-    domainId = c("Condition", "Drug", "Procedure"),
-    domainTable = c("condition_occurrence", "drug_exposure", "procedure_occurrence"),
-    domainConceptId = c("condition_concept_id", "drug_concept_id", "procedure_concept_id"),
-    domainSourceConceptId = c("condition_source_concept_id", "drug_source_concept_id", "procedure_source_concept_id"),
-    domainEndDate = c("condition_end_date", "drug_exposure_end_date", "procedure_end_date")
+    domainId = c("Condition", "Drug", "Procedure", "Measurement"),
+    domainTable = c("condition_occurrence", "drug_exposure", "procedure_occurrence", "measurement"),
+    domainConceptId = c("condition_concept_id", "drug_concept_id", "procedure_concept_id", "measurement_concept_id"),
+    domainSourceConceptId = c("condition_source_concept_id", "drug_source_concept_id", "procedure_source_concept_id", "measurement_source_concept_id"),
+    domainEndDate = c("condition_end_date", "drug_exposure_end_date", "procedure_end_date", "measurement_date")
   )
 
   covariatesTableTemp <- covariatesTable |>

@@ -221,7 +221,7 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
 
       columnNames <- r$groupOfCovariatesObject$personGroupsTibble |>
         names() |>
-        setdiff("personSourceValue")
+        setdiff(c("personSourceValue", "total", "totalBin"))
 
       r$groupOfCovariatesObject$personGroupsTibble |>
         dplyr::mutate(dplyr::across(columnNames, ~ ifelse(.x == 0, NA, paste("Group", dplyr::cur_column())))) |>
@@ -405,7 +405,7 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
 
   columnNames <- groupOfCovariatesObject$personGroupsTibble |>
     names() |>
-    setdiff(c("personSourceValue", "totalBin"))
+    setdiff(c("personSourceValue", "total", "totalBin"))
 
   # Calculate total scores
   breaks <- c(
