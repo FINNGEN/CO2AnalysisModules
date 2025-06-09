@@ -552,7 +552,6 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
             textOverflow = "ellipsis"
           )
         ),
-        # defaultSorted = list(mlogp = "desc", oddsRatio = "desc"),
         sortable = FALSE,
         columns = list(
           covariateName = reactable::colDef(
@@ -566,11 +565,21 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
             ),
             minWidth = 220,
             cell = function(name, rowIndex) {
-              htmltools::tags$a(
-                href = paste0(atlasUrl, "/#/concept/", df$covariateId[ rowIndex ]),
-                target = "_blank", df$covariateName[ rowIndex ],
-                content = name
-              )
+              if(df$vocabularyId[rowIndex] %in% c("CohortLibrary", "Endpoints", "None")) {
+                # no Atlas link for these vocabularies
+                return(
+                  stringr::str_trunc(name, width = 50, ellipsis = "...")
+                )
+              } else {
+                # create a link to the Atlas concept
+                return(
+                  htmltools::tags$a(
+                    href = paste0(atlasUrl, "/#/concept/", df$covariateId[rowIndex]),
+                    target = "_blank", name,
+                    content = stringr::str_trunc(name, width = 50, ellipsis = "...")
+                  )
+                )
+              }
             }
           ),
           conceptCode = reactable::colDef(
