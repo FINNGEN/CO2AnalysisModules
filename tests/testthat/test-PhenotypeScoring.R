@@ -161,6 +161,19 @@ test_that("executePhenotypeScoring works", {
   dplyr::filter(nCasesYes != n) |> 
   nrow() |> 
   expect_equal(0)
- 
- 
+
+  # Demographics
+  nCases  <- cohortTableHandler$cohortDemograpics |> dplyr::filter(cohortId == 1) |> dplyr::pull(cohortSubjects)
+  covariatesPerPerson |> dplyr::filter(covariateId == 1002) |> nrow() |> expect_equal(nCases)
+  covariatesPerPerson |> dplyr::filter(covariateId == 1041) |> nrow() |> expect_equal(nCases)
+  covariatesPerPerson |> dplyr::filter(covariateId == 1010) |> nrow() |> expect_equal(nCases)
+
+  nMale <- cohortTableHandler$cohortDemograpics |> dplyr::filter(cohortId == 1) |> purrr::pluck("sexCounts", 1) |>
+  dplyr::filter(sex == "MALE") |> dplyr::pull(n)
+  nFemale <- cohortTableHandler$cohortDemograpics |> dplyr::filter(cohortId == 1) |> purrr::pluck("sexCounts", 1) |>
+  dplyr::filter(sex == "FEMALE") |> dplyr::pull(n)
+  covariatesPerPerson |> dplyr::filter(covariateId == 8507001) |> nrow() |> expect_equal(nMale)
+  covariatesPerPerson |> dplyr::filter(covariateId == 8532001) |> nrow() |> expect_equal(nFemale)
+
+  
  })

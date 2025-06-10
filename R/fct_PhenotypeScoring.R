@@ -205,6 +205,7 @@ execute_PhenotypeScoring <- function(
       value = as.double(covariateValue),
       unit = dplyr::case_when(
       covariateId == 8507001 ~ "yes/no",
+      covariateId == 8532001 ~ "yes/no",
       covariateId == 1002 ~ "years",
       covariateId == 1041 ~ "year",
       covariateId == 1010 ~ "days",
