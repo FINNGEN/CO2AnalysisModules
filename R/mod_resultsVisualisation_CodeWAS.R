@@ -391,9 +391,9 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
                     ),
                   ) # column
                 ) # fluidRow
-            ) # tagList
-        ) # div
-      ) # div
+            ) # div collapsible-content
+        ) # div menu-section
+      ) # div tagList
 
       session$onFlushed(function() {
         session$sendCustomMessage("setupCollapsiblesAgain", list())
