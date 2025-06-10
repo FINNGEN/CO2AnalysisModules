@@ -16,7 +16,15 @@ test_that("executePhenotypeScoring works", {
   analysisSettings <- list(
     cohortIdCases = 1,
     cohortIdControls = 0,
-    analysisIds = c(141, 342)
+    analysisIds = c(
+      141, # source condition counts
+      342, # ATC group counts
+      1, # DemographicsGender
+      2, # DemographicsAge
+      6, # DemographicsIndexYear
+      10, # DemographicsTimeInCohort
+      41 # year of birth
+    )
   )
 
   # function
@@ -110,7 +118,14 @@ test_that("executePhenotypeScoring works", {
   analysisSettings <- list(
     cohortIdCases = 1,
     cohortIdControls = 0,
-    analysisIds = c(141, 342)
+     analysisIds = c(
+      141, # source condition counts
+      342, # ATC group counts
+      1, # DemographicsGender
+      2, # DemographicsAge
+      10, # DemographicsTimeInCohort
+      41 # year of birth
+    )
   )
 
   # function
@@ -130,7 +145,7 @@ test_that("executePhenotypeScoring works", {
     duckdb::dbConnect(duckdb::duckdb(), pathToResultsDatabase)
 
   covariatesPerPerson <- analysisResults |> dplyr::tbl("covariatesPerPerson")  |> dplyr::collect()
-  gwasResults <- analysisResults |> dplyr::tbl("codewasResults") |> dplyr::collect()
+  codewasResults <- analysisResults |> dplyr::tbl("codewasResults") |> dplyr::collect()
 
   covariatesPerPerson |> dplyr::filter(is.na(value)) |> nrow() |> expect_equal(0)
   covariatesPerPerson |> dplyr::filter(is.na(covariateId)) |> nrow() |> expect_equal(0)
@@ -139,10 +154,10 @@ test_that("executePhenotypeScoring works", {
   covariatesPerPerson |> dplyr::filter(value <= 0) |> 
   nrow() |> expect_equal(0)
 
-  # same number of subjects in covariatesPerPerson and gwasResults
+  # same number of subjects in covariatesPerPerson and codewasResults
   covariatesPerPerson |>
   dplyr::count(covariateId)   |> 
-  dplyr::left_join(gwasResults |> dplyr::select(covariateId, nCasesYes), by = "covariateId")  |> 
+  dplyr::left_join(codewasResults |> dplyr::select(covariateId, nCasesYes), by = "covariateId")  |> 
   dplyr::filter(nCasesYes != n) |> 
   nrow() |> 
   expect_equal(0)

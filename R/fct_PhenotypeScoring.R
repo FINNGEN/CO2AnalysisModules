@@ -106,13 +106,22 @@ execute_PhenotypeScoring <- function(
 
   ATCLevelThreshold <- 7
   
-  covariatesTable <- codewasResultsTbl |>
+  # Apply filter if not demographics domain
+  covariates <- codewasResultsTbl |>
     dplyr::select(covariateId, covariateType, nCasesYes, pValue, oddsRatio) |>
     dplyr::left_join(
       covariateRefTbl |>
         dplyr::select(analysisId, covariateId, conceptId, conceptCode, vocabularyId),
       by = c("covariateId" = "covariateId")
     ) |>
+    dplyr::left_join(
+      analysisRefTbl |>
+        dplyr::select(analysisId, domainId),
+      by = c("analysisId" = "analysisId")
+    ) 
+
+  covariatesNoDemographics <- covariates |>
+    dplyr::filter(domainId != "Demographics") |>
     dplyr::filter(pValue < pValueThreshold) |>
     dplyr::filter(oddsRatio > oddRatioThreshold) |>
     dplyr::filter(nCasesYes > nCasesThreshold) |>
@@ -125,18 +134,92 @@ execute_PhenotypeScoring <- function(
     ) |>
     dplyr::select(analysisId, domainId, covariateId, conceptId, isBinary, isSourceConcept) 
 
+  covariatesDemographics <- covariates |>
+    dplyr::filter(domainId == "Demographics") |>
+    dplyr::collect()
+
+  duckdb::dbDisconnect(analysisResults)
+
+  #
+  # Non demographics analysis
+  #
   ParallelLogger::logInfo("Extracting covariates per person")
   covariatesPerPerson <- .extractCovariatesPerPerson(
     cohortTableHandler = cohortTableHandler,
     cohortId = cohortIdCases,
-    covariatesTable = covariatesTable
+    covariatesTable = covariatesNoDemographics
   )
+
+  #
+  # Demographics
+  #
+  ParallelLogger::logInfo("Getting FeatureExtraction for cases and controls")
+
+  covariateSettings <- HadesExtras::FeatureExtraction_createTemporalCovariateSettingsFromList(
+    analysisIds = unique(covariatesDemographics$analysisId),
+    temporalStartDays = -99999,
+    temporalEndDays = 99999
+  )
+  
+  demographicsResults <- FeatureExtraction::getDbCovariateData(
+      connection = connection,
+      cohortTable = cohortTable,
+      cohortDatabaseSchema = cohortDatabaseSchema,
+      cdmDatabaseSchema = cdmDatabaseSchema,
+      covariateSettings = covariateSettings,
+      cohortIds = c(cohortIdCases),
+      aggregated = FALSE,
+      tempEmulationSchema = getOption("sqlRenderTempEmulationSchema")
+    )
+
+  # get the pesont_id to source_person_id for the cohortIdCases
+  sql <- "
+  SELECT DISTINCT
+    person.person_id,
+    person.person_source_value AS source_person_id
+  FROM @cohort_database_schema.@cohort_table cohort
+  INNER JOIN @cdm_database_schema.person person
+    ON cohort.subject_id = person.person_id
+  WHERE cohort.cohort_definition_id = @cohort_id"
+
+  sql <- SqlRender::render(sql,
+    cdm_database_schema = cdmDatabaseSchema,
+    cohort_database_schema = cohortDatabaseSchema,
+    cohort_table = cohortTable,
+    cohort_id = cohortIdCases, 
+    warnOnMissingParameters = TRUE
+  )
+
+  sql <- SqlRender::translate(sql, targetDialect = connection@dbms)
+
+  personIdToSourcePersonId <- DatabaseConnector::querySql(connection, sql) |> 
+    dplyr::as_tibble() |>
+    SqlRender::snakeCaseToCamelCaseNames()
+  
+  covariatesPerPersonDemographics <- demographicsResults$covariates |>
+    dplyr::collect() |>
+    dplyr::left_join(personIdToSourcePersonId, by = c("rowId" = "personId"))  |> 
+    dplyr::transmute(
+      personSourceValue = as.character(sourcePersonId),
+      covariateId = as.double(covariateId),
+      value = as.double(covariateValue),
+      unit = dplyr::case_when(
+      covariateId == 8507001 ~ "yes/no",
+      covariateId == 1002 ~ "years",
+      covariateId == 1041 ~ "year",
+      covariateId == 1010 ~ "days",
+      TRUE ~ ""
+    )
+  )
+  
+  covariatesPerPerson <- dplyr::bind_rows(covariatesPerPerson, covariatesPerPersonDemographics)
+
 
   ParallelLogger::logInfo("PhenotypeScoring completed")
   analysisDuration <- Sys.time() - startAnalysisTime
 
 
-   #
+  #
   # Export
   #
   ParallelLogger::logInfo("Exporting results")
@@ -201,6 +284,17 @@ assertAnalysisSettings_PhenotypeScoring <- function(analysisSettings) {
   analysisSettings$cohortIdCases |> checkmate::assertNumeric(lower = 1, len = 1)
   analysisSettings$cohortIdControls |> checkmate::assertNumeric(lower = 0, len = 1)
   analysisSettings$analysisIds |> checkmate::assertNumeric()
+
+  analysisSettings$analysisId |> checkmate::assertSubset(
+    choices = c(
+      141, # source condition counts
+      342, # ATC group counts
+      1, # DemographicsGender
+      2, # DemographicsAge
+      10, # DemographicsTimeInCohort
+      41 # year of birth
+    )
+  )
 
   return(analysisSettings)
 }
@@ -304,6 +398,7 @@ checkResults_PhenotypeScoring <- function(pathToResultsDatabase) {
 
     ParallelLogger::logInfo(paste0("Extracting covariates for analysisId: ", analysisId))
     ParallelLogger::logInfo(paste0("Domain: ", domainId, " Isbinary: ", isBinary, " IsSourceConcept: ", isSourceConcept, " Number of covariates: ", nrow(analysisInfo)))
+
 
     #
     # Binary covariates no drugs
@@ -416,6 +511,7 @@ checkResults_PhenotypeScoring <- function(pathToResultsDatabase) {
 
       covariatesPerPerson <- dplyr::bind_rows(covariatesPerPerson, covariates)
     }
+
   }
   
   # TEMP: visit with null values result in 0 counts, make them at least 1
