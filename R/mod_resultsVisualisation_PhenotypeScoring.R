@@ -36,7 +36,13 @@ mod_resultsVisualisation_PhenotypeScoring_ui <- function(id) {
       shiny::hr(),
       shiny::hr(),
       shiny::h4("Formula:"),
-      shiny::h6("Total = Group1 * 1 + Group2 * 2 + Group3 * 3 + ..."),
+      shiny::textInput(
+        ns("formula"),
+        "Formula",
+        width = "100%",
+        value = ""
+      ),
+      shiny::textOutput(ns("formulaText")),
       shiny::hr(),
       shiny::hr(),
       shiny::hr(),
@@ -91,7 +97,8 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
           .rows = 0
         ),
         personGroupsTibble = NULL
-      )
+      ),
+      errorMessage = NULL
     )
 
     #
@@ -154,7 +161,7 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
 
         # Update the list of groups with selected rows
         groupOfCovariatesObject <- .appendCovariateGroup(analysisResults, selectedRows$covariateId, r$groupOfCovariatesObject)
-        r$groupOfCovariatesObject <- .calculateTotalScores(groupOfCovariatesObject)
+        r$groupOfCovariatesObject <- groupOfCovariatesObject
       }
 
       # clear selection
@@ -234,11 +241,37 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
         ggplot2::theme_minimal()
     })
 
+
+    #
+    # when input$formula is changed, update total column in r$groupOfCovariatesObject
+    #
+    shiny::observe({
+      shiny::req(input$formula)
+      errorMessage <- NULL
+      tryCatch({
+        r$groupOfCovariatesObject <- .calculateTotalScores(r$groupOfCovariatesObject, input$formula)
+      }, error = function(e) {
+        errorMessage <<- e$message
+      })
+
+      r$errorMessage <- errorMessage
+     
+    })
+
+    #
+    # When r$errorMessage is ready, update the formula text
+    #
+    output$formulaText <- shiny::renderText({
+      shiny::req(r$errorMessage)
+      r$errorMessage
+    })
+
     #
     # When r$groupOfCovariatesObject is ready, update the slider range
     #
     shiny::observe({
       shiny::req(r$groupOfCovariatesObject$personGroupsTibble |> nrow() > 0)
+      shiny::req(! r$groupOfCovariatesObject$personGroupsTibble$total |> is.null())
 
       personGroupsTibble <- r$groupOfCovariatesObject$personGroupsTibble
 
@@ -256,6 +289,7 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
     #
     output$totalScoreDistributionPlot <- shiny::renderPlot({
       shiny::req(r$groupOfCovariatesObject$personGroupsTibble |> nrow() > 0, input$scoreRange)
+      shiny::req(! r$groupOfCovariatesObject$personGroupsTibble$total |> is.null())
 
        personGroupsTibble <- r$groupOfCovariatesObject$personGroupsTibble
  
@@ -287,6 +321,7 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
     #
     output$selectedPatientsCount <- shiny::renderText({
       shiny::req(r$groupOfCovariatesObject$personGroupsTibble |> nrow() > 0, input$scoreRange)
+      shiny::req(! r$groupOfCovariatesObject$personGroupsTibble$total |> is.null())
 
         personGroupsTibble <- r$groupOfCovariatesObject$personGroupsTibble
  
@@ -400,7 +435,7 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
   return(groupOfCovariatesObject)
 }
 
-.calculateTotalScores <- function(groupOfCovariatesObject) {
+.calculateTotalScores <- function(groupOfCovariatesObject, formula) {
   personGroupsTibble <- groupOfCovariatesObject$personGroupsTibble
 
   columnNames <- groupOfCovariatesObject$personGroupsTibble |>
@@ -421,8 +456,9 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
     100000, 120000, 140000, 160000, 180000,
     200000, 250000, 300000, 350000, 400000, 450000, 500000, 550000, 600000, 650000, 700000, 750000, 800000, 850000, 900000, 950000
   )
+  
   personGroupsTibble <- personGroupsTibble |>
-    dplyr::mutate(total = rowSums(dplyr::across(columnNames))) |>
+    dplyr::mutate(total = eval(parse(text = formula))) |>
     dplyr::mutate(totalBin = cut(total, breaks = breaks, include.lowest = TRUE))
 
   groupOfCovariatesObject$personGroupsTibble <- personGroupsTibble

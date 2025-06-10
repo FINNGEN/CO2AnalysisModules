@@ -13,7 +13,14 @@ dir.create(exportFolder, showWarnings = FALSE)
 analysisSettings <- list(
   cohortIdCases = 1,
   cohortIdControls = 0,
-  analysisIds = c(141, 342)
+  analysisIds = c(
+      141, # source condition counts
+      342, # ATC group counts
+      1, # DemographicsGender
+      2, # DemographicsAge
+      10, # DemographicsTimeInCohort
+      41 # year of birth
+    )
 )
 
 # function

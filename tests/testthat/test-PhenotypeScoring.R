@@ -21,7 +21,6 @@ test_that("executePhenotypeScoring works", {
       342, # ATC group counts
       1, # DemographicsGender
       2, # DemographicsAge
-      6, # DemographicsIndexYear
       10, # DemographicsTimeInCohort
       41 # year of birth
     )
