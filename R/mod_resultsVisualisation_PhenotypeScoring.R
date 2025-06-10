@@ -74,6 +74,7 @@ mod_resultsVisualisation_PhenotypeScoring_ui <- function(id) {
 #'
 #' @param id A string representing the module's namespace.
 #' @param analysisResults Pooled connection to the analysis results duckdb.
+#' 
 #'
 #' @return The module returns server-side logic to generate and manage the CodeWAS results visualization.
 #'
@@ -359,6 +360,12 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
 
 
 
+#' Get All Covariates Tibble
+#' @description Retrieves all covariates data from analysis results and joins with reference tables
+#' @param analysisResults A database connection containing analysis results tables
+#' @return A tibble containing all covariates data with reference information
+#' @importFrom dplyr tbl left_join filter distinct mutate collect
+#' @importFrom stats na.omit
 .getAllCovariatesTibble <- function(analysisResults) {
   analysisResults |>
     dplyr::tbl("codewasResults") |>
@@ -378,6 +385,13 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
 }
 
 
+#' Append Covariate Group
+#' @description Appends a new group of covariates to the groupOfCovariatesObject
+#' @param analysisResults A database connection containing analysis results tables
+#' @param covariateIds A vector of covariate ids
+#' @param groupOfCovariatesObject A list containing the group of covariates object
+#' @return A list containing the updated group of covariates object
+#' @importFrom dplyr tbl left_join filter distinct mutate collect
 .appendCovariateGroup <- function(analysisResults, covariateIds, groupOfCovariatesObject) {
   newGroupId <- nrow(groupOfCovariatesObject$groupsTibble) + 1
 
@@ -435,6 +449,12 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
   return(groupOfCovariatesObject)
 }
 
+#' Calculate Total Scores
+#' @description Calculates the total scores for each person in the groupOfCovariatesObject
+#' @param groupOfCovariatesObject A list containing the group of covariates object
+#' @param formula A string containing the formula to calculate the total scores
+#' @return A list containing the updated group of covariates object
+#' @importFrom dplyr tbl left_join filter distinct mutate collect
 .calculateTotalScores <- function(groupOfCovariatesObject, formula) {
   personGroupsTibble <- groupOfCovariatesObject$personGroupsTibble
 
@@ -465,6 +485,11 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
   return(groupOfCovariatesObject)
 }
 
+#' Render Covariates Distribution
+#' @description Renders a plot of the covariates distribution
+#' @param covariatesDistribution A tibble containing the covariates distribution
+#' @return A plot of the covariates distribution
+#' @importFrom apexcharter apex ax_chart ax_legend
 .renderCovariatesDistribution <- function(covariatesDistribution) {
   if (is.null(covariatesDistribution)) {
     return(NULL)

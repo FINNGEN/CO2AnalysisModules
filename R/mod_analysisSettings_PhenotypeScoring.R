@@ -5,7 +5,9 @@
 #'
 #' @return A Shiny UI element that can be included in a Shiny app.
 #'
-#' @importFrom shiny NS tags h4 numericInput
+#' @importFrom shiny NS
+#' @importFrom shiny tags
+#' @importFrom shiny h4
 #' @importFrom shinyWidgets pickerInput
 #' @importFrom shinyjs useShinyjs
 #' @importFrom htmltools tagList
@@ -37,6 +39,7 @@ mod_analysisSettings_phenotypeScoring_ui <- function(id) {
       inputId = ns("features_pickerInput"),
       label = "Select features to compare between cases and controls:",
       analysisIdsToShow = c(
+        1, 2, 10, 41,
         101, 141,
         301, 342,
         501, 541,
@@ -44,7 +47,7 @@ mod_analysisSettings_phenotypeScoring_ui <- function(id) {
         801, 841,
         601, 641
         ),
-      analysisIdsSelected = c(141, 342, 701, 501)
+      analysisIdsSelected = c(1,2,10,41,141,342)
     ),
     htmltools::hr(),
     shiny::tags$h4("Pre-ran info"),
@@ -60,7 +63,10 @@ mod_analysisSettings_phenotypeScoring_ui <- function(id) {
 #'
 #' @return A reactive expression that returns the analysis settings as a list.
 #'
-#' @importFrom shiny moduleServer reactive req observe
+#' @importFrom shiny moduleServer
+#' @importFrom shiny reactive
+#' @importFrom shiny req
+#' @importFrom shiny observe
 #' @importFrom shinyjs toggleState
 #' @importFrom shinyWidgets updatePickerInput
 #'

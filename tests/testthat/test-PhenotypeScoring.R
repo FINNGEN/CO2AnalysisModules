@@ -2,6 +2,7 @@
 # With covariates
 #
 test_that("executePhenotypeScoring works", {
+  skip_if_not(Sys.getenv("HADESEXTAS_TESTING_ENVIRONMENT") == "Synthea-S10")
 
   # set up
   cohortTableHandler <-
@@ -66,6 +67,7 @@ test_that("executePhenotypeScoring works", {
 
 
 test_that(".extractCovariatesPerPerson works", {
+  skip_if_not(Sys.getenv("HADESEXTAS_TESTING_ENVIRONMENT") == "Synthea-S10")
   # set up
   cohortTableHandler <-
     helper_createNewCohortTableHandler(addCohorts = "DiabetesSyntheaCohorts")

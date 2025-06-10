@@ -54,7 +54,8 @@ Imports:
     httr,
     jsonlite,
     ggh4x,
-    ggupset
+    ggupset,
+    apexcharter
 Remotes: 
     FINNGEN/HadesExtras,
     FINNGEN/FinnGenUtilsR,
