@@ -42,7 +42,7 @@ test_that("mod_analysisSettings_timetimeCodeWAS works", {
       )
 
       output$info_text |> expect_match("No subjects overlap between case and control cohorts")
-      output$info_text |> expect_match("There is a significant difference in year of birth distribution between case and control cohorts")
+      output$info_text |> expect_match("There is a significant difference in the shapes of year of birth distributions|There is a significant difference in the mean year of birth|There is significant difference both in the mean year of birth")
 
       #
       session$setInputs(
