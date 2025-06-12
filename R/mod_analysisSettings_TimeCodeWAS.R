@@ -232,19 +232,19 @@ mod_analysisSettings_timeCodeWAS_server <- function(id, r_connectionHandler) {
                           "- Cohen's d = ", round(cohen_d, 3), " (mean year of birth: Cases=",round(meanCases),", Controls=",round(meanControls),". Cohen's d, the effect size of the difference in means is negligible if less than 0.2) \n"
         )
         if (small_d) {
-          message <- paste0(message, "\u2139\uFE0F Effect size is small — practical difference may be negligible.\n")
+          message <- paste0(message, "\u2139\uFE0F Effect size is small - practical difference may be negligible.\n")
         } else {
           message <- paste0(message, "\n=> Consider controlling for year of birth by creating a new control cohort matching the case cohort by year of birth in the Match Cohorts tab.\n")
         }
       } else if (sig_t && sig_ks) {
         message <- paste0(message,
-                          "\u26A0\uFE0F There is significant difference both in the mean year of birth between case and control cohorts (t-test) — and the shapes of year of birth distributions (KS test).\n",
+                          "\u26A0\uFE0F There is significant difference both in the mean year of birth between case and control cohorts (t-test) - and the shapes of year of birth distributions (KS test).\n",
                           "- t-test p = ", scales::scientific(p_ttest), "\n",
                           "- KS test p = ", scales::scientific(p_ks), "\n",
                           "- Cohen's d = ", round(cohen_d, 3)," (mean year of birth: Cases=",round(meanCases),", Controls=",round(meanControls),". Cohen's d, the effect size of the difference in means is negligible if less than 0.2)  \n"
         )
         if (small_d) {
-          message <- paste0(message, "\u2139\uFE0F Effect size is small — practical difference may be negligible but the birth year distributions are significantly different .\n")
+          message <- paste0(message, "\u2139\uFE0F Effect size is small - practical difference may be negligible but the birth year distributions are significantly different .\n")
         }
         message <- paste0(message, "\n=> Consider controlling for year of birth by creating a new control cohort matching the case cohort by year of birth in the Match Cohorts tab.\n")
       }

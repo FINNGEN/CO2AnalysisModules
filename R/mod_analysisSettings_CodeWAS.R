@@ -198,7 +198,6 @@ mod_analysisSettings_codeWAS_server <- function(id, r_connectionHandler) {
       nSubjectsCase <- cohortTableHandler$getNumberOfSubjects(input$selectCaseCohort_pickerInput)
       nSubjectsControl <- cohortTableHandler$getNumberOfSubjects(input$selectControlCohort_pickerInput)
 
-
       # cores
       message <- paste0("\u2139\uFE0F Analysis will use : ", cores, " cores\n")
 
@@ -274,19 +273,19 @@ mod_analysisSettings_codeWAS_server <- function(id, r_connectionHandler) {
                             "- Cohen's d = ", round(cohen_d, 3), " (mean year of birth: Cases=",round(meanCases),", Controls=",round(meanControls),". Cohen's d, the effect size of the difference in means is negligible if less than 0.2) \n"
           )
           if (small_d) {
-            message <- paste0(message, "\u2139\uFE0F Effect size is small — practical difference may be negligible.\n")
+            message <- paste0(message, "\u2139\uFE0F Effect size is small - practical difference may be negligible.\n")
           } else {
             message <- paste0(message, "\n=> Consider adjusting for year of birth with the regression analysis option or re-matching controls.\n")
           }
         } else if (sig_t && sig_ks) {
           message <- paste0(message,
-                            "\u26A0\uFE0F There is significant difference both in the mean year of birth between case and control cohorts (t-test) — and the shapes of year of birth distributions (KS test).\n",
+                            "\u26A0\uFE0F There is significant difference both in the mean year of birth between case and control cohorts (t-test) - and the shapes of year of birth distributions (KS test).\n",
                             "- t-test p = ", scales::scientific(p_ttest), "\n",
                             "- KS test p = ", scales::scientific(p_ks), "\n",
                             "- Cohen's d = ", round(cohen_d, 3)," (mean year of birth: Cases=",round(meanCases),", Controls=",round(meanControls),". Cohen's d, the effect size of the difference in means is negligible if less than 0.2)  \n"
           )
           if (small_d) {
-            message <- paste0(message, "\u2139\uFE0F Effect size is small — practical difference may be negligible but the birth year distributions are significantly different .\n")
+            message <- paste0(message, "\u2139\uFE0F Effect size is small - practical difference may be negligible but the birth year distributions are significantly different .\n")
           }
           message <- paste0(message, "\n=> Consider adjusting for year of birth with the regression analysis option or re-matching controls.\n")
         }
