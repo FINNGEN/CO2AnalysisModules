@@ -208,7 +208,7 @@ mod_analysisSettings_codeWAS_server <- function(id, r_connectionHandler) {
 
       # counts
       if( nSubjectsCase > nSubjectsControl ){
-        message <- paste0(message, "\u274C There are more subjects in  case cohort (", nSubjectsCase,") that in control cohort (", nSubjectsControl,"). Are you sure they are correct?\n")
+        message <- paste0(message, "\u274C There are more subjects in  case cohort (", nSubjectsCase,") than in control cohort (", nSubjectsControl,"). Are you sure they are correct?\n")
       }
 
       # overlap
@@ -216,7 +216,7 @@ mod_analysisSettings_codeWAS_server <- function(id, r_connectionHandler) {
         message <- paste0(message, "\u2705 No subjects overlap between case and control cohorts\n")
       }else{
         if(nSubjectsOverlap > nSubjectsCase * .20){
-          message <- paste0(message, "\u274C There are many subjects, ",nSubjectsOverlap, ", that overlap  berween case and control cohorts. Consider removing them in Operate Cohorts tab\n")
+          message <- paste0(message, "\u274C There are many subjects, ",nSubjectsOverlap, ", that overlap  between case and control cohorts. Consider removing them in Operate Cohorts tab\n")
         }else{
           message <- paste0(message, "\u26A0\uFE0F There are few subjects, ",nSubjectsOverlap, ", that overlap between case and control cohorts. \n")
         }

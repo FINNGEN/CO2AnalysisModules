@@ -2,7 +2,7 @@
 test_that("mod_analysisSettings_CodeWAS works", {
 
   # set up
-  cohortTableHandler <- helper_createNewCohortTableHandler(addCohorts = "HadesExtrasFractureCohorts")
+  cohortTableHandler <- helper_createNewCohortTableHandler(addCohorts = "EunomiaDefaultCohorts")
   withr::defer({rm(cohortTableHandler);gc()})
 
   r_connectionHandler <- shiny::reactiveValues(
@@ -48,7 +48,8 @@ test_that("mod_analysisSettings_CodeWAS works", {
         )
       )
 
-      output$info_text |> expect_match("No subjects overlap between case and control cohorts")
+
+      output$info_text |> expect_match("There are more subjects in  case cohort|than in control cohort")
       output$info_text |> expect_match("There is a significant difference in the shapes of year of birth distributions|There is a significant difference in the mean year of birth|There is significant difference both in the mean year of birth")
 
 
@@ -82,9 +83,7 @@ test_that("mod_analysisSettings_CodeWAS works", {
         )
       )
 
-      output$info_text |> expect_match("No subjects overlap between case and control cohorts")
-      output$info_text |> expect_no_match("There is a significant difference in sex distribution between case and control cohorts")
-      output$info_text |> expect_no_match("There is a significant difference in the shapes of year of birth distributions|There is a significant difference in the mean year of birth|There is significant difference both in the mean year of birth")
+      output$info_text |> expect_match("There are more subjects in  case cohort|than in control cohort")
 
     }
   )

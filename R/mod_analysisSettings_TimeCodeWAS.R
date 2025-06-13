@@ -163,7 +163,6 @@ mod_analysisSettings_timeCodeWAS_server <- function(id, r_connectionHandler) {
       nEntryCase <- cohortTableHandler$getNumberOfCohortEntries(input$selectCaseCohort_pickerInput)
       nEntryControl <- cohortTableHandler$getNumberOfCohortEntries(input$selectControlCohort_pickerInput)
 
-
       message <- ""
       if(input$selectControlCohort_pickerInput == 0){
         message <- paste0(message, "\u2139\uFE0F Analysis will create a control cohort from the patients not in case cohort that matches case cohort by sex and birth year with ratio 1:10 and start date as in case cohort\n")
@@ -172,7 +171,7 @@ mod_analysisSettings_timeCodeWAS_server <- function(id, r_connectionHandler) {
 
       # counts
       if( nEntryCase > nEntryControl ){
-        message <- paste0(message, "There are more entries in case cohort (", nEntryCase,") that in control cohort (", nEntryControl,"). Are you sure they are correct?\n")
+        message <- paste0(message, "There are more entries in case cohort (", nEntryCase,") than in control cohort (", nEntryControl,"). Are you sure they are correct?\n")
       }
 
       # overlap
@@ -188,7 +187,8 @@ mod_analysisSettings_timeCodeWAS_server <- function(id, r_connectionHandler) {
 
       # sex
       fisher_results = cohortTableHandler$getSexFisherTest(selected_cohortId1=input$selectCaseCohort_pickerInput,
-                                                           selected_cohortId2=input$selectControlCohort_pickerInput)
+                                                           selected_cohortId2=input$selectControlCohort_pickerInput,
+                                                           testFor="allEvents")
 
       if(fisher_results$p.value < 0.05){
         message <- paste0(message, "\u26A0\uFE0F There is a significant difference in sex distribution between case and control cohorts. (Fisher's test p = ", scales::scientific(fisher_results$p.value)," ) \n")
@@ -198,7 +198,8 @@ mod_analysisSettings_timeCodeWAS_server <- function(id, r_connectionHandler) {
 
       # year of birth
       yearOfBirthComparison_results = cohortTableHandler$getYearOfBirthTests(selected_cohortId1=input$selectCaseCohort_pickerInput,
-                                                                             selected_cohortId2=input$selectControlCohort_pickerInput)
+                                                                             selected_cohortId2=input$selectControlCohort_pickerInput,
+                                                                             testFor="allEvents")
 
       ttestResult <- yearOfBirthComparison_results[["ttestResult"]]
       ks_result <- yearOfBirthComparison_results[["ksResult"]]
