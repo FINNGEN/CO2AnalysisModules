@@ -391,9 +391,9 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
                     ),
                   ) # column
                 ) # fluidRow
-            ) # tagList
-        ) # div
-      ) # div
+            ) # div collapsible-content
+        ) # div menu-section
+      ) # div tagList
 
       session$onFlushed(function() {
         session$sendCustomMessage("setupCollapsiblesAgain", list())
@@ -552,7 +552,6 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
             textOverflow = "ellipsis"
           )
         ),
-        # defaultSorted = list(mlogp = "desc", oddsRatio = "desc"),
         sortable = FALSE,
         columns = list(
           covariateName = reactable::colDef(
@@ -566,13 +565,24 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
             ),
             minWidth = 220,
             cell = function(name, rowIndex) {
-              htmltools::tags$a(
-                href = paste0(atlasUrl, "/#/concept/", df$covariateId[ rowIndex ]),
-                target = "_blank", df$covariateName[ rowIndex ],
-                content = name
-              )
-            }
-          ),
+              if (df$vocabularyId[rowIndex] %in% c("CohortLibrary", "Endpoints", "None")) {
+                # No Atlas link: just show truncated text with tooltip
+                htmltools::span(
+                  title = name,
+                  style = "display: inline-block; max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;",
+                  stringr::str_trunc(name, width = 50, ellipsis = "...")
+                )
+              } else {
+                # With Atlas link and tooltip
+                htmltools::a(
+                  href = paste0(atlasUrl, "/#/concept/", df$covariateId[rowIndex]),
+                  target = "_blank",
+                  title = name,  # Tooltip
+                  style = "display: inline-block; max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-decoration: none;",
+                  stringr::str_trunc(name, width = 50, ellipsis = "...")
+                )
+              }
+            }          ),
           conceptCode = reactable::colDef(
             name = "Concept Code",
             sticky = "left",

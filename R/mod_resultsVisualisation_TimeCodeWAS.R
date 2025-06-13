@@ -1033,11 +1033,6 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
         df,
         filterable = TRUE,
         bordered = TRUE,
-        # highlight = TRUE,
-        # striped = TRUE,
-        # defaultColDef = reactable::colDef(
-        #   resizable = TRUE
-        # ),
         defaultColDef = reactable::colDef(
           minWidth = 80,
           headerStyle = list(whiteSpace = "nowrap"),
@@ -1070,14 +1065,26 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
               textOverflow = "ellipsis",
               backgroundColor = "#f7f7f7"
             ),
+            minWidth = 220,
             cell = function(name, rowIndex) {
-              htmltools::tags$a(
-                href = paste0(atlasUrl, "/#/concept/", df$code[ rowIndex ]),
-                target = "_blank", df$name[ rowIndex ],
-                content = name
-              )
-            },
-            minWidth = 150
+              if (df$vocabularyId[rowIndex] %in% c("CohortLibrary", "Endpoints", "None")) {
+                # No Atlas link: just show truncated text with tooltip
+                htmltools::span(
+                  title = name,
+                  style = "display: inline-block; max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;",
+                  stringr::str_trunc(name, width = 50, ellipsis = "...")
+                )
+              } else {
+                # With Atlas link and tooltip
+                htmltools::a(
+                  href = paste0(atlasUrl, "/#/concept/", df$code[rowIndex]),
+                  target = "_blank",
+                  title = name,  # Tooltip
+                  style = "display: inline-block; max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-decoration: none;",
+                  stringr::str_trunc(name, width = 50, ellipsis = "...")
+                )
+              }
+            }
           ),
           code = reactable::colDef(show = FALSE),
           conceptCode = reactable::colDef(name = "Concept Code", minWidth = 100),
