@@ -565,23 +565,24 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
             ),
             minWidth = 220,
             cell = function(name, rowIndex) {
-              if(df$vocabularyId[rowIndex] %in% c("CohortLibrary", "Endpoints", "None")) {
-                # no Atlas link for these vocabularies
-                return(
+              if (df$vocabularyId[rowIndex] %in% c("CohortLibrary", "Endpoints", "None")) {
+                # No Atlas link: just show truncated text with tooltip
+                htmltools::span(
+                  title = name,
+                  style = "display: inline-block; max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;",
                   stringr::str_trunc(name, width = 50, ellipsis = "...")
                 )
               } else {
-                # create a link to the Atlas concept
-                return(
-                  htmltools::tags$a(
-                    href = paste0(atlasUrl, "/#/concept/", df$covariateId[rowIndex]),
-                    target = "_blank", name,
-                    content = stringr::str_trunc(name, width = 50, ellipsis = "...")
-                  )
+                # With Atlas link and tooltip
+                htmltools::a(
+                  href = paste0(atlasUrl, "/#/concept/", df$covariateId[rowIndex]),
+                  target = "_blank",
+                  title = name,  # Tooltip
+                  style = "display: inline-block; max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-decoration: none;",
+                  stringr::str_trunc(name, width = 50, ellipsis = "...")
                 )
               }
-            }
-          ),
+            }          ),
           conceptCode = reactable::colDef(
             name = "Concept Code",
             sticky = "left",
