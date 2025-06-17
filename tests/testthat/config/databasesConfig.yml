@@ -11,6 +11,7 @@ S10:
           server: localhost/synthea
           user: syntheauser
           password: mypass
+          port: 5433
     cdm:
         cdmDatabaseSchema: cdm_synthea10
         vocabularyDatabaseSchema: cdm_synthea10
