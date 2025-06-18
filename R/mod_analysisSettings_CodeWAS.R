@@ -261,7 +261,7 @@ mod_analysisSettings_codeWAS_server <- function(id, r_connectionHandler) {
                             "\u26A0\uFE0F There is a significant difference in the shapes of year of birth distributions between the case and control cohorts (KS test), but the mean year of births are similar (t-test).\n",
                             "- t-test p = ", scales::scientific(p_ttest), "\n",
                             "- KS test p = ", scales::scientific(p_ks), "\n",
-                            "- Cohen's d = ", round(cohen_d, 3), " (mean year of birth: Cases=",round(meanCases),", Controls=",round(meanControls),". Cohen's d, the effect size of the difference in means is negligible if less than 0.2) \n"
+                            "- Cohen's d = ", round(d, 3), " (mean year of birth: Cases=",round(meanCases),", Controls=",round(meanControls),". Cohen's d, the effect size of the difference in means is negligible if less than 0.2) \n"
           )
             message <- paste0(message, "\n=> Consider adjusting for year of birth with the regression analysis option or re-matching controls if the Cohen's d effect size is greater than 0.2.\n")
 
@@ -270,7 +270,7 @@ mod_analysisSettings_codeWAS_server <- function(id, r_connectionHandler) {
                             "\u26A0\uFE0F There is a significant difference in the mean year of birth between case and control cohorts (t-test), but year of birth distributions are similar in shape (KS test).\n",
                             "- t-test p = ", scales::scientific(p_ttest), "\n",
                             "- KS test p = ", scales::scientific(p_ks), "\n",
-                            "- Cohen's d = ", round(cohen_d, 3), " (mean year of birth: Cases=",round(meanCases),", Controls=",round(meanControls),". Cohen's d, the effect size of the difference in means is negligible if less than 0.2) \n"
+                            "- Cohen's d = ", round(d, 3), " (mean year of birth: Cases=",round(meanCases),", Controls=",round(meanControls),". Cohen's d, the effect size of the difference in means is negligible if less than 0.2) \n"
           )
           if (small_d) {
             message <- paste0(message, "\u2139\uFE0F Effect size is small - practical difference may be negligible.\n")
@@ -282,7 +282,7 @@ mod_analysisSettings_codeWAS_server <- function(id, r_connectionHandler) {
                             "\u26A0\uFE0F There is significant difference both in the mean year of birth between case and control cohorts (t-test) - and the shapes of year of birth distributions (KS test).\n",
                             "- t-test p = ", scales::scientific(p_ttest), "\n",
                             "- KS test p = ", scales::scientific(p_ks), "\n",
-                            "- Cohen's d = ", round(cohen_d, 3)," (mean year of birth: Cases=",round(meanCases),", Controls=",round(meanControls),". Cohen's d, the effect size of the difference in means is negligible if less than 0.2)  \n"
+                            "- Cohen's d = ", round(d, 3)," (mean year of birth: Cases=",round(meanCases),", Controls=",round(meanControls),". Cohen's d, the effect size of the difference in means is negligible if less than 0.2)  \n"
           )
           if (small_d) {
             message <- paste0(message, "\u2139\uFE0F Effect size is small - practical difference may be negligible but the birth year distributions are significantly different .\n")
