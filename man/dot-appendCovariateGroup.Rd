@@ -4,14 +4,21 @@
 \alias{.appendCovariateGroup}
 \title{Append Covariate Group}
 \usage{
-.appendCovariateGroup(analysisResults, covariateIds, groupOfCovariatesObject)
+.appendCovariateGroup(
+  analysisResults,
+  covariateIds,
+  groupedCovariatesTibble,
+  groupedCovariatesPerPersonTibble
+)
 }
 \arguments{
 \item{analysisResults}{A database connection containing analysis results tables}
 
 \item{covariateIds}{A vector of covariate ids}
 
-\item{groupOfCovariatesObject}{A list containing the group of covariates object}
+\item{groupedCovariatesTibble}{A tibble containing the grouped covariates}
+
+\item{groupedCovariatesPerPersonTibble}{A tibble containing the grouped covariates per person}
 }
 \value{
 A list containing the updated group of covariates object

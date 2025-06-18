@@ -587,10 +587,10 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
 }
 
 #' Calculate Total Scores
-#' @description Calculates the total scores for each person in the groupedCovariatesPerPersonTibble given a formula
+#' @description Calculates the total scores for each person in the `groupedCovariatesPerPersonTibble` given a formula
 #' @param groupedCovariatesPerPersonTibble A tibble containing the grouped covariates per person
 #' @param formula A string containing the formula to calculate the total scores
-#' @return A tibble containing the updated groupedCovariatesPerPersonTibble, with a new column "total" and "totalBin"
+#' @return A tibble containing the updated `groupedCovariatesPerPersonTibble`, with a new column `totalScore` and `totalScoreBin`
 #' @importFrom dplyr tbl left_join filter distinct mutate collect
 .calculateTotalScores <- function(
     groupedCovariatesPerPersonTibble,

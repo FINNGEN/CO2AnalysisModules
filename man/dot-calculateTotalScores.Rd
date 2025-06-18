@@ -4,16 +4,16 @@
 \alias{.calculateTotalScores}
 \title{Calculate Total Scores}
 \usage{
-.calculateTotalScores(groupOfCovariatesObject, formula)
+.calculateTotalScores(groupedCovariatesPerPersonTibble, formula)
 }
 \arguments{
-\item{groupOfCovariatesObject}{A list containing the group of covariates object}
+\item{groupedCovariatesPerPersonTibble}{A tibble containing the grouped covariates per person}
 
 \item{formula}{A string containing the formula to calculate the total scores}
 }
 \value{
-A list containing the updated group of covariates object
+A tibble containing the updated \code{groupedCovariatesPerPersonTibble}, with a new column \code{totalScore} and \code{totalScoreBin}
 }
 \description{
-Calculates the total scores for each person in the groupOfCovariatesObject
+Calculates the total scores for each person in the \code{groupedCovariatesPerPersonTibble} given a formula
 }

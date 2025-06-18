@@ -30,7 +30,6 @@ Imports:
     reactable,
     shinybrowser,
     tibble,
-    markdown,
     DatabaseConnector,
     FeatureExtraction,
     SqlRender,
@@ -40,7 +39,6 @@ Imports:
     ggrepel,
     gtable,
     grid,
-    htmlwidgets,
     lubridate,
     purrr,
     readr,
@@ -51,11 +49,10 @@ Imports:
     shinyFeedback,
     CohortGenerator,
     FinnGenUtilsR,
-    httr,
-    jsonlite,
     ggh4x,
-    ggupset,
-    apexcharter
+    apexcharter,
+    colourpicker,
+    shinyjqui
 Remotes: 
     FINNGEN/HadesExtras,
     FINNGEN/FinnGenUtilsR,
