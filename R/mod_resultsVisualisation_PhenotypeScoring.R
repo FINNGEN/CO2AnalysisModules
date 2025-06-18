@@ -17,7 +17,7 @@ mod_resultsVisualisation_PhenotypeScoring_ui <- function(id) {
     shinyjs::useShinyjs(),
     shiny::tagList(
       shiny::h4("CodeWAS Results Table"),
-      reactable::reactableOutput(ns("codewasResultsTable"), height = 500),
+      reactable::reactableOutput(ns("codeWasCovariatesTable"), height = 500),
       shiny::actionButton(
         ns("createGroupFromSelected"),
         "Create Group From Selected"
@@ -26,7 +26,7 @@ mod_resultsVisualisation_PhenotypeScoring_ui <- function(id) {
       shiny::hr(),
       shiny::hr(),
       shiny::h4("Code Groups"),
-      reactable::reactableOutput(ns("codeGroupsTable"), height = 500),
+      reactable::reactableOutput(ns("groupedCovariatesTable"), height = 500),
       # shiny::hr(),
       # shiny::hr(),
       # shiny::hr(),
@@ -36,12 +36,17 @@ mod_resultsVisualisation_PhenotypeScoring_ui <- function(id) {
       shiny::hr(),
       shiny::hr(),
       shiny::h4("Formula:"),
-      ,
-      shiny::textOutput(ns("formulaText")),
+      mod_fct_dragAndDropFormula_ui(ns("totalScoreFormula_formula")),
+      shiny::tags$h4("Formula message:"),
+      shiny::verbatimTextOutput(ns("totalScoreFormula_text"), placeholder = TRUE),
       shiny::hr(),
       shiny::hr(),
       shiny::hr(),
       shiny::h4("Flags:"),
+      mod_fct_phenotypeFlags_ui(ns("phenotypeFlags_flags")),
+      shiny::br(), shiny::br(), shiny::br(),
+      shiny::tags$h4("Flags message:"),
+      shiny::verbatimTextOutput(ns("phenotypeFlags_text"), placeholder = TRUE),
       shiny::hr(),
       shiny::hr(),
       shiny::hr(),
@@ -73,7 +78,7 @@ mod_resultsVisualisation_PhenotypeScoring_ui <- function(id) {
 #'
 #' @param id A string representing the module's namespace.
 #' @param analysisResults Pooled connection to the analysis results duckdb.
-#' 
+#'
 #'
 #' @return The module returns server-side logic to generate and manage the CodeWAS results visualization.
 #'
@@ -83,37 +88,43 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
   shiny::moduleServer(id, function(input, output, session) {
     ns <- session$ns
 
+    emptyGroupedCovariatesTibble <- tibble::tibble(
+      groupId = character(),
+      groupName = character(),
+      covariateIds = list(),
+      conceptCodes = list(),
+      covariateNames = list(),
+      covariatesDistribution = list()
+    )
 
     r <- shiny::reactiveValues(
-      allCovariatesTibble = NULL,
-      groupOfCovariatesObject = list(
-        groupsTibble = tibble::tibble(
-          groupId = integer(),
-          groupName = character(),
-          covariateIds = list(),
-          conceptCodes = list(),
-          covariateNames = list(),
-          covariatesDistribution = list(),
-          .rows = 0
-        ),
-        personGroupsTibble = NULL
-      ),
-      errorMessage = NULL
+      codeWasCovariatesTibble = NULL,
+      errorMessageTotalScore = NULL,
+      errorMessagePhenotypeFlags = NULL
+    )
+
+    # Break the groupedCovariatesPerPersonTibble into columns to avoid loop
+    r_groupedCovariates <- shiny::reactiveValues(
+      groupedCovariatesTibble = emptyGroupedCovariatesTibble,
+      groupedCovariatesPerPersonTibble = NULL,
+      groupedCovariatesPerPersonTibble_totalScore = NULL,
+      groupedCovariatesPerPersonTibble_flag = NULL
     )
 
     #
-    # Start up: get the list of codes from database into r$listOfCovariates
+    # Start up: get the list of codes from database into r$codeWasCovariatesTibble
+    #
     shiny::observe({
-      r$allCovariatesTibble <- .getAllCovariatesTibble(analysisResults)
+      r$codeWasCovariatesTibble <- .getcodeWasCovariatesTibble(analysisResults)
     })
 
     #
-    # When r$listOfCovariates is ready, plot it
+    # When r$codeWasCovariatesTibble is ready, plot it
     #
-    output$codewasResultsTable <- reactable::renderReactable({
-      shiny::req(r$allCovariatesTibble)
+    output$codeWasCovariatesTable <- reactable::renderReactable({
+      shiny::req(r$codeWasCovariatesTibble)
 
-      toPlot <- r$allCovariatesTibble |>
+      toPlot <- r$codeWasCovariatesTibble |>
         dplyr::transmute(
           domainId = domainId,
           vocabularyId = vocabularyId,
@@ -151,31 +162,35 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
 
 
     #
-    # When click inp$createGroupFromSelected, create a new group into r$groupOfCovariatesObject
+    # When click input$createGroupFromSelected, create a new group into r_groupedCovariates
     #
     shiny::observeEvent(input$createGroupFromSelected, {
-      selected <- reactable::getReactableState("codewasResultsTable", "selected")
+      selected <- reactable::getReactableState("codeWasCovariatesTable", "selected")
       if (!is.null(selected)) {
         # Get the selected rows from the table
-        selectedRows <- r$allCovariatesTibble[selected, ]
+        selectedRows <- r$codeWasCovariatesTibble[selected, ]
 
         # Update the list of groups with selected rows
-        groupOfCovariatesObject <- .appendCovariateGroup(analysisResults, selectedRows$covariateId, r$groupOfCovariatesObject)
-        r$groupOfCovariatesObject <- groupOfCovariatesObject
+        res <- .appendCovariateGroup(
+          analysisResults = analysisResults,
+          covariateIds = selectedRows$covariateId,
+          groupedCovariatesTibble = r_groupedCovariates$groupedCovariatesTibble,
+          groupedCovariatesPerPersonTibble = r_groupedCovariates$groupedCovariatesPerPersonTibble
+        )
+        r_groupedCovariates$groupedCovariatesTibble <- res$groupedCovariatesTibble
+        r_groupedCovariates$groupedCovariatesPerPersonTibble <- res$groupedCovariatesPerPersonTibble
       }
 
       # clear selection
-      reactable::updateReactable("codewasResultsTable", selected = NA)
+      reactable::updateReactable("codeWasCovariatesTable", selected = NA)
     })
 
 
     #
-    # When r$groupOfCovariatesObject is ready, plot table of groups
+    # When r_groupedCovariates$groupedCovariatesTibble is ready, plot table of groups
     #
-    output$codeGroupsTable <- reactable::renderReactable({
-      shiny::req(r$groupOfCovariatesObject$groupsTibble |> nrow() > 0)
-
-      toPlot <- r$groupOfCovariatesObject$groupsTibble |>
+    output$groupedCovariatesTable <- reactable::renderReactable({
+      toPlot <- r_groupedCovariates$groupedCovariatesTibble |>
         dplyr::mutate(deleteButton = NA)
 
       columns <- list(
@@ -241,63 +256,171 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
     #     ggplot2::theme_minimal()
     # })
 
+    #
+    # render the flag formula builder
+    #
+    rf_totalScoreFormula <- mod_fct_dragAndDropFormula_server(
+      id = "totalScoreFormula_formula",
+      r_groupedCovariates = r_groupedCovariates,
+      operatorItems = c(
+        `(` = "(", `)` = ")",
+        `+` = "+",
+        `-` = "-",
+        `*` = "*",
+        `/` = "/"
+      ),
+      placeholder = "Drag and Drop here to create formula"
+    )
+
 
     #
-    # when input$formula is changed, update total column in r$groupOfCovariatesObject
+    # when input$formula is changed, attempt to use it
+    # if it is valid, calculate totalScore and totalScoreBin columns
+    # if it is invalid, show error message and delete totalScore and totalScoreBin columns
     #
     shiny::observe({
-      shiny::req(input$formula)
+      shiny::req(rf_totalScoreFormula())
+
+      totalScoreFormula <- rf_totalScoreFormula()
+      groupedCovariatesPerPersonTibble <- r_groupedCovariates$groupedCovariatesPerPersonTibble
+
       errorMessage <- NULL
-      tryCatch({
-        r$groupOfCovariatesObject <- .calculateTotalScores(r$groupOfCovariatesObject, input$formula)
-      }, error = function(e) {
-        errorMessage <<- e$message
-      })
+      groupedCovariatesPerPersonTibble_totalScore <- NULL
+      tryCatch(
+        {
+          groupedCovariatesPerPersonTibble_totalScore <- .calculateTotalScores(
+            groupedCovariatesPerPersonTibble = groupedCovariatesPerPersonTibble,
+            formula = totalScoreFormula$formula
+          )
+        },
+        error = function(e) {
+          errorMessage <<- e$message
+        }
+      )
 
-      r$errorMessage <- errorMessage
-     
+      if (is.null(errorMessage)) {
+        # show formula
+        r$errorMessageTotalScore <- totalScoreFormula$formulaPretty
+      } else {
+        r$errorMessageTotalScore <- errorMessage
+      }
+
+      r_groupedCovariates$groupedCovariatesPerPersonTibble_totalScore <- groupedCovariatesPerPersonTibble_totalScore
     })
 
     #
-    # When r$errorMessage is ready, update the formula text
+    # When r$errorMessageTotalScore is ready, update the formula text
     #
-    output$formulaText <- shiny::renderText({
-      shiny::req(r$errorMessage)
-      r$errorMessage
+    output$totalScoreFormula_text <- shiny::renderText({
+      shiny::req(r$errorMessageTotalScore)
+      r$errorMessageTotalScore
     })
 
     #
-    # When r$groupOfCovariatesObject is ready, update the slider range
+    # render the flag formula builder
+    #
+    rf_flagsTable <- mod_fct_phenotypeFlags_server("phenotypeFlags_flags", r_groupedCovariates)
+
+    #
+    # Evaluate the flag formulas
     #
     shiny::observe({
-      shiny::req(r$groupOfCovariatesObject$personGroupsTibble |> nrow() > 0)
-      shiny::req(! r$groupOfCovariatesObject$personGroupsTibble$total |> is.null())
+      shiny::req(rf_flagsTable())
+      shiny::req(r_groupedCovariates$groupedCovariatesPerPersonTibble_totalScore)
 
-      personGroupsTibble <- r$groupOfCovariatesObject$personGroupsTibble
+      flagsTable <- rf_flagsTable()
+      flagsTable <- flagsTable |>
+        dplyr::mutate(flagCaseWhenRule = paste0(flagRule, " ~ '", flagName, "'"))
+      flagCaseWhenRules <- paste(flagsTable$flagCaseWhenRule, collapse = ", \n")
+
+      groupedCovariatesPerPersonTibble <- r_groupedCovariates$groupedCovariatesPerPersonTibble
+
+
+      errorMessage <- NULL
+      groupedCovariatesPerPersonTibble_flag <- NULL
+      tryCatch(
+        {
+          groupedCovariatesPerPersonTibble_flag <- eval(parse(text = paste(
+            "groupedCovariatesPerPersonTibble |>",
+            "dplyr::mutate(flag = dplyr::case_when(", flagCaseWhenRules, ", TRUE ~ 'no-flag'))"
+          )))
+
+          groupedCovariatesPerPersonTibble_flag <- groupedCovariatesPerPersonTibble_flag |>
+            dplyr::select(personSourceValue, flag)
+        },
+        error = function(e) {
+          errorMessage <<- e$message
+        }
+      )
+
+      if (is.null(errorMessage)) {
+        r$errorMessagePhenotypeFlags <- errorMessage
+      } else {
+        r$errorMessagePhenotypeFlags <- errorMessage
+      }
+
+      r_groupedCovariates$groupedCovariatesPerPersonTibble_flag <- groupedCovariatesPerPersonTibble_flag
+    })
+
+    #
+    # When r$errorMessagePhenotypeFlags is ready, update the formula text
+    #
+    output$phenotypeFlags_text <- shiny::renderText({
+      shiny::req(r$errorMessagePhenotypeFlags)
+      r$errorMessagePhenotypeFlags
+    })
+
+
+    #
+    # When r_groupedCovariates is ready, update the slider range
+    #
+    shiny::observe({
+      shiny::req(r_groupedCovariates$groupedCovariatesPerPersonTibble |> nrow() > 0)
+      shiny::req(r_groupedCovariates$groupedCovariatesPerPersonTibble_totalScore)
+
+      groupedCovariatesPerPersonTibble <- r_groupedCovariates$groupedCovariatesPerPersonTibble |>
+        dplyr::left_join(r_groupedCovariates$groupedCovariatesPerPersonTibble_totalScore, by = "personSourceValue")
 
       shiny::updateSliderInput(
         session,
         "scoreRange",
         min = 0,
-        max = max(personGroupsTibble$totalBin |> as.integer(), na.rm = TRUE),
-        value = c(0, max(personGroupsTibble$totalBin |> as.integer(), na.rm = TRUE))
+        max = max(groupedCovariatesPerPersonTibble$totalScoreBin |> as.integer(), na.rm = TRUE),
+        value = c(0, max(groupedCovariatesPerPersonTibble$totalScoreBin |> as.integer(), na.rm = TRUE))
       )
     })
 
     #
-    # When r$groupOfCovariatesObject is ready or slider is changed, plot the total score distribution
+    # When r_groupedCovariates is ready or slider is changed, plot the total score distribution, if flag is available, add flag to the plot
     #
     output$totalScoreDistributionPlot <- shiny::renderPlot({
-      shiny::req(r$groupOfCovariatesObject$personGroupsTibble |> nrow() > 0, input$scoreRange)
-      shiny::req(! r$groupOfCovariatesObject$personGroupsTibble$total |> is.null())
+      shiny::req(r_groupedCovariates$groupedCovariatesPerPersonTibble |> nrow() > 0)
+      shiny::req(input$scoreRange)
+      shiny::req(r_groupedCovariates$groupedCovariatesPerPersonTibble_totalScore)
 
-       personGroupsTibble <- r$groupOfCovariatesObject$personGroupsTibble
- 
+      groupedCovariatesPerPersonTibble <- r_groupedCovariates$groupedCovariatesPerPersonTibble |>
+        dplyr::left_join(r_groupedCovariates$groupedCovariatesPerPersonTibble_totalScore, by = "personSourceValue")
+
+      if (!is.null(r_groupedCovariates$groupedCovariatesPerPersonTibble_flag)) {
+        groupedCovariatesPerPersonTibble <- groupedCovariatesPerPersonTibble |>
+          dplyr::left_join(r_groupedCovariates$groupedCovariatesPerPersonTibble_flag, by = "personSourceValue")
+      } else {
+        groupedCovariatesPerPersonTibble <- groupedCovariatesPerPersonTibble |>
+          dplyr::mutate(flag = "no-flag")
+      }
+
+      flagsTable <- rf_flagsTable()
+      flagsTable <- flagsTable |>
+        dplyr::bind_rows(tibble::tibble(flagName = "no-flag", flagColor = "grey"))
+
       # Create the plot
-      p <- personGroupsTibble |>
-        ggplot2::ggplot(aes(x = totalBin)) +
-        ggplot2::geom_bar() +
-        ggplot2::theme_minimal()
+      p <- groupedCovariatesPerPersonTibble |>
+        ggplot2::ggplot(aes(x = totalScoreBin, fill = flag)) +
+        ggplot2::geom_bar(position = "stack") +
+        ggplot2::theme_minimal() +
+        ggplot2::scale_fill_manual(
+          values = setNames(flagsTable$flagColor, flagsTable$flagName)
+        )
 
       # Add box overlay if slider values are set
       if (!is.null(input$scoreRange)) {
@@ -320,15 +443,15 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
     # When r$groupOfCovariatesObject is ready or slider is changed, update the selected patients count
     #
     output$selectedPatientsCount <- shiny::renderText({
-      shiny::req(r$groupOfCovariatesObject$personGroupsTibble |> nrow() > 0, input$scoreRange)
-      shiny::req(! r$groupOfCovariatesObject$personGroupsTibble$total |> is.null())
+      shiny::req(r_groupedCovariates$groupedCovariatesPerPersonTibble |> nrow() > 0, input$scoreRange)
+      shiny::req(r_groupedCovariates$groupedCovariatesPerPersonTibble_totalScore)
 
-        personGroupsTibble <- r$groupOfCovariatesObject$personGroupsTibble
- 
+      groupedCovariatesPerPersonTibble <- r_groupedCovariates$groupedCovariatesPerPersonTibble |>
+        dplyr::left_join(r_groupedCovariates$groupedCovariatesPerPersonTibble_totalScore, by = "personSourceValue")
 
       # Count subjects in the selected range
-      nSelected <- personGroupsTibble |>
-        dplyr::filter(totalBin |> as.integer() >= input$scoreRange[1] & totalBin |> as.integer() <= input$scoreRange[2]) |>
+      nSelected <- groupedCovariatesPerPersonTibble |>
+        dplyr::filter(totalScoreBin |> as.integer() >= input$scoreRange[1] & totalScoreBin |> as.integer() <= input$scoreRange[2]) |>
         nrow()
 
       paste("Number of patients selected:", nSelected)
@@ -342,13 +465,23 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
         paste0("selected_subjects_", input$scoreRange[1], "_to_", input$scoreRange[2], ".csv")
       },
       content = function(file) {
-        shiny::req(r$groupOfCovariatesObject$personGroupsTibble |> nrow() > 0)
+        shiny::req(r_groupedCovariates$groupedCovariatesPerPersonTibble |> nrow() > 0)
+        shiny::req(r_groupedCovariates$groupedCovariatesPerPersonTibble_totalScore)
 
-        personGroupsTibble <- r$groupOfCovariatesObject$personGroupsTibble
+        groupedCovariatesPerPersonTibble <- r_groupedCovariates$groupedCovariatesPerPersonTibble |>
+          dplyr::left_join(r_groupedCovariates$groupedCovariatesPerPersonTibble_totalScore, by = "personSourceValue")
+
+        if (is.null(r_groupedCovariates$groupedCovariatesPerPersonTibble_flag)) {
+          groupedCovariatesPerPersonTibble <- groupedCovariatesPerPersonTibble |>
+            dplyr::mutate(flag = "no-flag")
+        } else {
+          groupedCovariatesPerPersonTibble <- groupedCovariatesPerPersonTibble |>
+            dplyr::left_join(r_groupedCovariates$groupedCovariatesPerPersonTibble_flag, by = "personSourceValue")
+        }
 
         # Get the subjects with total score in the range of the slider
-        selectedSubjects <- personGroupsTibble |>
-          dplyr::filter(totalBin |> as.integer() >= input$scoreRange[1] & totalBin |> as.integer() <= input$scoreRange[2])
+        selectedSubjects <- groupedCovariatesPerPersonTibble |>
+          dplyr::filter(totalScoreBin |> as.integer() >= input$scoreRange[1] & totalScoreBin |> as.integer() <= input$scoreRange[2])
 
         # Write the selected subjects to the file
         write.csv(selectedSubjects, file, row.names = FALSE, na = "")
@@ -365,7 +498,7 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
 #' @return A tibble containing all covariates data with reference information
 #' @importFrom dplyr tbl left_join filter distinct mutate collect
 #' @importFrom stats na.omit
-.getAllCovariatesTibble <- function(analysisResults) {
+.getcodeWasCovariatesTibble <- function(analysisResults) {
   analysisResults |>
     dplyr::tbl("codewasResults") |>
     dplyr::left_join(analysisResults |> dplyr::tbl("covariateRef"), by = c("covariateId" = "covariateId")) |>
@@ -388,11 +521,16 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
 #' @description Appends a new group of covariates to the groupOfCovariatesObject
 #' @param analysisResults A database connection containing analysis results tables
 #' @param covariateIds A vector of covariate ids
-#' @param groupOfCovariatesObject A list containing the group of covariates object
+#' @param groupedCovariatesTibble A tibble containing the grouped covariates
+#' @param groupedCovariatesPerPersonTibble A tibble containing the grouped covariates per person
 #' @return A list containing the updated group of covariates object
 #' @importFrom dplyr tbl left_join filter distinct mutate collect
-.appendCovariateGroup <- function(analysisResults, covariateIds, groupOfCovariatesObject) {
-  newGroupId <- nrow(groupOfCovariatesObject$groupsTibble) + 1
+.appendCovariateGroup <- function(
+    analysisResults,
+    covariateIds,
+    groupedCovariatesTibble,
+    groupedCovariatesPerPersonTibble) {
+  newGroupId <- nrow(groupedCovariatesTibble) + 1
 
   sumAllCovariatesPerPerson <- analysisResults |>
     dplyr::tbl("covariatesPerPerson") |>
@@ -405,9 +543,6 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
         dplyr::summarise(value = sum(value, na.rm = TRUE), .groups = "drop"),
       by = "personSourceValue"
     ) |>
-    # TEMP
-    dplyr::mutate(value = value + 1) |>
-    # END TEMP
     dplyr::mutate(value = ifelse(is.na(value), 0, value)) |>
     dplyr::collect()
 
@@ -426,7 +561,7 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
     dplyr::pull(covariateName)
 
   groupTibble <- tibble::tibble(
-    groupId = newGroupId,
+    groupId = paste0("g", newGroupId),
     groupName = paste("Group ", newGroupId),
     covariateIds = list(covariateIds),
     conceptCodes = list(conceptCodes),
@@ -435,32 +570,31 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
   )
 
   sumAllCovariatesPerPerson <- sumAllCovariatesPerPerson |>
-    dplyr::rename(!!as.character(newGroupId) := value)
+    dplyr::rename(!!paste0("g", newGroupId) := value)
 
   # append
-  groupOfCovariatesObject$groupsTibble <- dplyr::bind_rows(groupOfCovariatesObject$groupsTibble, groupTibble)
-  if (is.null(groupOfCovariatesObject$personGroupsTibble)) {
-    groupOfCovariatesObject$personGroupsTibble <- sumAllCovariatesPerPerson
+  groupedCovariatesTibble <- dplyr::bind_rows(groupedCovariatesTibble, groupTibble)
+  if (is.null(groupedCovariatesPerPersonTibble)) {
+    groupedCovariatesPerPersonTibble <- sumAllCovariatesPerPerson
   } else {
-    groupOfCovariatesObject$personGroupsTibble <- dplyr::left_join(groupOfCovariatesObject$personGroupsTibble, sumAllCovariatesPerPerson, by = "personSourceValue")
+    groupedCovariatesPerPersonTibble <- dplyr::left_join(groupedCovariatesPerPersonTibble, sumAllCovariatesPerPerson, by = "personSourceValue")
   }
 
-  return(groupOfCovariatesObject)
+  return(list(
+    groupedCovariatesTibble = groupedCovariatesTibble,
+    groupedCovariatesPerPersonTibble = groupedCovariatesPerPersonTibble
+  ))
 }
 
 #' Calculate Total Scores
-#' @description Calculates the total scores for each person in the groupOfCovariatesObject
-#' @param groupOfCovariatesObject A list containing the group of covariates object
+#' @description Calculates the total scores for each person in the groupedCovariatesPerPersonTibble given a formula
+#' @param groupedCovariatesPerPersonTibble A tibble containing the grouped covariates per person
 #' @param formula A string containing the formula to calculate the total scores
-#' @return A list containing the updated group of covariates object
+#' @return A tibble containing the updated groupedCovariatesPerPersonTibble, with a new column "total" and "totalBin"
 #' @importFrom dplyr tbl left_join filter distinct mutate collect
-.calculateTotalScores <- function(groupOfCovariatesObject, formula) {
-  personGroupsTibble <- groupOfCovariatesObject$personGroupsTibble
-
-  columnNames <- groupOfCovariatesObject$personGroupsTibble |>
-    names() |>
-    setdiff(c("personSourceValue", "total", "totalBin"))
-
+.calculateTotalScores <- function(
+    groupedCovariatesPerPersonTibble,
+    formula) {
   # Calculate total scores
   breaks <- c(
     0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
@@ -475,13 +609,13 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
     100000, 120000, 140000, 160000, 180000,
     200000, 250000, 300000, 350000, 400000, 450000, 500000, 550000, 600000, 650000, 700000, 750000, 800000, 850000, 900000, 950000
   )
-  
-  personGroupsTibble <- personGroupsTibble |>
-    dplyr::mutate(total = eval(parse(text = formula))) |>
-    dplyr::mutate(totalBin = cut(total, breaks = breaks, include.lowest = TRUE))
 
-  groupOfCovariatesObject$personGroupsTibble <- personGroupsTibble
-  return(groupOfCovariatesObject)
+  groupedCovariatesPerPersonTibble_totalScore <- groupedCovariatesPerPersonTibble |>
+    dplyr::mutate(totalScore = eval(parse(text = formula))) |>
+    dplyr::mutate(totalScoreBin = cut(totalScore, breaks = breaks, include.lowest = TRUE)) |>
+    dplyr::select(personSourceValue, totalScore, totalScoreBin)
+
+  return(groupedCovariatesPerPersonTibble_totalScore)
 }
 
 #' Render Covariates Distribution

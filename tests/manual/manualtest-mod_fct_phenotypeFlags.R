@@ -6,7 +6,7 @@ source(testthat::test_path("helper.R"))
 # run module --------------------------------------------------------------
 devtools::load_all(".")
 
-groupsTibble <- tibble::tibble(
+groupedCovariatesTibble <- tibble::tibble(
           groupId = c("g1", "g2", "g3"),
           groupName = c("Group 1", "Group 2", "Group 3"),
           covariateIds = list("1", "2", "3"),
@@ -15,7 +15,7 @@ groupsTibble <- tibble::tibble(
           covariatesDistribution = list("1", "2", "3")
         )
 
-personGroupsTibble <- tibble::tibble(
+groupedCovariatesPerPersonTibble <- tibble::tibble(
   'g1' = c(1, 0, 0),
   'g2' = c(0, 1, 0),
   'g3' = c(0, 0, 1)
@@ -26,17 +26,18 @@ shiny::shinyApp(
     mod_fct_phenotypeFlags_ui("test")
   ),
   function(input, output, session) {
-    r <- shiny::reactiveValues(
-      groupOfCovariatesObject = list(
-        groupsTibble = groupsTibble,
-        personGroupsTibble = personGroupsTibble
-      )
+    r_groupedCovariates <- shiny::reactiveValues(
+      groupedCovariatesTibble = groupedCovariatesTibble,
+      groupedCovariatesPerPersonTibble = groupedCovariatesPerPersonTibble
     )
 
-    rf_flagFormulas <- mod_fct_phenotypeFlags_server("test", r$groupOfCovariatesObject)
+    rf_flagsTable <- mod_fct_phenotypeFlags_server(
+      id = "test",
+      r_groupedCovariates = r_groupedCovariates
+    )
 
     shiny::observe({
-      print(rf_flagFormulas())
+      print(rf_flagsTable())
     })
   },
   options = list(launch.browser = TRUE)

@@ -1,6 +1,6 @@
 
 
-mod_fct_dragAndDropTotalFormula_ui <- function(id) {
+mod_fct_dragAndDropFormula_ui <- function(id) {
   ns <- shiny::NS(id)
   shiny::tagList(
     shinyjs::useShinyjs(),
@@ -8,7 +8,7 @@ mod_fct_dragAndDropTotalFormula_ui <- function(id) {
   )
 }
 
-mod_fct_dragAndDropTotalFormula_server <- function(id, r_groupItems, operatorItems, placeholder) {
+mod_fct_dragAndDropFormula_server <- function(id, r_groupedCovariates, operatorItems, placeholder) {
   shiny::moduleServer(id, function(input, output, session) {
     ns <- session$ns
 
@@ -16,9 +16,12 @@ mod_fct_dragAndDropTotalFormula_server <- function(id, r_groupItems, operatorIte
     # Update is not working, we build the ui in server
     #
     output$operation_expression <- shiny::renderUI({
-      shiny::req(r_groupItems)
+      shiny::req(r_groupedCovariates$groupedCovariatesTibble)
 
-      groupItems <- r_groupItems
+      groupItems <- setNames(
+        r_groupedCovariates$groupedCovariatesTibble$groupId,
+        r_groupedCovariates$groupedCovariatesTibble$groupName
+      )
       operatorItems <- operatorItems
       numbersItems <- 0:9
 
@@ -64,14 +67,17 @@ mod_fct_dragAndDropTotalFormula_server <- function(id, r_groupItems, operatorIte
     })
 
     #
-    # calculates cohort operation expression
+    # calculates formula
     #
-    rf_operationExpression <- shiny::reactive({
-      shiny::req(r_groupItems)
+    rf_formula <- shiny::reactive({
+      shiny::req(r_groupedCovariates$groupedCovariatesTibble)
       shiny::req(input$dest_boxes)
       shiny::req(input$dest_boxes != placeholder)
 
-      groupItems <- r_groupItems
+      groupItems <- setNames(
+        r_groupedCovariates$groupedCovariatesTibble$groupId,
+        r_groupedCovariates$groupedCovariatesTibble$groupName
+      )
 
       expresionElements <- input$dest_boxes
 
@@ -83,19 +89,19 @@ mod_fct_dragAndDropTotalFormula_server <- function(id, r_groupItems, operatorIte
         }
       })
 
-      operationExpression <- list(
-        ids = paste(expresionElements, collapse = " "),
-        names = paste(expressionNames, collapse = " ")
+      formula <- list(
+        formula = paste(expresionElements, collapse = ""),
+        formulaPretty = paste(expressionNames, collapse = "")
       )
 
-      return(operationExpression)
+      return(formula)
      
     })
 
 
     #
-    # returns the operation expresion
+    # returns the formula
     #
-    return(rf_operationExpression)
+    return(rf_formula)
   })
 }

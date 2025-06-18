@@ -7,43 +7,33 @@ mod_fct_phenotypeFlags_ui <- function(id) {
     )
 }
 
-mod_fct_phenotypeFlags_server <- function(id, r_groupOfCovariatesObject) {
+mod_fct_phenotypeFlags_server <- function(id, r_groupedCovariates) {
     shiny::moduleServer(id, function(input, output, session) {
         ns <- session$ns
 
         r <- shiny::reactiveValues(
-            r_groupItems = NULL,
             flagBuildMessage = NULL,
             flagToBeAdded = NULL,
-            flagTable = tibble::tibble(
+            flagsTable = tibble::tibble(
                 flagName = character(),
                 flagColor = character(),
-                flagFormula = character(),
-                formula = character()
+                flagRulePretty = character(),
+                flagRule = character()
             )
         )
 
         #
-        # update the group items
-        #
-        shiny::observe({
-            r$r_groupItems <- setNames(
-                r_groupOfCovariatesObject$groupsTibble$groupId,
-                r_groupOfCovariatesObject$groupsTibble$groupName
-            )
-        })
-        #
         # When add flag button is clicked, show modal dialog
         #
         shiny::observeEvent(input$addFlag_button, {
-            shiny::req(r_groupOfCovariatesObject$groupsTibble |> nrow() > 0)
-            shiny::req(r_groupOfCovariatesObject$personGroupsTibble)
+            shiny::req(r_groupedCovariates$groupedCovariatesTibble |> nrow() > 0)
+            shiny::req(r_groupedCovariates$groupedCovariatesPerPersonTibble)
 
             shiny::showModal(shiny::modalDialog(
                 shiny::tags$h4("Add Flag"),
                 shiny::textInput(ns("flagName_textinput"), "Flag Name", width = "100%", value = "", placeholder = "Enter flag name"),
                 colourpicker::colourInput(ns("flagColor_colorinput"), "Flag Color", value = "red", palette = "limited"),
-                mod_fct_dragAndDropTotalFormula_ui(ns("flagFormula_formula")),
+                mod_fct_dragAndDropFormula_ui(ns("flagFormula_formula")),
                 shiny::tags$h4("Flag message:"),
                 shiny::verbatimTextOutput(ns("flagToBeAdded_textoutput"), placeholder = TRUE),
                 shiny::actionButton(ns("acceptFlag_actionButton"), "Accept"),
@@ -55,9 +45,9 @@ mod_fct_phenotypeFlags_server <- function(id, r_groupOfCovariatesObject) {
         #
         # render the flag formula builder
         #
-        rf_operationExpression <- mod_fct_dragAndDropTotalFormula_server(
+        rf_formula <- mod_fct_dragAndDropFormula_server(
             id = "flagFormula_formula",
-            r_groupItems = r$r_groupItems,
+            r_groupedCovariates = r_groupedCovariates,
             operatorItems = c(
                 `(` = "(", `)` = ")",
                 `<` = "<",
@@ -69,28 +59,30 @@ mod_fct_phenotypeFlags_server <- function(id, r_groupOfCovariatesObject) {
                 `+` = "+",
                 `-` = "-",
                 `*` = "*",
-                `/` = "/"
+                `/` = "/",
+                `&` = "&",
+                `|` = "|",
+                `!` = "!"
             ),
-            placeholder = "Drag and Drop COHORTS and OPERATORS here to create an expression"
+            placeholder = "Drag and Drop to create rule"
         )
 
         #
         # validate the formula
         #
         shiny::observe({
-            shiny::req(r_groupOfCovariatesObject$personGroupsTibble |> nrow() > 0)
-            shiny::req(rf_operationExpression())
+            shiny::req(r_groupedCovariates$groupedCovariatesPerPersonTibble |> nrow() > 0)
+            shiny::req(rf_formula())
 
-            operationExpression <- rf_operationExpression()
-            expressionIds <- operationExpression$ids
-            expressionNames <- operationExpression$names
+            flagRuleFormula <- rf_formula()
+            flagRule <- flagRuleFormula$formula
 
             errorMessage <- NULL
             tryCatch(
                 {
                     numberOfPersonsInFlag <- eval(parse(text = paste(
-                        "r_groupOfCovariatesObject$personGroupsTibble |>",
-                        "dplyr::filter(", expressionIds, ") |>",
+                        "r_groupedCovariates$groupedCovariatesPerPersonTibble |>",
+                        "dplyr::filter(", flagRule, ") |>",
                         "nrow()"
                     )))
                 },
@@ -100,15 +92,18 @@ mod_fct_phenotypeFlags_server <- function(id, r_groupOfCovariatesObject) {
             )
 
             if (!is.null(errorMessage)) {
-                r$flagBuildMessage <- errorMessage
+                r$flagBuildMessage <- paste("Error:", errorMessage)
                 r$flagToBeAdded <- NULL
             } else {
-                r$flagBuildMessage <- paste("Number of persons in flag:", numberOfPersonsInFlag)
+                r$flagBuildMessage <- paste(
+                    "Flag rule:", flagRuleFormula$formulaPretty, "\n",
+                    "Number of persons in flag:", numberOfPersonsInFlag
+                )
                 r$flagToBeAdded <- list(
                     flagName = input$flagName_textinput,
                     flagColor = input$flagColor_colorinput,
-                    flagFormula = expressionNames,
-                    formula = expressionIds
+                    flagRulePretty = flagRuleFormula$formulaPretty,
+                    flagRule = flagRuleFormula$formula
                 )
             }
     
@@ -123,13 +118,13 @@ mod_fct_phenotypeFlags_server <- function(id, r_groupOfCovariatesObject) {
         })
 
         #
-        # accept flag
+        # accept flag, copy form to flagTable
         #
         shiny::observeEvent(input$acceptFlag_actionButton, {
             shiny::req(r$flagToBeAdded)
             shiny::removeModal()
 
-            r$flagTable <- rbind(r$flagTable, r$flagToBeAdded)
+            r$flagsTable <- rbind(r$flagsTable, r$flagToBeAdded)
             r$flagToBeAdded <- NULL
             r$flagBuildMessage <- NULL
         })
@@ -138,26 +133,19 @@ mod_fct_phenotypeFlags_server <- function(id, r_groupOfCovariatesObject) {
         # render the flag table
         #
         output$flagTable_sortableTable <- shiny::renderTable(
-            r$flagTable,
+            r$flagsTable,
             rowNames = TRUE
         )
 
 
         #
-        # Flag table to flag formulas
+        # Return the flag table
         #
-        rf_flagFormulas <- shiny::reactive({
-            shiny::req(r$flagTable)
-
-            flagTable <- r$flagTable
-            flagTable  <- flagTable |> dplyr::mutate(formula = paste(formula, ' ~ ', flagName))
-
-            return(flagTable$formula)
+        rf_flagsTable <- shiny::reactive({
+            shiny::req(r$flagsTable)
+            return(r$flagsTable)
         })
 
-        #
-        # return the flag formulas
-        #
-        return(rf_flagFormulas)
+        return(rf_flagsTable)
     })
 }
