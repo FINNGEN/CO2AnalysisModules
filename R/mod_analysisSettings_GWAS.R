@@ -69,7 +69,7 @@ mod_analysisSettings_GWAS_ui <- function(id) {
 #'
 #' @return A reactive expression that provides the analysis settings for the GWAS.
 #'
-#' @importFrom shiny moduleServer observe req updateTextInput renderText reactive observeEvent 
+#' @importFrom shiny moduleServer observe req updateTextInput renderText reactive observeEvent
 #' @importFrom shinyWidgets updatePickerInput
 #' @importFrom shinyFeedback feedbackWarning
 #' @importFrom stringr str_detect
@@ -180,38 +180,16 @@ mod_analysisSettings_GWAS_server <- function(id, r_connectionHandler) {
     # render info text
     #
     output$info_text <- shiny::renderText({
-      if ( !shiny::isTruthy(input$selectCaseCohort_pickerInput) || 
+      if ( !shiny::isTruthy(input$selectCaseCohort_pickerInput) ||
       !shiny::isTruthy(input$selectControlCohort_pickerInput)) {
         return("")
       }
 
-      cohortsOverlap <- r_connectionHandler$cohortTableHandler$getCohortsOverlap()
-      cohortCounts <- r_connectionHandler$cohortTableHandler$getCohortCounts()
-      cohortsSumary  <- r_connectionHandler$cohortTableHandler$getCohortsSummary()
-
-      nSubjectsOverlap <- cohortsOverlap |>
-        dplyr::filter(
-          stringr::str_detect(cohortIdCombinations, paste0("-", input$selectCaseCohort_pickerInput, "-")) &
-            stringr::str_detect(cohortIdCombinations, paste0("-", input$selectControlCohort_pickerInput, "-"))
-        ) |>
-        dplyr::pull(numberOfSubjects) |>
-        sum()
-
-      nSubjectsCase <- cohortCounts |>
-        dplyr::filter(cohortId == input$selectCaseCohort_pickerInput) |>
-        dplyr::pull(cohortSubjects)
-
-      nSubjectsControl <- cohortCounts |>
-        dplyr::filter(cohortId == input$selectControlCohort_pickerInput) |>
-        dplyr::pull(cohortSubjects)
-
-      nEntriesCase <- cohortCounts |>
-        dplyr::filter(cohortId == input$selectCaseCohort_pickerInput) |>
-        dplyr::pull(cohortEntries)
-
-      nEntriesControl <- cohortCounts |>
-        dplyr::filter(cohortId == input$selectControlCohort_pickerInput) |>
-        dplyr::pull(cohortEntries)
+      nSubjectsOverlap <- r_connectionHandler$cohortTableHandler$getNumberOfOverlappingSubjects(selected_cohortId1=input$selectCaseCohort_pickerInput,selected_cohortId2=input$selectControlCohort_pickerInput)
+      nSubjectsCase <- r_connectionHandler$cohortTableHandler$getNumberOfSubjects(input$selectCaseCohort_pickerInput)
+      nSubjectsControl <- r_connectionHandler$cohortTableHandler$getNumberOfSubjects(input$selectControlCohort_pickerInput)
+      nEntriesCase <- r_connectionHandler$cohortTableHandler$getNumberOfCohortEntries(input$selectCaseCohort_pickerInput)
+      nEntriesControl <- r_connectionHandler$cohortTableHandler$getNumberOfCohortEntries(input$selectControlCohort_pickerInput)
 
       message <- ""
 
@@ -234,7 +212,7 @@ mod_analysisSettings_GWAS_server <- function(id, r_connectionHandler) {
         }
       }
 
-      
+
 
       # counts
       if (nSubjectsCase > nSubjectsControl) {
@@ -257,41 +235,16 @@ mod_analysisSettings_GWAS_server <- function(id, r_connectionHandler) {
       }
 
       # sex
-      sexCase <- cohortsSumary |>
-        dplyr::filter(cohortId == input$selectCaseCohort_pickerInput) |>
-        dplyr::pull(sexCounts)
-      sexControl <- cohortsSumary |>
-        dplyr::filter(cohortId == input$selectControlCohort_pickerInput) |>
-        dplyr::pull(sexCounts)
-      nMaleCases <- sexCase[[1]] |>
-        dplyr::filter(sex == "MALE") |>
-        dplyr::pull(n)
-      nMaleCases <- ifelse(length(nMaleCases) == 0, 0, nMaleCases)
-      nFemaleCases <- sexCase[[1]] |>
-        dplyr::filter(sex == "FEMALE") |>
-        dplyr::pull(n)
-      nFemaleCases <- ifelse(length(nFemaleCases) == 0, 0, nFemaleCases)
-      nMaleControls <- sexControl[[1]] |>
-        dplyr::filter(sex == "MALE") |>
-        dplyr::pull(n)
-      nMaleControls <- ifelse(length(nMaleControls) == 0, 0, nMaleControls)
-      nFemaleControls <- sexControl[[1]] |>
-        dplyr::filter(sex == "FEMALE") |>
-        dplyr::pull(n)
-      nFemaleControls <- ifelse(length(nFemaleControls) == 0, 0, nFemaleControls)
+      fisher_results = r_connectionHandler$cohortTableHandler$getSexFisherTest(selected_cohortId1=input$selectCaseCohort_pickerInput,
+                                                                               selected_cohortId2=input$selectControlCohort_pickerInput)
 
-      data <- matrix(c(nMaleCases, nFemaleCases, nMaleControls, nFemaleControls), ncol = 2)
-      fisher_results <- stats::fisher.test(data)
 
       # year of birth
-      yearOfBirthCase <- cohortsSumary |>
-        dplyr::filter(cohortId == input$selectCaseCohort_pickerInput) |>
-        dplyr::pull(histogramBirthYear)
-      yearOfBirthControl <- cohortsSumary |>
-        dplyr::filter(cohortId == input$selectControlCohort_pickerInput) |>
-        dplyr::pull(histogramBirthYear)
+      yearOfBirthComparison_results = r_connectionHandler$cohortTableHandler$getYearOfBirthTests(selected_cohortId1=input$selectCaseCohort_pickerInput,
+                                                                                                 selected_cohortId2=input$selectControlCohort_pickerInput)
 
-      ttestResult <- t.test(yearOfBirthCase[[1]]  |> tidyr::uncount(n), yearOfBirthControl[[1]]  |> tidyr::uncount(n))
+      ttestResult <- yearOfBirthComparison_results[["ttestResult"]]
+
 
       if (fisher_results$p.value < 0.05 & ttestResult$p.value < 0.05) {
         message <- paste0(message, "\u26A0\uFE0F Cases and control cohorts, seem to have the same sex and year of birth distribution. \n")
