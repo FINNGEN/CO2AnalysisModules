@@ -164,34 +164,90 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
     #
     # When click input$createGroupFromSelected, create a new group into r_groupedCovariates
     #
+    # shiny::observeEvent(input$createGroupFromSelected, {
+    #   selected <- reactable::getReactableState("codeWasCovariatesTable", "selected")
+    #   if (!is.null(selected)) {
+    #     # Get the selected rows from the table
+    #     selectedRows <- r$codeWasCovariatesTibble[selected, ]
+    #
+    #     # Update the list of groups with selected rows
+    #     res <- .appendCovariateGroup(
+    #       analysisResults = analysisResults,
+    #       covariateIds = selectedRows$covariateId,
+    #       groupedCovariatesTibble = r_groupedCovariates$groupedCovariatesTibble,
+    #       groupedCovariatesPerPersonTibble = r_groupedCovariates$groupedCovariatesPerPersonTibble
+    #     )
+    #     r_groupedCovariates$groupedCovariatesTibble <- res$groupedCovariatesTibble
+    #     r_groupedCovariates$groupedCovariatesPerPersonTibble <- res$groupedCovariatesPerPersonTibble
+    #   }
+    #
+    #   # clear selection
+    #   reactable::updateReactable("codeWasCovariatesTable", selected = NA)
+    # })
+
     shiny::observeEvent(input$createGroupFromSelected, {
       selected <- reactable::getReactableState("codeWasCovariatesTable", "selected")
-      if (!is.null(selected)) {
-        # Get the selected rows from the table
-        selectedRows <- r$codeWasCovariatesTibble[selected, ]
-
-        # Update the list of groups with selected rows
-        res <- .appendCovariateGroup(
-          analysisResults = analysisResults,
-          covariateIds = selectedRows$covariateId,
-          groupedCovariatesTibble = r_groupedCovariates$groupedCovariatesTibble,
-          groupedCovariatesPerPersonTibble = r_groupedCovariates$groupedCovariatesPerPersonTibble
-        )
-        r_groupedCovariates$groupedCovariatesTibble <- res$groupedCovariatesTibble
-        r_groupedCovariates$groupedCovariatesPerPersonTibble <- res$groupedCovariatesPerPersonTibble
+      if (is.null(selected) || length(selected) == 0) {
+        showNotification("Please select at least one row to group.", type = "error")
+        return()
       }
 
-      # clear selection
-      reactable::updateReactable("codeWasCovariatesTable", selected = NA)
+      showModal(
+        modalDialog(
+          title = "Name Your Group",
+          textInput(ns("groupNameInput"), "Group Name:", ""),
+          footer = tagList(
+            modalButton("Cancel"),
+            actionButton(ns("confirmGroupName"), "Create Group")
+          ),
+          tags$script(HTML(sprintf("
+            $(document).on('shown.bs.modal', function() {
+              $('#%s').focus();
+            });", ns("groupNameInput"))))
+        )
+      )
+
     })
 
+    shiny::observeEvent(input$confirmGroupName, {
+      groupName <- input$groupNameInput
+
+      # Validate group name input
+      if (is.null(groupName) || nchar(trimws(groupName)) == 0) {
+        showNotification("Group name cannot be empty.", type = "error")
+        return()
+      }
+
+      selected <- reactable::getReactableState("codeWasCovariatesTable", "selected")
+      if (is.null(selected) || length(selected) == 0) {
+        showNotification("No rows selected.", type = "error")
+        removeModal()
+        return()
+      }
+
+      selectedRows <- r$codeWasCovariatesTibble[selected, ]
+
+      res <- .appendCovariateGroup(
+        analysisResults = analysisResults,
+        covariateIds = selectedRows$covariateId,
+        newGroupName = groupName,
+        groupedCovariatesTibble = r_groupedCovariates$groupedCovariatesTibble,
+        groupedCovariatesPerPersonTibble = r_groupedCovariates$groupedCovariatesPerPersonTibble
+      )
+
+      r_groupedCovariates$groupedCovariatesTibble <- res$groupedCovariatesTibble
+      r_groupedCovariates$groupedCovariatesPerPersonTibble <- res$groupedCovariatesPerPersonTibble
+
+      reactable::updateReactable("codeWasCovariatesTable", selected = NA)
+      removeModal()
+    })
 
     #
     # When r_groupedCovariates$groupedCovariatesTibble is ready, plot table of groups
     #
     output$groupedCovariatesTable <- reactable::renderReactable({
       toPlot <- r_groupedCovariates$groupedCovariatesTibble |>
-        dplyr::mutate(deleteButton = NA)
+        dplyr::mutate(editButton = NA,deleteButton = NA)
 
       columns <- list(
         groupId = reactable::colDef(show = FALSE),
@@ -201,7 +257,16 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
           name = "Concept Codes",
           minWidth = 100,
           cell = function(value) {
-            paste(value, collapse = "<br>")
+            display <- if (length(value) > 3) {
+              paste(c(value[1:3], "..."), collapse = "<br>")
+            } else {
+              paste(value, collapse = "<br>")
+            }
+            full <- paste(value, collapse = ", ")
+            as.character(htmltools::tags$div(title = full, HTML(display),
+              style = "transition: background-color 0.3s ease;",
+              onmouseover = "this.style.backgroundColor='#ffffcc'; this.style.cursor='pointer';",
+              onmouseout = "this.style.backgroundColor='';"))
           },
           html = TRUE
         ),
@@ -209,23 +274,62 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
           name = "Covariate Names",
           minWidth = 200,
           cell = function(value) {
-            value <- value |>
+            processed <- value |>
               stringr::str_remove(".*:") |>
-              stringr::str_trunc(80) |>
-              paste(collapse = "<br>")
+              stringr::str_trunc(80)
+
+            display <- if (length(processed) > 3) {
+              paste(c(processed[1:3], "..."), collapse = "<br>")
+            } else {
+              paste(processed, collapse = "<br>")
+            }
+            full <- paste(processed, collapse = ", ")
+            as.character(htmltools::tags$div(title = full, HTML(display),
+               style = "transition: background-color 0.3s ease;",
+               onmouseover = "this.style.backgroundColor='#ffffcc'; this.style.cursor='pointer';",
+               onmouseout = "this.style.backgroundColor='';"))
           },
           html = TRUE
         ),
         covariatesDistribution = reactable::colDef(
           name = "Covariates Distribution",
           width = 300,
-          cell = .renderCovariatesDistribution
+          cell = function(value, index) {
+            htmltools::tagList(
+              .renderCovariatesDistribution(value),
+              shiny::actionButton(paste0("showDistPlot_", index), "View Larger", style = "font-size: 0.7em; margin-top: 5px;")
+            )
+          }
+        ),
+        editButton = reactable::colDef(
+          name = "",
+          sortable = FALSE,
+          cell = function(value, index) {
+            htmltools::tags$button(
+              shiny::icon("pen"),
+              class = "btn btn-outline-primary btn-sm",
+              onclick = sprintf(
+                "Shiny.setInputValue('%s', %d, {priority: 'event'})",
+                ns("edit_row"), index
+              )
+            )
+          },
+          maxWidth = 50
         ),
         deleteButton = reactable::colDef(
           name = "",
           sortable = FALSE,
-          cell = function() htmltools::tags$button(shiny::icon("trash")),
-          maxWidth = 40
+          cell = function(value, index) {
+            htmltools::tags$button(
+              shiny::icon("trash"),
+              class = "btn btn-outline-danger btn-sm",
+              onclick = sprintf(
+                "Shiny.setInputValue('%s', %d, {priority: 'event'})",
+                ns("delete_row"), index
+              )
+            )
+          },
+          maxWidth = 50
         )
       )
 
@@ -233,6 +337,64 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
         columns = columns,
         resizable = TRUE
       )
+    })
+
+    observeEvent(input$delete_row, {
+      index <- input$delete_row
+      groupName <- r_groupedCovariates$groupedCovariatesTibble[index, "groupName"]
+
+      shinyWidgets::confirmSweetAlert(
+        session = session,
+        inputId = "confirmDelete",
+        title = "Confirm Deletion",
+        text = paste0("Are you sure you want to delete the group '", groupName, "'?"),
+        type = "warning",
+        btn_labels = c("Cancel", "Delete"),
+        danger_mode = TRUE
+      )
+    })
+
+    observeEvent(input$confirmDelete, {
+      req(input$delete_row, input$confirmDelete)
+      if (isTRUE(input$confirmDelete)) {
+        index <- input$delete_row
+
+        res <- .deleteCovariateGroup(
+          rowIndex = index,
+          groupedCovariatesTibble = r_groupedCovariates$groupedCovariatesTibble,
+          groupedCovariatesPerPersonTibble = r_groupedCovariates$groupedCovariatesPerPersonTibble
+        )
+
+        r_groupedCovariates$groupedCovariatesTibble <- res$groupedCovariatesTibble
+        r_groupedCovariates$groupedCovariatesPerPersonTibble <- res$groupedCovariatesPerPersonTibble
+      }
+    })
+
+
+    observeEvent(input$edit_row, {
+      index <- input$edit_row
+      currentName <- r_groupedCovariates$groupedCovariatesTibble[index, "groupName"]
+
+      shinyWidgets::inputSweetAlert(
+        session = session,
+        inputId = "confirmEdit",
+        title = paste0("Edit name for group '", currentName, "'"),
+        input = "text",
+        inputValue = currentName,
+        showCancelButton = TRUE,
+        inputPlaceholder = "Enter new group name",
+        type = "question"
+      )
+
+    })
+
+    observeEvent(input$confirmEdit, {
+      req(input$edit_row, input$confirmEdit)
+
+      index <- input$edit_row
+      newName <- input$confirmEdit
+
+      r_groupedCovariates$groupedCovariatesTibble[index, "groupName"] <- newName
     })
 
     #
@@ -527,10 +689,17 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
 #' @importFrom dplyr tbl left_join filter distinct mutate collect
 .appendCovariateGroup <- function(
     analysisResults,
-    covariateIds,
+    covariateIds,newGroupName,
     groupedCovariatesTibble,
     groupedCovariatesPerPersonTibble) {
-  newGroupId <- nrow(groupedCovariatesTibble) + 1
+
+  if (nrow(groupedCovariatesTibble) == 0) {
+    newGroupId <- 1
+  } else {
+    existingIds <- groupedCovariatesTibble$groupId
+    existingNums <- as.integer(sub("g", "", existingIds))
+    newGroupId <- max(existingNums, na.rm = TRUE) + 1
+  }
 
   sumAllCovariatesPerPerson <- analysisResults |>
     dplyr::tbl("covariatesPerPerson") |>
@@ -562,7 +731,7 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
 
   groupTibble <- tibble::tibble(
     groupId = paste0("g", newGroupId),
-    groupName = paste("Group ", newGroupId),
+    groupName = newGroupName,
     covariateIds = list(covariateIds),
     conceptCodes = list(conceptCodes),
     covariateNames = list(covariateNames),
@@ -585,6 +754,31 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
     groupedCovariatesPerPersonTibble = groupedCovariatesPerPersonTibble
   ))
 }
+
+
+.deleteCovariateGroup <- function(
+    rowIndex,
+    groupedCovariatesTibble,
+    groupedCovariatesPerPersonTibble
+) {
+  # Get the groupId of the row to delete
+  groupIdToDelete <- groupedCovariatesTibble$groupId[rowIndex]
+
+  # Remove the row from groupedCovariatesTibble
+  groupedCovariatesTibble <- groupedCovariatesTibble[-rowIndex, ]
+
+  # Remove the corresponding column from groupedCovariatesPerPersonTibble if exists
+  if (!is.null(groupedCovariatesPerPersonTibble)) {
+    groupedCovariatesPerPersonTibble <- groupedCovariatesPerPersonTibble |>
+      dplyr::select(-dplyr::any_of(groupIdToDelete))
+  }
+
+  return(list(
+    groupedCovariatesTibble = groupedCovariatesTibble,
+    groupedCovariatesPerPersonTibble = groupedCovariatesPerPersonTibble
+  ))
+}
+
 
 #' Calculate Total Scores
 #' @description Calculates the total scores for each person in the `groupedCovariatesPerPersonTibble` given a formula
@@ -624,14 +818,29 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
 #' @return A plot of the covariates distribution
 #' @importFrom apexcharter apex ax_chart ax_legend
 .renderCovariatesDistribution <- function(covariatesDistribution) {
-  if (is.null(covariatesDistribution)) {
-    return(NULL)
-  }
+  if (is.null(covariatesDistribution) || nrow(covariatesDistribution) == 0) return(NULL)
+  if (!all(c("value", "n") %in% colnames(covariatesDistribution))) return(NULL)
 
-  plot <- covariatesDistribution |>
-    apexcharter::apex(apexcharter::aes(x = value, y = n), type = "column", height = 150, width = 250) |>
-    apexcharter::ax_chart(toolbar = list(show = FALSE)) |>
-    apexcharter::ax_legend(show = FALSE)
+  # Calculate IQR boundaries for outliers
+  Q1 <- quantile(covariatesDistribution$value, 0.25, na.rm = TRUE)
+  Q3 <- quantile(covariatesDistribution$value, 0.75, na.rm = TRUE)
+  IQR <- Q3 - Q1
+  lowerBound <- Q1 - 1.5 * IQR
+  upperBound <- Q3 + 1.5 * IQR
 
-  return(plot)
+  covariatesDistribution$isOutlier <- with(covariatesDistribution, ifelse(value < lowerBound | value > upperBound,"outlier_group_value",""))
+
+  plot <- apexcharter::apex(
+        covariatesDistribution,
+        apexcharter::aes(x = value, y = n, fill = as.factor(isOutlier)),
+        type = "column",
+        height = 150,
+        width = 250
+      ) |>
+        apexcharter::ax_colors(c("#3498DB", "#E74C3C")) |>
+        apexcharter::ax_chart(toolbar = list(show = FALSE)) |>
+        apexcharter::ax_xaxis(type = "numeric") |>
+        apexcharter::ax_legend(show = FALSE)
+
+  htmltools::tags$div(style = "width: 250px; height: 150px;", plot)
 }
