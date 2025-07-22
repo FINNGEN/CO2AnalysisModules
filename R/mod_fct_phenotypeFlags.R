@@ -45,27 +45,57 @@ mod_fct_phenotypeFlags_server <- function(id, r_groupedCovariates) {
         #
         # render the flag formula builder
         #
+        operators_flag = c(`(` = "(", `)` = ")",`<` = "<",`>` = ">",`>=` = ">=",
+                           `<=` = "<=", `==` = "==",`!=` = "!=",`+` = "+",`-` = "-",
+                           `*` = "*",`/` = "/",`&` = "&",`|` = "|",`!` = "!")
         rf_formula <- mod_fct_dragAndDropFormula_server(
             id = "flagFormula_formula",
             r_groupedCovariates = r_groupedCovariates,
-            operatorItems = c(
-                `(` = "(", `)` = ")",
-                `<` = "<",
-                `>` = ">",
-                `>=` = ">=",
-                `<=` = "<=",
-                `==` = "==",
-                `!=` = "!=",
-                `+` = "+",
-                `-` = "-",
-                `*` = "*",
-                `/` = "/",
-                `&` = "&",
-                `|` = "|",
-                `!` = "!"
-            ),
+            operatorItems = operators_flag,
             placeholder = "Drag and Drop to create rule"
         )
+
+        is_flagformula_incomplete <- function(formula, operators) {
+
+          f <- trimws(formula)
+          if (nchar(f) == 0) {
+            return(TRUE)
+          }
+
+          escape_regex <- function(x) {
+            gsub("([][{}()+*^$|\\\\?.])", "\\\\\\1", x)
+          }
+
+          escaped_ops <- escape_regex(operators)
+          invalid_start_ends <- escape_regex(c("<", ">", ">=", "<=", "==", "!=","!","+","=" ,"-", "*", "/", "&", "|"))
+
+          ops_pattern_end <- paste0("(", paste0(invalid_start_ends, collapse = "|"), ")$")
+
+          # formula should not end with these operators
+          if (grepl(ops_pattern_end, f)) {
+            return(TRUE)
+          }
+
+          # formula should not start with these operators
+          ops_pattern_start <- paste0("^(", paste(invalid_start_ends, collapse = "|"), ")")
+          if (grepl(ops_pattern_start, f)) return(TRUE)
+
+          # check for unmatched parentheses
+          open_parens <- stringr::str_count(f, stringr::fixed("("))
+          close_parens <- stringr::str_count(f, stringr::fixed(")"))
+
+          if (open_parens != close_parens) {
+            return(TRUE)
+          }
+
+          # just variable with no operators
+          contains_operator <- any(sapply(escaped_ops, function(op) grepl(op, f)))
+          if (!contains_operator) return(TRUE)
+
+          return(FALSE)
+
+        }
+
 
         #
         # validate the formula
@@ -73,9 +103,17 @@ mod_fct_phenotypeFlags_server <- function(id, r_groupedCovariates) {
         shiny::observe({
             shiny::req(r_groupedCovariates$groupedCovariatesPerPersonTibble |> nrow() > 0)
             shiny::req(rf_formula())
+            #browser()
 
             flagRuleFormula <- rf_formula()
             flagRule <- flagRuleFormula$formula
+
+            # Check if formula is potentially incomplete (e.g., ends with operator or is empty)
+            if (is_flagformula_incomplete(flagRule, operators_flag)) {
+              r$flagBuildMessage <- NULL
+              r$flagToBeAdded <- NULL
+              return()
+            }
 
             errorMessage <- NULL
             tryCatch(
@@ -87,7 +125,7 @@ mod_fct_phenotypeFlags_server <- function(id, r_groupedCovariates) {
                     )))
                 },
                 error = function(e) {
-                    errorMessage <<- e$message
+                    errorMessage <<- paste("formula syntax: formula should result in logical values. Details:", e$message)
                 }
             )
 
@@ -106,7 +144,7 @@ mod_fct_phenotypeFlags_server <- function(id, r_groupedCovariates) {
                     flagRule = flagRuleFormula$formula
                 )
             }
-    
+
         })
 
         #

@@ -3,7 +3,7 @@ devtools::load_all(".")
 source(testthat::test_path("setup.R"))
 source(testthat::test_path("helper.R"))
 
-cohortTableHandler <- helper_createNewCohortTableHandler(addCohorts = "HadesExtrasFractureCohortsMatched")
+cohortTableHandler <- helper_createNewCohortTableHandler(addCohorts = "EunomiaDefaultCohorts")
 
 # run module --------------------------------------------------------------
 devtools::load_all(".")

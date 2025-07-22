@@ -4,15 +4,18 @@ source(testthat::test_path("setup.R"))
 source(testthat::test_path("helper.R"))
 
 # set up
+#cohortTableHandler <-
+#  helper_createNewCohortTableHandler(addCohorts = "DiabetesSyntheaCohorts")
+
 cohortTableHandler <-
-  helper_createNewCohortTableHandler(addCohorts = "DiabetesSyntheaCohorts")
+  helper_createNewCohortTableHandler(addCohorts = "EunomiaDefaultCohorts")
 
 exportFolder <- file.path(tempdir(), "testCodeWAS")
 dir.create(exportFolder, showWarnings = FALSE)
 
 analysisSettings <- list(
   cohortIdCases = 1,
-  cohortIdControls = 0,
+  cohortIdControls = 3,
   analysisIds = c(
       141, # source condition counts
       342, # ATC group counts

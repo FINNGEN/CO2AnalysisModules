@@ -68,6 +68,19 @@ mod_resultsVisualisation_PhenotypeScoring_ui <- function(id) {
       ),
       shiny::hr(),
       shiny::hr(),
+      tags$script(HTML("
+      Shiny.addCustomMessageHandler('focusInput', function(message) {
+        var id = message.id;
+        setTimeout(function() {
+          var el = document.getElementById(id);
+          if(el) {
+            el.focus();
+            // Optionally select all text:
+            if(el.select) el.select();
+          }
+        }, 200);  // small delay to ensure modal is rendered
+      });
+    "))
     )
   ) # end of fluidPage
 }
@@ -200,11 +213,14 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
             modalButton("Cancel"),
             actionButton(ns("confirmGroupName"), "Create Group")
           ),
-          tags$script(HTML(sprintf("
-            $(document).on('shown.bs.modal', function() {
-              $('#%s').focus();
-            });", ns("groupNameInput"))))
+          easyClose = TRUE,
+          fade = TRUE,
+          size = "s"
         )
+      )
+      session$sendCustomMessage(
+        type = 'focusInput',
+        message = list(id = ns("groupNameInput"))
       )
 
     })
@@ -444,10 +460,27 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
       shiny::req(rf_totalScoreFormula())
 
       totalScoreFormula <- rf_totalScoreFormula()
+      formula <- totalScoreFormula$formula
+
       groupedCovariatesPerPersonTibble <- r_groupedCovariates$groupedCovariatesPerPersonTibble
 
       errorMessage <- NULL
       groupedCovariatesPerPersonTibble_totalScore <- NULL
+
+      # Check if formula is potentially incomplete (e.g., ends with operator or is empty)
+      isIncomplete <- function(f) {
+        if (!nzchar(f)) return(TRUE)
+        endsWithOp <- grepl("[+*/\\-]\\s*$", f)
+        unbalancedParens <- stringr::str_count(f, "\\(") != stringr::str_count(f, "\\)")
+        endsWithOp || unbalancedParens
+      }
+
+      if (isIncomplete(formula)) {
+        r$errorMessageTotalScore <- NULL
+        r_groupedCovariates$groupedCovariatesPerPersonTibble_totalScore <- NULL
+        return()
+      }
+
       tryCatch(
         {
           groupedCovariatesPerPersonTibble_totalScore <- .calculateTotalScores(
@@ -456,7 +489,7 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
           )
         },
         error = function(e) {
-          errorMessage <<- e$message
+          errorMessage <<- "Error: Invalid formula. Please check your expression syntax and variable names."
         }
       )
 
@@ -491,12 +524,19 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
       shiny::req(r_groupedCovariates$groupedCovariatesPerPersonTibble_totalScore)
 
       flagsTable <- rf_flagsTable()
+
+      # Check if flagsTable has any rows
+      if (nrow(flagsTable) == 0) {
+        r$errorMessagePhenotypeFlags <- NULL
+        r_groupedCovariates$groupedCovariatesPerPersonTibble_flag <- NULL
+        return()
+      }
+
       flagsTable <- flagsTable |>
         dplyr::mutate(flagCaseWhenRule = paste0(flagRule, " ~ '", flagName, "'"))
       flagCaseWhenRules <- paste(flagsTable$flagCaseWhenRule, collapse = ", \n")
 
       groupedCovariatesPerPersonTibble <- r_groupedCovariates$groupedCovariatesPerPersonTibble
-
 
       errorMessage <- NULL
       groupedCovariatesPerPersonTibble_flag <- NULL
@@ -518,7 +558,7 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
       if (is.null(errorMessage)) {
         r$errorMessagePhenotypeFlags <- errorMessage
       } else {
-        r$errorMessagePhenotypeFlags <- errorMessage
+        r$errorMessagePhenotypeFlags <- paste("error when filtering with flag:", errorMessage)
       }
 
       r_groupedCovariates$groupedCovariatesPerPersonTibble_flag <- groupedCovariatesPerPersonTibble_flag
@@ -804,8 +844,14 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
     200000, 250000, 300000, 350000, 400000, 450000, 500000, 550000, 600000, 650000, 700000, 750000, 800000, 850000, 900000, 950000
   )
 
+  # Parse formula first to catch syntax errors
+  parsed_formula <- tryCatch(
+    parse(text = formula),
+    error = function(e) stop(paste("Formula syntax error:", e$message))
+  )
+
   groupedCovariatesPerPersonTibble_totalScore <- groupedCovariatesPerPersonTibble |>
-    dplyr::mutate(totalScore = eval(parse(text = formula))) |>
+    dplyr::mutate(totalScore = eval(parsed_formula)) |>
     dplyr::mutate(totalScoreBin = cut(totalScore, breaks = breaks, include.lowest = TRUE)) |>
     dplyr::select(personSourceValue, totalScore, totalScoreBin)
 
