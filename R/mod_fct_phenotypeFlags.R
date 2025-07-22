@@ -3,7 +3,7 @@ mod_fct_phenotypeFlags_ui <- function(id) {
     shiny::tagList(
         shinyjs::useShinyjs(),
         shiny::actionButton(ns("addFlag_button"), "Add Flag"),
-        shinyjqui::sortableTableOutput(ns("flagTable_sortableTable"))
+        reactable::reactableOutput(ns("flagTable_sortableTable"))
     )
 }
 
@@ -19,7 +19,8 @@ mod_fct_phenotypeFlags_server <- function(id, r_groupedCovariates) {
                 flagColor = character(),
                 flagRulePretty = character(),
                 flagRule = character()
-            )
+            ),
+            flagBeingEditedIndex = NULL
         )
 
         #
@@ -48,12 +49,13 @@ mod_fct_phenotypeFlags_server <- function(id, r_groupedCovariates) {
         operators_flag = c(`(` = "(", `)` = ")",`<` = "<",`>` = ">",`>=` = ">=",
                            `<=` = "<=", `==` = "==",`!=` = "!=",`+` = "+",`-` = "-",
                            `*` = "*",`/` = "/",`&` = "&",`|` = "|",`!` = "!")
-        rf_formula <- mod_fct_dragAndDropFormula_server(
+        rf_formula_res <- mod_fct_dragAndDropFormula_server(
             id = "flagFormula_formula",
             r_groupedCovariates = r_groupedCovariates,
             operatorItems = operators_flag,
             placeholder = "Drag and Drop to create rule"
         )
+        rf_formula = rf_formula_res$get_formula
 
         is_flagformula_incomplete <- function(formula, operators) {
 
@@ -158,22 +160,123 @@ mod_fct_phenotypeFlags_server <- function(id, r_groupedCovariates) {
         #
         # accept flag, copy form to flagTable
         #
-        shiny::observeEvent(input$acceptFlag_actionButton, {
-            shiny::req(r$flagToBeAdded)
-            shiny::removeModal()
+        observeEvent(input$acceptFlag_actionButton, {
+          shiny::req(r$flagToBeAdded)
 
+          if (is.null(r$flagBeingEditedIndex)) {
+            # Add new
             r$flagsTable <- rbind(r$flagsTable, r$flagToBeAdded)
-            r$flagToBeAdded <- NULL
-            r$flagBuildMessage <- NULL
+          } else {
+            # Edit existing
+            r$flagsTable[r$flagBeingEditedIndex, ] <- r$flagToBeAdded
+            r$flagBeingEditedIndex <- NULL
+          }
+
+          r$flagToBeAdded <- NULL
+          r$flagBuildMessage <- NULL
+          removeModal()
         })
+
 
         #
         # render the flag table
         #
-        output$flagTable_sortableTable <- shiny::renderTable(
-            r$flagsTable,
-            rowNames = TRUE
-        )
+        # output$flagTable_sortableTable <- shiny::renderTable(
+        #     r$flagsTable,
+        #     rowNames = TRUE
+        # )
+
+        # render the flags
+        output$flagTable_sortableTable <- reactable::renderReactable({
+          shiny::req(r$flagsTable)
+
+          df <- r$flagsTable
+          if (nrow(df) == 0) return(NULL)
+
+          flags <- r$flagsTable |>
+            dplyr::mutate(editButton = NA, deleteButton = NA)
+
+          columns <- list(
+            flagName = reactable::colDef(name = "Flag Name"),
+            flagColor = reactable::colDef(name = "Color"),
+            flagRulePretty = reactable::colDef(name = "Rule"),
+            editButton = reactable::colDef(
+              name = "",
+              sortable = FALSE,
+              cell = function(value, index) {
+                htmltools::tags$button(
+                  shiny::icon("pen"),
+                  class = "btn btn-outline-primary btn-sm",
+                  onclick = sprintf("Shiny.setInputValue('%s', %d, {priority: 'event'})", ns("edit_flag"), index)
+                )
+              },
+              maxWidth = 50
+            ),
+            deleteButton = reactable::colDef(
+              name = "",
+              sortable = FALSE,
+              cell = function(value, index) {
+                htmltools::tags$button(
+                  shiny::icon("trash"),
+                  class = "btn btn-outline-danger btn-sm",
+                  onclick = sprintf("Shiny.setInputValue('%s', %d, {priority: 'event'})", ns("delete_flag"), index)
+                )
+              },
+              maxWidth = 50
+            )
+          )
+
+          reactable::reactable(flags, columns = columns, resizable = TRUE)
+        })
+
+        # Deletion confirmation
+        observeEvent(input$delete_flag, {
+          index <- input$delete_flag
+          flagName <- r$flagsTable[index, "flagName"]
+
+          shinyWidgets::confirmSweetAlert(
+            session = session,
+            inputId = "confirmFlagDelete",
+            title = "Confirm Deletion",
+            text = paste0("Are you sure you want to delete the flag '", flagName, "'?"),
+            type = "warning",
+            btn_labels = c("Cancel", "Delete"),
+            danger_mode = TRUE
+          )
+        })
+
+        observeEvent(input$confirmFlagDelete, {
+          req(input$delete_flag, input$confirmFlagDelete)
+          if (isTRUE(input$confirmFlagDelete)) {
+            index <- input$delete_flag
+            r$flagsTable <- r$flagsTable[-index, ]
+          }
+        })
+
+        # Edit flag using the dialog box
+        observeEvent(input$edit_flag, {
+          index <- input$edit_flag
+          r$flagBeingEditedIndex <- index
+          browser()
+
+          selectedFlag <- r$flagsTable[index, ]
+
+          updateTextInput(session, "flagName_textinput", value = selectedFlag$flagName)
+          colourpicker::updateColourInput(session, "flagColor_colorinput", value = selectedFlag$flagColor)
+          rf_formula_res$set_formula(selectedFlag$flagRule)
+
+          showModal(shiny::modalDialog(
+            shiny::tags$h4("Edit Flag"),
+            shiny::textInput(ns("flagName_textinput"), "Flag Name", width = "100%"),
+            colourpicker::colourInput(ns("flagColor_colorinput"), "Flag Color", palette = "limited"),
+            mod_fct_dragAndDropFormula_ui(ns("flagFormula_formula")),
+            shiny::tags$h4("Flag message:"),
+            shiny::verbatimTextOutput(ns("flagToBeAdded_textoutput"), placeholder = TRUE),
+            shiny::actionButton(ns("acceptFlag_actionButton"), "Save Changes"),
+            shiny::modalButton("Cancel"),
+            footer = NULL
+          ))
+        })
 
 
         #

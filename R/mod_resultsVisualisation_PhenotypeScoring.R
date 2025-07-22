@@ -437,7 +437,7 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
     #
     # render the flag formula builder
     #
-    rf_totalScoreFormula <- mod_fct_dragAndDropFormula_server(
+    rf_totalScoreFormula_res <- mod_fct_dragAndDropFormula_server(
       id = "totalScoreFormula_formula",
       r_groupedCovariates = r_groupedCovariates,
       operatorItems = c(
@@ -449,6 +449,8 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
       ),
       placeholder = "Drag and Drop here to create formula"
     )
+    rf_totalScoreFormula = rf_totalScoreFormula_res$get_formula
+
 
 
     #
@@ -515,6 +517,7 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
     # render the flag formula builder
     #
     rf_flagsTable <- mod_fct_phenotypeFlags_server("phenotypeFlags_flags", r_groupedCovariates)
+
 
     #
     # Evaluate the flag formulas

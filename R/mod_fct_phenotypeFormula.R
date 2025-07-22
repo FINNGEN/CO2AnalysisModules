@@ -12,6 +12,8 @@ mod_fct_dragAndDropFormula_server <- function(id, r_groupedCovariates, operatorI
   shiny::moduleServer(id, function(input, output, session) {
     ns <- session$ns
 
+    destBoxes <- shiny::reactiveVal(NULL)
+
     #
     # Update is not working, we build the ui in server
     #
@@ -34,7 +36,7 @@ mod_fct_dragAndDropFormula_server <- function(id, r_groupedCovariates, operatorI
             inputId = ns("dest_boxes"),
             width = "100%",
             label = NULL,
-            items = NULL,
+            items = destBoxes(),
             placeholder = placeholder
           )
         ),
@@ -95,13 +97,26 @@ mod_fct_dragAndDropFormula_server <- function(id, r_groupedCovariates, operatorI
       )
 
       return(formula)
-     
+
     })
+
+    # To pre-fill the formula for editing
+    set_formula <- function(formula_string) {
+      # Split formula into items
+      parsed <- stringr::str_extract_all(formula_string, "g\\d+|[><=()!&|]+|\\d+")[[1]]
+      destBoxes(parsed)
+    }
 
 
     #
     # returns the formula
     #
-    return(rf_formula)
+    #return(rf_formula)
+    return(list(
+      get_formula = rf_formula,
+      set_formula = set_formula
+    ))
+
+
   })
 }
