@@ -105,7 +105,6 @@ mod_fct_phenotypeFlags_server <- function(id, r_groupedCovariates) {
         shiny::observe({
             shiny::req(r_groupedCovariates$groupedCovariatesPerPersonTibble |> nrow() > 0)
             shiny::req(rf_formula())
-            #browser()
 
             flagRuleFormula <- rf_formula()
             flagRule <- flagRuleFormula$formula
@@ -257,7 +256,6 @@ mod_fct_phenotypeFlags_server <- function(id, r_groupedCovariates) {
         observeEvent(input$edit_flag, {
           index <- input$edit_flag
           r$flagBeingEditedIndex <- index
-          browser()
 
           selectedFlag <- r$flagsTable[index, ]
 

@@ -42,29 +42,60 @@ mod_resultsVisualisation_PhenotypeScoring_ui <- function(id) {
       shiny::hr(),
       shiny::hr(),
       shiny::hr(),
-      shiny::h4("Flags:"),
-      mod_fct_phenotypeFlags_ui(ns("phenotypeFlags_flags")),
-      shiny::br(), shiny::br(), shiny::br(),
-      shiny::tags$h4("Flags message:"),
-      shiny::verbatimTextOutput(ns("phenotypeFlags_text"), placeholder = TRUE),
-      shiny::hr(),
-      shiny::hr(),
-      shiny::hr(),
-      shiny::h4("Total Score Distribution"),
-      shiny::plotOutput(ns("totalScoreDistributionPlot"), height = 500),
-      shiny::sliderInput(
-        ns("scoreRange"),
-        "Score Range",
-        width = "100%",
-        min = 0,
-        max = 10, # This will be updated dynamically
-        value = c(0, 10),
-        step = 1
-      ),
-      shiny::textOutput(ns("selectedPatientsCount")),
-      shiny::downloadButton(
-        ns("exportSelectedSubjects"),
-        "Export Selected Subjects"
+      shiny::fluidRow(
+        column(
+          width = 7,
+          # Left column: plots and slider
+          tabsetPanel(
+            id = ns("scorePlotTabs"),
+            tabPanel("Total Score Bar Plot", plotly::plotlyOutput(ns("totalScoreDistributionPlot"), height = "400px")),
+            tabPanel("Density Plot", plotly::plotlyOutput(ns("totalScoreDensityPlot"), height = "400px")),
+            tabPanel("Score Table", DT::dataTableOutput(ns("totalScoreTable")))
+          ),
+          shiny::br(), shiny::hr(),
+          shiny::textOutput(ns("selectedPatientsCount")),
+          shiny::sliderInput(
+            ns("scoreRange"),
+            "Score Range",
+            width = "100%",
+            min = 0,
+            max = 10, # to be updated dynamically
+            value = c(0, 10),
+            step = 1,
+            ticks = T
+          )
+        ),
+        column(
+          width = 5,
+          shiny::hr(),
+          shiny::hr(),
+          shiny::wellPanel(
+          shiny::h4("Flags:"),
+          shiny::hr(),
+          mod_fct_phenotypeFlags_ui(ns("phenotypeFlags_flags")),
+          shiny::br(),
+          shiny::tags$h4("Flags message:"),
+          shiny::verbatimTextOutput(ns("phenotypeFlags_text"), placeholder = TRUE),
+          shiny::hr(),
+          shiny::hr(),
+          shiny::h4("Download Data:"),
+          shiny::selectInput(
+            ns("downloadFlagSelection"),
+            "Select Group to Download:",
+            choices = c("All Data"),
+            selected = "All Data"
+          ),
+           shiny::checkboxInput(
+             ns("downloadInRangeOnly"),
+             "Download only in selected score range",
+             value = FALSE
+           ),
+          shiny::downloadButton(
+            ns("exportSelectedSubjects"),
+            "Export Selected Subjects"
+          )
+         )
+        )
       ),
       shiny::hr(),
       shiny::hr(),
@@ -312,8 +343,9 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
           width = 300,
           cell = function(value, index) {
             htmltools::tagList(
-              .renderCovariatesDistribution(value),
-              shiny::actionButton(paste0("showDistPlot_", index), "View Larger", style = "font-size: 0.7em; margin-top: 5px;")
+              .renderCovariatesDistribution(value)
+              # TO DO: improve the distribution plot, add a way to enlarge it when hovering or clicking a button
+              #shiny::actionButton(paste0("showDistPlot_", index), "View Larger", style = "font-size: 0.7em; margin-top: 5px;")
             )
           }
         ),
@@ -586,62 +618,94 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
       groupedCovariatesPerPersonTibble <- r_groupedCovariates$groupedCovariatesPerPersonTibble |>
         dplyr::left_join(r_groupedCovariates$groupedCovariatesPerPersonTibble_totalScore, by = "personSourceValue")
 
+
+      min_score <- floor(min(groupedCovariatesPerPersonTibble$totalScore, na.rm = TRUE))
+      max_score <- ceiling(max(groupedCovariatesPerPersonTibble$totalScore, na.rm = TRUE))
+
       shiny::updateSliderInput(
         session,
         "scoreRange",
-        min = 0,
-        max = max(groupedCovariatesPerPersonTibble$totalScoreBin |> as.integer(), na.rm = TRUE),
-        value = c(0, max(groupedCovariatesPerPersonTibble$totalScoreBin |> as.integer(), na.rm = TRUE))
+        min = min_score,
+        max = max_score,
+        value = c(min_score, max_score),
+        step = 1
       )
     })
 
     #
     # When r_groupedCovariates is ready or slider is changed, plot the total score distribution, if flag is available, add flag to the plot
     #
-    output$totalScoreDistributionPlot <- shiny::renderPlot({
+    output$totalScoreDistributionPlot <- plotly::renderPlotly({
       shiny::req(r_groupedCovariates$groupedCovariatesPerPersonTibble |> nrow() > 0)
       shiny::req(input$scoreRange)
       shiny::req(r_groupedCovariates$groupedCovariatesPerPersonTibble_totalScore)
 
       groupedCovariatesPerPersonTibble <- r_groupedCovariates$groupedCovariatesPerPersonTibble |>
-        dplyr::left_join(r_groupedCovariates$groupedCovariatesPerPersonTibble_totalScore, by = "personSourceValue")
+        dplyr::left_join(r_groupedCovariates$groupedCovariatesPerPersonTibble_totalScore, by = "personSourceValue") |>
+        dplyr::mutate(flag = r_groupedCovariates$groupedCovariatesPerPersonTibble_flag$flag[match(personSourceValue, r_groupedCovariates$groupedCovariatesPerPersonTibble_flag$personSourceValue)] %||% "no-flag")
 
-      if (!is.null(r_groupedCovariates$groupedCovariatesPerPersonTibble_flag)) {
-        groupedCovariatesPerPersonTibble <- groupedCovariatesPerPersonTibble |>
-          dplyr::left_join(r_groupedCovariates$groupedCovariatesPerPersonTibble_flag, by = "personSourceValue")
-      } else {
-        groupedCovariatesPerPersonTibble <- groupedCovariatesPerPersonTibble |>
-          dplyr::mutate(flag = "no-flag")
-      }
-
-      flagsTable <- rf_flagsTable()
-      flagsTable <- flagsTable |>
+      flagsTable <- rf_flagsTable() |>
         dplyr::bind_rows(tibble::tibble(flagName = "no-flag", flagColor = "grey"))
 
-      # Create the plot
-      p <- groupedCovariatesPerPersonTibble |>
-        ggplot2::ggplot(aes(x = totalScoreBin, fill = flag)) +
-        ggplot2::geom_bar(position = "stack") +
-        ggplot2::theme_minimal() +
-        ggplot2::scale_fill_manual(
-          values = setNames(flagsTable$flagColor, flagsTable$flagName)
-        )
+      selected_bins <- r_groupedCovariates$groupedCovariatesPerPersonTibble_totalScore |>
+        dplyr::filter(totalScore >= input$scoreRange[1], totalScore <= input$scoreRange[2]) |>
+        dplyr::pull(totalScoreBin) |>
+        unique()
 
-      # Add box overlay if slider values are set
-      if (!is.null(input$scoreRange)) {
-        p <- p +
-          ggplot2::annotate(
-            "rect",
-            xmin = input$scoreRange[1],
-            xmax = input$scoreRange[2],
-            ymin = -Inf,
-            ymax = Inf,
-            alpha = 0.2,
-            fill = "blue"
-          )
-      }
+      groupedCovariatesPerPersonTibble <- groupedCovariatesPerPersonTibble |>
+        dplyr::mutate(is_selected = totalScoreBin %in% selected_bins,
+                      is_selected_label = dplyr::if_else(is_selected, "In selected Range", "Not In Range")
+                      )
 
-      return(p)
+      p <- ggplot2::ggplot(groupedCovariatesPerPersonTibble, ggplot2::aes(x = totalScoreBin)) +
+        ggplot2::geom_bar(aes(fill = flag, alpha = is_selected_label), position = "stack") +
+        ggplot2::scale_alpha_manual(values = c("In selected Range" = 1, "Not In Range" = 0.2), guide = FALSE) +
+        ggplot2::scale_fill_manual(values = setNames(flagsTable$flagColor, flagsTable$flagName)) +
+        #ggplot2::scale_alpha_identity(guide = "none") +
+        ggplot2::theme_minimal()
+
+      # plotly::ggplotly(p)
+
+      plotly::ggplotly(p) |> plotly::layout(legend = list(title = list(text = "Flag and score")))
+    })
+
+    #
+    # When r_groupedCovariates is ready or slider is changed, plot the total score distribution using density plot, if flag is available, add flag to the plot
+    #
+
+    output$totalScoreDensityPlot <- plotly::renderPlotly({
+      shiny::req(r_groupedCovariates$groupedCovariatesPerPersonTibble_totalScore)
+      shiny::req(input$scoreRange)
+
+      df <- r_groupedCovariates$groupedCovariatesPerPersonTibble_totalScore |>
+        dplyr::filter(totalScore >= input$scoreRange[1], totalScore <= input$scoreRange[2]) |>
+        dplyr::mutate(flag = r_groupedCovariates$groupedCovariatesPerPersonTibble_flag$flag[match(personSourceValue, r_groupedCovariates$groupedCovariatesPerPersonTibble_flag$personSourceValue)] %||% "no-flag")
+
+      flagsTable <- rf_flagsTable() |>
+        dplyr::bind_rows(tibble::tibble(flagName = "no-flag", flagColor = "grey"))
+
+      p <- ggplot2::ggplot(df, ggplot2::aes(x = totalScore, fill = flag)) +
+        ggplot2::geom_density(alpha = 0.6) +
+        ggplot2::scale_fill_manual(values = setNames(flagsTable$flagColor, flagsTable$flagName)) +
+        ggplot2::theme_minimal()
+
+      plotly::ggplotly(p)
+    })
+
+    #
+    # When r_groupedCovariates is ready or slider is changed, show table of total scores
+    #
+
+    output$totalScoreTable <- DT::renderDataTable({
+      shiny::req(r_groupedCovariates$groupedCovariatesPerPersonTibble_totalScore)
+      shiny::req(input$scoreRange)
+
+      df <- r_groupedCovariates$groupedCovariatesPerPersonTibble_totalScore |>
+        dplyr::filter(totalScore >= input$scoreRange[1], totalScore <= input$scoreRange[2]) |>
+        dplyr::left_join(r_groupedCovariates$groupedCovariatesPerPersonTibble_flag, by = "personSourceValue") |>
+        dplyr::rename(Flag = flag)
+
+      DT::datatable(df)
     })
 
     #
@@ -663,35 +727,70 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
     })
 
     #
-    # When input$exportSelectedSubjects is clicked, export subjects with total score in the range of the slider
+    # Populate the download choices with the added flags
+    #
+    shiny::observe({
+      shiny::req(rf_flagsTable())
+      flag_choices <- c("All Data", unique(rf_flagsTable()$flagName))
+      updateSelectInput(
+        inputId = "downloadFlagSelection",
+        choices = flag_choices,
+        selected = "All Data"
+      )
+    })
+
+    #
+    # When input$exportSelectedSubjects is clicked, export all or flagged subjects with total score in the range of the slider (if check box ticked).
     #
     output$exportSelectedSubjects <- shiny::downloadHandler(
       filename = function() {
-        paste0("selected_subjects_", input$scoreRange[1], "_to_", input$scoreRange[2], ".csv")
+        flag <- input$downloadFlagSelection
+        range_label <- if (isTRUE(input$downloadInRangeOnly)) {
+          paste0("in_range_", input$scoreRange[1], "_to_", input$scoreRange[2])
+        } else {
+          "full_score_range"
+        }
+
+        flag_label <- if (!is.null(flag) && flag != "All Data") {
+          gsub("\\s+", "_", tolower(flag))
+        } else {
+          "all_data"
+        }
+
+        paste0("subjects_withflag_", flag_label, "_", range_label, ".csv")
       },
       content = function(file) {
         shiny::req(r_groupedCovariates$groupedCovariatesPerPersonTibble |> nrow() > 0)
         shiny::req(r_groupedCovariates$groupedCovariatesPerPersonTibble_totalScore)
 
-        groupedCovariatesPerPersonTibble <- r_groupedCovariates$groupedCovariatesPerPersonTibble |>
+        df <- r_groupedCovariates$groupedCovariatesPerPersonTibble |>
           dplyr::left_join(r_groupedCovariates$groupedCovariatesPerPersonTibble_totalScore, by = "personSourceValue")
 
         if (is.null(r_groupedCovariates$groupedCovariatesPerPersonTibble_flag)) {
-          groupedCovariatesPerPersonTibble <- groupedCovariatesPerPersonTibble |>
-            dplyr::mutate(flag = "no-flag")
+          df <- df |> dplyr::mutate(flag = "no-flag")
         } else {
-          groupedCovariatesPerPersonTibble <- groupedCovariatesPerPersonTibble |>
-            dplyr::left_join(r_groupedCovariates$groupedCovariatesPerPersonTibble_flag, by = "personSourceValue")
+          df <- df |> dplyr::left_join(r_groupedCovariates$groupedCovariatesPerPersonTibble_flag, by = "personSourceValue")
         }
 
-        # Get the subjects with total score in the range of the slider
-        selectedSubjects <- groupedCovariatesPerPersonTibble |>
-          dplyr::filter(totalScoreBin |> as.integer() >= input$scoreRange[1] & totalScoreBin |> as.integer() <= input$scoreRange[2])
+        # filter by selected flag (unless "All Data")
+        if (!is.null(input$downloadFlagSelection) && input$downloadFlagSelection != "All Data") {
+          df <- df |> dplyr::filter(flag == input$downloadFlagSelection)
+        }
 
-        # Write the selected subjects to the file
-        write.csv(selectedSubjects, file, row.names = FALSE, na = "")
+        # filter by score range
+        if (isTRUE(input$downloadInRangeOnly)) {
+          df <- df |> dplyr::filter(
+            totalScoreBin |> as.integer() >= input$scoreRange[1],
+            totalScoreBin |> as.integer() <= input$scoreRange[2]
+          )
+        }
+
+        write.csv(df, file, row.names = FALSE, na = "")
       }
     )
+
+
+
   })
 }
 
