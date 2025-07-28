@@ -50,7 +50,7 @@ mod_analysisSettings_phenotypeScoring_ui <- function(id) {
       analysisIdsSelected = c(1,2,10,41,141,342)
     ),
     htmltools::hr(),
-    shiny::tags$h4("Pre-ran info"),
+    shiny::tags$h4("Pre-run info"),
     shiny::verbatimTextOutput(ns("info_text"), placeholder = TRUE)
   )
 }
@@ -121,7 +121,7 @@ mod_analysisSettings_phenotypeScoring_server <- function(id, r_connectionHandler
       cohortIdAndNamesList <- cohortIdAndNamesList |>
         purrr::discard(~.x %in% input$selectCaseCohort_pickerInput)
 
-      # Add cohort 0 with 
+      # Add cohort 0 with
       cohortIdAndNamesList <- c(list(`AUTO-MATCH: Creates a control cohort from the patiens not in case cohort that matches case cohort by sex and birth year with ratio 1:10` = 0), cohortIdAndNamesList)
 
       shinyWidgets::updatePickerInput(

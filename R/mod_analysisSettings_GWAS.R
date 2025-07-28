@@ -51,7 +51,7 @@ mod_analysisSettings_GWAS_ui <- function(id) {
     shiny::textInput(ns("phenotypeName_textInput"), label = "Phenotype Name:"),
     shiny::textInput(ns("description_textInput"), label = "Description:"),
     htmltools::hr(),
-    shiny::tags$h4("Pre-ran info"),
+    shiny::tags$h4("Pre-run info"),
     shiny::verbatimTextOutput(ns("info_text"), placeholder = TRUE),
     htmltools::hr()
   )
@@ -69,7 +69,7 @@ mod_analysisSettings_GWAS_ui <- function(id) {
 #'
 #' @return A reactive expression that provides the analysis settings for the GWAS.
 #'
-#' @importFrom shiny moduleServer observe req updateTextInput renderText reactive observeEvent 
+#' @importFrom shiny moduleServer observe req updateTextInput renderText reactive observeEvent
 #' @importFrom shinyWidgets updatePickerInput
 #' @importFrom shinyFeedback feedbackWarning
 #' @importFrom stringr str_detect
@@ -180,7 +180,7 @@ mod_analysisSettings_GWAS_server <- function(id, r_connectionHandler) {
     # render info text
     #
     output$info_text <- shiny::renderText({
-      if ( !shiny::isTruthy(input$selectCaseCohort_pickerInput) || 
+      if ( !shiny::isTruthy(input$selectCaseCohort_pickerInput) ||
       !shiny::isTruthy(input$selectControlCohort_pickerInput)) {
         return("")
       }
@@ -234,7 +234,7 @@ mod_analysisSettings_GWAS_server <- function(id, r_connectionHandler) {
         }
       }
 
-      
+
 
       # counts
       if (nSubjectsCase > nSubjectsControl) {

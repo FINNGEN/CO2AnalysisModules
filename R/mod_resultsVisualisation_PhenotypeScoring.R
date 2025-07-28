@@ -33,8 +33,6 @@ mod_resultsVisualisation_PhenotypeScoring_ui <- function(id) {
       # shiny::h4("Groups Overlap"),
       # shiny::plotOutput(ns("groupsOverlapPlot"), height = 500),
       shiny::hr(),
-      shiny::hr(),
-      shiny::hr(),
       shiny::h4("Formula:"),
       mod_fct_dragAndDropFormula_ui(ns("totalScoreFormula_formula")),
       shiny::tags$h4("Formula message:"),
@@ -342,12 +340,12 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
           name = "Covariates Distribution",
           width = 300,
           cell = function(value, index) {
-            htmltools::tagList(
               .renderCovariatesDistribution(value)
               # TO DO: improve the distribution plot, add a way to enlarge it when hovering or clicking a button
               #shiny::actionButton(paste0("showDistPlot_", index), "View Larger", style = "font-size: 0.7em; margin-top: 5px;")
-            )
-          }
+
+          },
+          html = TRUE
         ),
         editButton = reactable::colDef(
           name = "",
@@ -662,9 +660,8 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
         ggplot2::scale_alpha_manual(values = c("In selected Range" = 1, "Not In Range" = 0.2), guide = FALSE) +
         ggplot2::scale_fill_manual(values = setNames(flagsTable$flagColor, flagsTable$flagName)) +
         #ggplot2::scale_alpha_identity(guide = "none") +
-        ggplot2::theme_minimal()
-
-      # plotly::ggplotly(p)
+        ggplot2::theme_minimal() +
+        ggplot2::labs(x = "Total Score", y = "Number of Patients")
 
       plotly::ggplotly(p) |> plotly::layout(legend = list(title = list(text = "Flag and score")))
     })
@@ -701,9 +698,15 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
       shiny::req(input$scoreRange)
 
       df <- r_groupedCovariates$groupedCovariatesPerPersonTibble_totalScore |>
-        dplyr::filter(totalScore >= input$scoreRange[1], totalScore <= input$scoreRange[2]) |>
-        dplyr::left_join(r_groupedCovariates$groupedCovariatesPerPersonTibble_flag, by = "personSourceValue") |>
-        dplyr::rename(Flag = flag)
+        dplyr::filter(totalScore >= input$scoreRange[1], totalScore <= input$scoreRange[2])
+
+      # Add flag information if it exists
+      if (!is.null(r_groupedCovariates$groupedCovariatesPerPersonTibble_flag) &&
+          nrow(r_groupedCovariates$groupedCovariatesPerPersonTibble_flag) > 0) {
+        df <- df |>
+          dplyr::left_join(r_groupedCovariates$groupedCovariatesPerPersonTibble_flag, by = "personSourceValue") |>
+          dplyr::rename(Flag = flag)
+      }
 
       DT::datatable(df)
     })
@@ -720,7 +723,7 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
 
       # Count subjects in the selected range
       nSelected <- groupedCovariatesPerPersonTibble |>
-        dplyr::filter(totalScoreBin |> as.integer() >= input$scoreRange[1] & totalScoreBin |> as.integer() <= input$scoreRange[2]) |>
+        dplyr::filter(totalScore >= input$scoreRange[1], totalScore <= input$scoreRange[2]) |>
         nrow()
 
       paste("Number of patients selected:", nSelected)
@@ -757,7 +760,7 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
           "all_data"
         }
 
-        paste0("subjects_withflag_", flag_label, "_", range_label, ".csv")
+        paste0("subjects_withflag_", flag_label, "_", range_label, ".tsv")
       },
       content = function(file) {
         shiny::req(r_groupedCovariates$groupedCovariatesPerPersonTibble |> nrow() > 0)
@@ -785,7 +788,7 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
           )
         }
 
-        write.csv(df, file, row.names = FALSE, na = "")
+        write.table(df, file, sep = "\t", row.names = FALSE, na = "", quote = FALSE)
       }
     )
 
@@ -931,29 +934,39 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
 .calculateTotalScores <- function(
     groupedCovariatesPerPersonTibble,
     formula) {
-  # Calculate total scores
-  breaks <- c(
-    0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
-    12, 14, 16, 18,
-    20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95,
-    100, 120, 140, 160, 180,
-    200, 250, 300, 350, 400, 450, 500, 550, 600, 650, 700, 750, 800, 850, 900, 950,
-    1000, 1200, 1400, 1600, 1800,
-    2000, 2500, 3000, 3500, 4000, 4500, 5000, 5500, 6000, 6500, 7000, 7500, 8000, 8500, 9000, 9500,
-    10000, 12000, 14000, 16000, 18000,
-    20000, 25000, 30000, 35000, 40000, 45000, 50000, 55000, 60000, 65000, 70000, 75000, 80000, 85000, 90000, 95000,
-    100000, 120000, 140000, 160000, 180000,
-    200000, 250000, 300000, 350000, 400000, 450000, 500000, 550000, 600000, 650000, 700000, 750000, 800000, 850000, 900000, 950000
-  )
 
-  # Parse formula first to catch syntax errors
+   # Parse formula to catch syntax errors
   parsed_formula <- tryCatch(
     parse(text = formula),
     error = function(e) stop(paste("Formula syntax error:", e$message))
   )
 
+  # Calculate total scores
   groupedCovariatesPerPersonTibble_totalScore <- groupedCovariatesPerPersonTibble |>
-    dplyr::mutate(totalScore = eval(parsed_formula)) |>
+    dplyr::mutate(totalScore = eval(parsed_formula))
+
+  score_values <- groupedCovariatesPerPersonTibble_totalScore$totalScore
+  unique_vals <- length(unique(score_values))
+
+  # Default to percentile breaks
+  percentile_breaks <- unique(quantile(score_values, probs = seq(0, 1, by = 0.05), na.rm = TRUE))
+
+  # Choose breaks adaptively
+  if (unique_vals < 5) {
+    breaks <- sort(unique(score_values))
+  } else if (length(percentile_breaks) >= 5) {
+    breaks <- percentile_breaks
+  } else {
+    breaks <- pretty(score_values, n = min(10, unique_vals))
+  }
+
+  # Ensure breaks fully cover range
+  if (length(breaks) == 1) breaks <- c(breaks - 0.5, breaks + 0.5)
+  if (min(breaks) > min(score_values, na.rm = TRUE)) breaks <- c(min(score_values, na.rm = TRUE), breaks)
+  if (max(breaks) < max(score_values, na.rm = TRUE)) breaks <- c(breaks, max(score_values, na.rm = TRUE))
+
+  # Bin scores
+  groupedCovariatesPerPersonTibble_totalScore <- groupedCovariatesPerPersonTibble_totalScore |>
     dplyr::mutate(totalScoreBin = cut(totalScore, breaks = breaks, include.lowest = TRUE)) |>
     dplyr::select(personSourceValue, totalScore, totalScoreBin)
 
@@ -992,3 +1005,4 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
 
   htmltools::tags$div(style = "width: 250px; height: 150px;", plot)
 }
+
