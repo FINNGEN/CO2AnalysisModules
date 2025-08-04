@@ -3,7 +3,24 @@ mod_fct_phenotypeFlags_ui <- function(id) {
     shiny::tagList(
         shinyjs::useShinyjs(),
         shiny::actionButton(ns("addFlag_button"), "Add Flag"),
-        reactable::reactableOutput(ns("flagTable_sortableTable"))
+        #reactable::reactableOutput(ns("flagTable_sortableTable")),
+        div(
+          id = ns("sortableTableContainer"),
+          reactable::reactableOutput(ns("flagTable_sortableTable"))
+        ),
+
+
+        # Custom CSS to remove grey background and border from verbatimTextOutput
+        shiny::tags$style(HTML(sprintf("
+          #%s {
+            background-color: transparent !important;
+            border: none !important;
+            padding: 0 !important;
+            font-family: monospace;
+            white-space: pre-wrap;
+          }
+        ", ns("flagToBeAdded_textoutput"))))
+
     )
 }
 
@@ -20,7 +37,8 @@ mod_fct_phenotypeFlags_server <- function(id, r_groupedCovariates) {
                 flagRulePretty = character(),
                 flagRule = character()
             ),
-            flagBeingEditedIndex = NULL
+            flagBeingEditedIndex = NULL,
+            editingColorIndex = NULL
         )
 
         #
@@ -29,6 +47,8 @@ mod_fct_phenotypeFlags_server <- function(id, r_groupedCovariates) {
         shiny::observeEvent(input$addFlag_button, {
             shiny::req(r_groupedCovariates$groupedCovariatesTibble |> nrow() > 0)
             shiny::req(r_groupedCovariates$groupedCovariatesPerPersonTibble)
+
+            rf_formula_res$set_formula(formula_string=NULL)
 
             shiny::showModal(shiny::modalDialog(
                 shiny::tags$h4("Add Flag"),
@@ -53,6 +73,7 @@ mod_fct_phenotypeFlags_server <- function(id, r_groupedCovariates) {
             id = "flagFormula_formula",
             r_groupedCovariates = r_groupedCovariates,
             operatorItems = operators_flag,
+            titleText = "Expression that evaluates to true or false:",
             placeholder = "Drag and Drop to create rule"
         )
         rf_formula = rf_formula_res$get_formula
@@ -173,6 +194,7 @@ mod_fct_phenotypeFlags_server <- function(id, r_groupedCovariates) {
 
           r$flagToBeAdded <- NULL
           r$flagBuildMessage <- NULL
+          r$flagBeingEditedIndex <- NULL
           removeModal()
         })
 
@@ -197,7 +219,18 @@ mod_fct_phenotypeFlags_server <- function(id, r_groupedCovariates) {
 
           columns <- list(
             flagName = reactable::colDef(name = "Flag Name"),
-            flagColor = reactable::colDef(name = "Color"),
+            flagColor = reactable::colDef(
+              name = "Color",
+              cell = function(value, index) {
+                inputId <- ns(paste0("flagColor_", index))
+                htmltools::tags$div(
+                  style = sprintf("width:40px;height:20px;background:%s;cursor:pointer;border:1px solid #ccc;", value),
+                  onclick = sprintf("Shiny.setInputValue('%s', %d, {priority: 'event'})", ns("edit_color"), index)
+                )
+              },
+              sortable = FALSE,
+              maxWidth = 60
+            ),
             flagRulePretty = reactable::colDef(name = "Rule"),
             editButton = reactable::colDef(
               name = "",
@@ -227,6 +260,33 @@ mod_fct_phenotypeFlags_server <- function(id, r_groupedCovariates) {
 
           reactable::reactable(flags, columns = columns, resizable = TRUE)
         })
+
+
+        # edit color from rows
+        observeEvent(input$edit_color, {
+          idx <- input$edit_color
+          current_color <- r$flagsTable$flagColor[idx]
+
+          showModal(modalDialog(
+            title = "Pick a new color",
+            colourpicker::colourInput(ns("new_color"), "Change Color", value = current_color,palette = "limited"),
+            footer = tagList(
+              actionButton(ns("save_color"), "Save"),
+              modalButton("Cancel")
+            )
+          ))
+
+          # Save the index in a reactiveVal to use later
+          r$editingColorIndex <- idx
+        })
+
+        observeEvent(input$save_color, {
+          idx <- r$editingColorIndex
+          r$flagsTable$flagColor[idx] <- input$new_color
+
+          removeModal()
+        })
+
 
         # Deletion confirmation
         observeEvent(input$delete_flag, {
@@ -259,14 +319,12 @@ mod_fct_phenotypeFlags_server <- function(id, r_groupedCovariates) {
 
           selectedFlag <- r$flagsTable[index, ]
 
-          updateTextInput(session, "flagName_textinput", value = selectedFlag$flagName)
-          colourpicker::updateColourInput(session, "flagColor_colorinput", value = selectedFlag$flagColor)
           rf_formula_res$set_formula(selectedFlag$flagRule)
 
           showModal(shiny::modalDialog(
             shiny::tags$h4("Edit Flag"),
-            shiny::textInput(ns("flagName_textinput"), "Flag Name", width = "100%"),
-            colourpicker::colourInput(ns("flagColor_colorinput"), "Flag Color", palette = "limited"),
+            shiny::textInput(ns("flagName_textinput"), "Flag Name", width = "100%", value = selectedFlag$flagName),
+            colourpicker::colourInput(ns("flagColor_colorinput"), "Flag Color", value = selectedFlag$flagColor, palette = "limited"),
             mod_fct_dragAndDropFormula_ui(ns("flagFormula_formula")),
             shiny::tags$h4("Flag message:"),
             shiny::verbatimTextOutput(ns("flagToBeAdded_textoutput"), placeholder = TRUE),

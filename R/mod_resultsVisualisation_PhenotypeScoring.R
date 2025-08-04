@@ -23,22 +23,21 @@ mod_resultsVisualisation_PhenotypeScoring_ui <- function(id) {
         "Create Group From Selected"
       ),
       shiny::hr(),
+      shiny::h4("Code Groups Table"),
+      reactable::reactableOutput(ns("groupedCovariatesTable"), height = "auto"),
       shiny::hr(),
-      shiny::hr(),
-      shiny::h4("Code Groups"),
-      reactable::reactableOutput(ns("groupedCovariatesTable"), height = 500),
       # shiny::hr(),
       # shiny::hr(),
       # shiny::hr(),
       # shiny::h4("Groups Overlap"),
       # shiny::plotOutput(ns("groupsOverlapPlot"), height = 500),
-      shiny::hr(),
+      shiny::wellPanel(
+      style = "padding: 15px; background-color: #f8f9fa;",
       shiny::h4("Formula:"),
       mod_fct_dragAndDropFormula_ui(ns("totalScoreFormula_formula")),
+      shiny::hr(),
       shiny::tags$h4("Formula message:"),
-      shiny::verbatimTextOutput(ns("totalScoreFormula_text"), placeholder = TRUE),
-      shiny::hr(),
-      shiny::hr(),
+      shiny::verbatimTextOutput(ns("totalScoreFormula_text"), placeholder = TRUE)),
       shiny::hr(),
       shiny::fluidRow(
         column(
@@ -109,7 +108,17 @@ mod_resultsVisualisation_PhenotypeScoring_ui <- function(id) {
           }
         }, 200);  // small delay to ensure modal is rendered
       });
-    "))
+    ")),
+      # Custom CSS to remove grey background and border from verbatimTextOutput
+      shiny::tags$style(HTML(sprintf("
+      #%s, #%s {
+        background-color: transparent !important;
+        border: none !important;
+        padding: 0 !important;
+        font-family: monospace;
+        white-space: pre-wrap;
+      }
+    ", ns("totalScoreFormula_text"), ns("phenotypeFlags_text"))))
     )
   ) # end of fluidPage
 }
@@ -477,6 +486,7 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
         `*` = "*",
         `/` = "/"
       ),
+      titleText = "Create Total Score Formula:",
       placeholder = "Drag and Drop here to create formula"
     )
     rf_totalScoreFormula = rf_totalScoreFormula_res$get_formula
@@ -564,6 +574,7 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
         r_groupedCovariates$groupedCovariatesPerPersonTibble_flag <- NULL
         return()
       }
+
 
       flagsTable <- flagsTable |>
         dplyr::mutate(flagCaseWhenRule = paste0(flagRule, " ~ '", flagName, "'"))
@@ -734,7 +745,11 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
     #
     shiny::observe({
       shiny::req(rf_flagsTable())
-      flag_choices <- c("All Data", unique(rf_flagsTable()$flagName))
+      if(nrow(rf_flagsTable()) > 0){
+       flag_choices <- c("All Data","no-flag",unique(rf_flagsTable()$flagName))
+      }else{
+      flag_choices <- c("All Data",unique(rf_flagsTable()$flagName))
+        }
       updateSelectInput(
         inputId = "downloadFlagSelection",
         choices = flag_choices,

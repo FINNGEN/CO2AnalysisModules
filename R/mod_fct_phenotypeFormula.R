@@ -8,7 +8,7 @@ mod_fct_dragAndDropFormula_ui <- function(id) {
   )
 }
 
-mod_fct_dragAndDropFormula_server <- function(id, r_groupedCovariates, operatorItems, placeholder) {
+mod_fct_dragAndDropFormula_server <- function(id, r_groupedCovariates, operatorItems, titleText,placeholder) {
   shiny::moduleServer(id, function(input, output, session) {
     ns <- session$ns
 
@@ -28,17 +28,18 @@ mod_fct_dragAndDropFormula_server <- function(id, r_groupedCovariates, operatorI
       numbersItems <- 0:9
 
       htmltools::tagList(
+
         shinydashboard::box(
-          title = "Expression defining the flag",
+          title = titleText,
           width = 12,
           background = "light-blue",
-          shinyjqui::orderInput(
-            inputId = ns("dest_boxes"),
-            width = "100%",
-            label = NULL,
-            items = destBoxes(),
-            placeholder = placeholder
-          )
+            shinyjqui::orderInput(
+              inputId = ns("dest_boxes"),
+              width = "100%",
+              label = NULL,
+              items = destBoxes(),
+              placeholder = placeholder
+            )
         ),
         shinydashboard::box(
           width = 12,
@@ -63,7 +64,7 @@ mod_fct_dragAndDropFormula_server <- function(id, r_groupedCovariates, operatorI
             items = numbersItems,
             as_source = TRUE, connect = ns("dest_boxes")
           )
-        )
+        ),shiny::br(),shiny::br()
 
       )
     })
@@ -101,9 +102,13 @@ mod_fct_dragAndDropFormula_server <- function(id, r_groupedCovariates, operatorI
     })
 
     # To pre-fill the formula for editing
-    set_formula <- function(formula_string) {
-      # Split formula into items
-      parsed <- stringr::str_extract_all(formula_string, "g\\d+|[><=()!&|]+|\\d+")[[1]]
+    set_formula <- function(formula_string=NULL) {
+      if(is.null(formula_string)){
+        parsed=NULL
+      }else{
+        # Split formula into items
+        parsed <- stringr::str_extract_all(formula_string, "g\\d+|[><=()!&|]+|\\d+")[[1]]
+      }
       destBoxes(parsed)
     }
 
