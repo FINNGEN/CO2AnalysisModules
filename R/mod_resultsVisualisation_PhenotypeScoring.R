@@ -556,7 +556,10 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
     #
     # render the flag formula builder
     #
-    rf_flagsTable <- mod_fct_phenotypeFlags_server("phenotypeFlags_flags", r_groupedCovariates)
+    rf_flagsTable_list <- mod_fct_phenotypeFlags_server("phenotypeFlags_flags", r_groupedCovariates)
+    rf_flagsTable <- rf_flagsTable_list[["r_flagstable"]]
+    rf_flagsTableOrder <- rf_flagsTable_list[["r_roworder"]]
+
 
 
     #
@@ -575,7 +578,12 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
         return()
       }
 
+      # reorder flagsTable rows if rows are sorted by user
+      if(!is.null(rf_flagsTableOrder())){
+        flagsTable <- flagsTable[rf_flagsTableOrder(), , drop = FALSE]
+      }
 
+      # Apply flags
       flagsTable <- flagsTable |>
         dplyr::mutate(flagCaseWhenRule = paste0(flagRule, " ~ '", flagName, "'"))
       flagCaseWhenRules <- paste(flagsTable$flagCaseWhenRule, collapse = ", \n")

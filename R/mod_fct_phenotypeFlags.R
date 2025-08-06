@@ -4,11 +4,7 @@ mod_fct_phenotypeFlags_ui <- function(id) {
         shinyjs::useShinyjs(),
         shiny::actionButton(ns("addFlag_button"), "Add Flag"),
         #reactable::reactableOutput(ns("flagTable_sortableTable")),
-        div(
-          id = ns("sortableTableContainer"),
-          reactable::reactableOutput(ns("flagTable_sortableTable"))
-        ),
-
+        shinyjqui::jqui_sortable(shinyjqui::sortableTableOutput(ns("flagTable_sortableTable"))),
 
         # Custom CSS to remove grey background and border from verbatimTextOutput
         shiny::tags$style(HTML(sprintf("
@@ -38,8 +34,31 @@ mod_fct_phenotypeFlags_server <- function(id, r_groupedCovariates) {
                 flagRule = character()
             ),
             flagBeingEditedIndex = NULL,
-            editingColorIndex = NULL
+            editingColorIndex = NULL,
+            lastFlagsTableRowOrder = NULL
         )
+
+        flagTable_row_order <- reactive({
+
+          order_df <- input$flagTable_sortableTable_order
+
+          # shinyjqui::sortableTableOutput did not work as it should normally, it was not tracking the row orders.
+          # So wrapped with jqui_sortable above, and order extracted from the text column of input$flagTable_sortableTable_order returned
+
+          # If input not available or empty, return NULL or default order
+          if (is.null(order_df) || nrow(order_df) == 0 || all(is.na(order_df$text))) {
+            return(NULL)  # or return default: seq_len(nrow(flagsTable)) if you have flagsTable available
+          }
+
+          # Extract numeric row numbers from text column (before first tab)
+          new_order <- as.numeric(sub("\t.*", "", order_df$text))
+
+          if (any(is.na(new_order))) {
+            return(NULL)
+          }
+
+          new_order
+        })
 
         #
         # When add flag button is clicked, show modal dialog
@@ -202,64 +221,97 @@ mod_fct_phenotypeFlags_server <- function(id, r_groupedCovariates) {
         #
         # render the flag table
         #
-        # output$flagTable_sortableTable <- shiny::renderTable(
-        #     r$flagsTable,
-        #     rowNames = TRUE
-        # )
 
+        # # render the flags
+        # output$flagTable_sortableTable <- reactable::renderReactable({
+        #   shiny::req(r$flagsTable)
+        #
+        #   df <- r$flagsTable
+        #   if (nrow(df) == 0) return(NULL)
+        #
+        #   flags <- r$flagsTable |>
+        #     dplyr::mutate(editButton = NA, deleteButton = NA)
+        #
+        #   columns <- list(
+        #     flagName = reactable::colDef(name = "Flag Name"),
+        #     flagColor = reactable::colDef(
+        #       name = "Color",
+        #       cell = function(value, index) {
+        #         inputId <- ns(paste0("flagColor_", index))
+        #         htmltools::tags$div(
+        #           style = sprintf("width:40px;height:20px;background:%s;cursor:pointer;border:1px solid #ccc;", value),
+        #           onclick = sprintf("Shiny.setInputValue('%s', %d, {priority: 'event'})", ns("edit_color"), index)
+        #         )
+        #       },
+        #       sortable = FALSE,
+        #       maxWidth = 60
+        #     ),
+        #     flagRulePretty = reactable::colDef(name = "Rule"),
+        #     editButton = reactable::colDef(
+        #       name = "",
+        #       sortable = FALSE,
+        #       cell = function(value, index) {
+        #         htmltools::tags$button(
+        #           shiny::icon("pen"),
+        #           class = "btn btn-outline-primary btn-sm",
+        #           onclick = sprintf("Shiny.setInputValue('%s', %d, {priority: 'event'})", ns("edit_flag"), index)
+        #         )
+        #       },
+        #       maxWidth = 50
+        #     ),
+        #     deleteButton = reactable::colDef(
+        #       name = "",
+        #       sortable = FALSE,
+        #       cell = function(value, index) {
+        #         htmltools::tags$button(
+        #           shiny::icon("trash"),
+        #           class = "btn btn-outline-danger btn-sm",
+        #           onclick = sprintf("Shiny.setInputValue('%s', %d, {priority: 'event'})", ns("delete_flag"), index)
+        #         )
+        #       },
+        #       maxWidth = 50
+        #     )
+        #   )
+        #
+        #   reactable::reactable(flags, columns = columns, resizable = TRUE)
+        # })
+
+        #
+        # render the flag table
+        #
         # render the flags
-        output$flagTable_sortableTable <- reactable::renderReactable({
+        output$flagTable_sortableTable <- shiny::renderTable({
           shiny::req(r$flagsTable)
-
           df <- r$flagsTable
           if (nrow(df) == 0) return(NULL)
 
-          flags <- r$flagsTable |>
-            dplyr::mutate(editButton = NA, deleteButton = NA)
-
-          columns <- list(
-            flagName = reactable::colDef(name = "Flag Name"),
-            flagColor = reactable::colDef(
-              name = "Color",
-              cell = function(value, index) {
-                inputId <- ns(paste0("flagColor_", index))
-                htmltools::tags$div(
-                  style = sprintf("width:40px;height:20px;background:%s;cursor:pointer;border:1px solid #ccc;", value),
-                  onclick = sprintf("Shiny.setInputValue('%s', %d, {priority: 'event'})", ns("edit_color"), index)
-                )
-              },
-              sortable = FALSE,
-              maxWidth = 60
-            ),
-            flagRulePretty = reactable::colDef(name = "Rule"),
-            editButton = reactable::colDef(
-              name = "",
-              sortable = FALSE,
-              cell = function(value, index) {
-                htmltools::tags$button(
-                  shiny::icon("pen"),
-                  class = "btn btn-outline-primary btn-sm",
-                  onclick = sprintf("Shiny.setInputValue('%s', %d, {priority: 'event'})", ns("edit_flag"), index)
-                )
-              },
-              maxWidth = 50
-            ),
-            deleteButton = reactable::colDef(
-              name = "",
-              sortable = FALSE,
-              cell = function(value, index) {
-                htmltools::tags$button(
-                  shiny::icon("trash"),
-                  class = "btn btn-outline-danger btn-sm",
-                  onclick = sprintf("Shiny.setInputValue('%s', %d, {priority: 'event'})", ns("delete_flag"), index)
-                )
-              },
-              maxWidth = 50
-            )
+          # Build the table manually with HTML
+          df_display <- df
+          df_display$flagColor <- sprintf(
+            "<div style='width:40px;height:20px;background:%s;cursor:pointer;border:1px solid #ccc;'
+             onclick=\"Shiny.setInputValue('%s', %d, {priority: 'event'})\"></div>",
+            df$flagColor, ns("edit_color"), seq_len(nrow(df))
           )
 
-          reactable::reactable(flags, columns = columns, resizable = TRUE)
-        })
+          df_display$edit <- sprintf(
+            "<button class='btn btn-outline-primary btn-sm'
+            onclick=\"Shiny.setInputValue('%s', %d, {priority: 'event'})\">
+            <i class='fa fa-pen'></i></button>",
+            ns("edit_flag"), seq_len(nrow(df))
+          )
+
+          df_display$delete <- sprintf(
+            "<button class='btn btn-outline-danger btn-sm'
+            onclick=\"Shiny.setInputValue('%s', %d, {priority: 'event'})\">
+            <i class='fa fa-trash'></i></button>",
+            ns("delete_flag"), seq_len(nrow(df))
+          )
+
+          # Select and order columns to display
+          df_display <- df_display[, c("flagName", "flagColor", "flagRulePretty", "edit", "delete")]
+
+          df_display
+        }, rownames = TRUE, sanitize.text.function = function(x) x)  # allows HTML rendering
 
 
         # edit color from rows
@@ -343,6 +395,7 @@ mod_fct_phenotypeFlags_server <- function(id, r_groupedCovariates) {
             return(r$flagsTable)
         })
 
-        return(rf_flagsTable)
+        #return(rf_flagsTable)
+        return(list(r_flagstable=rf_flagsTable, r_roworder=flagTable_row_order))
     })
 }
