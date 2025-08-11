@@ -349,9 +349,12 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
           name = "Covariates Distribution",
           width = 300,
           cell = function(value, index) {
-              .renderCovariatesDistribution(value)
-              # TO DO: improve the distribution plot, add a way to enlarge it when hovering or clicking a button
-              #shiny::actionButton(paste0("showDistPlot_", index), "View Larger", style = "font-size: 0.7em; margin-top: 5px;")
+            plotDiv <- .renderCovariatesDistribution(value)
+            htmltools::tags$div(
+              onclick = sprintf("Shiny.setInputValue('%s', %d, {priority: 'event'})", ns("showDistPlot"), index),
+              style = "cursor:pointer;",
+              plotDiv
+            )
 
           },
           html = TRUE
@@ -393,6 +396,92 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
         resizable = TRUE
       )
     })
+
+    observeEvent(input$showDistPlot, {
+
+      idx <- input$showDistPlot
+      dist_data <- r_groupedCovariates$groupedCovariatesTibble$covariatesDistribution[[idx]]
+
+      values_expanded <- rep(dist_data$value, dist_data$n)
+
+      # Calculate IQR to detect outliers on the score values
+      Q1 <- quantile(values_expanded, 0.25, na.rm = TRUE)
+      Q3 <- quantile(values_expanded, 0.75, na.rm = TRUE)
+      IQR <- Q3 - Q1
+      lowerBound <- Q1 - 1.5 * IQR
+      upperBound <- Q3 + 1.5 * IQR
+
+      dist_data$isOutlier <- ifelse(dist_data$value < lowerBound | dist_data$value > upperBound, "outlier_group_value", "")
+
+      print(dist_data)
+
+      showModal(modalDialog(
+        title = "Grouped covariates score distribution - Detailed View",
+        easyClose = TRUE,
+        footer = modalButton("Close"),
+        size = "l",
+        tabsetPanel(
+          tabPanel("Histogram",
+                   plotly::plotlyOutput(ns("modalHistPlot"), height = "400px")
+          ),
+          tabPanel("Boxplot",
+                   plotly::plotlyOutput(ns("modalBoxPlot"), height = "400px")
+          )
+        )
+      ))
+
+      output$modalHistPlot <- plotly::renderPlotly({
+        req(dist_data)
+
+        plotly::plot_ly(
+          dist_data,
+          x = ~value,
+          y = ~n,
+          type = 'bar',
+          marker = list(color = ifelse(dist_data$isOutlier == "outlier_group_value", "#E74C3C", "#3498DB"))
+        ) %>%
+          plotly::layout(
+            xaxis = list(
+              title = "Group score",
+              dtick = 1,  # forces ticks at every integer
+              tickmode = "linear"
+            ),
+            yaxis = list(title = "Frequency"),
+            showlegend = FALSE
+          )
+      })
+
+      # Boxplot
+      output$modalBoxPlot <- plotly::renderPlotly({
+        req(dist_data)
+
+        # Create a dataframe with value and outlier status for each point
+        df_expanded <- do.call(rbind, lapply(seq_len(nrow(dist_data)), function(i) {
+          data.frame(
+            value = rep(dist_data$value[i], dist_data$n[i]),
+            isOutlier = rep(dist_data$isOutlier[i], dist_data$n[i])
+          )
+        }))
+
+        df_expanded$isOutlier = as.factor(df_expanded$isOutlier)
+
+        df_expanded$outlier_flag <- ifelse(df_expanded$isOutlier == "outlier_group_value", "Outlier", "Normal")
+
+        p <- ggplot2::ggplot(df_expanded, ggplot2::aes(x = "", y = value)) +
+          ggplot2::geom_boxplot(outlier.shape = NA) +  # hide default outliers
+          ggplot2::geom_jitter(aes(color = outlier_flag), width = 0.2, size = 2)  +
+          ggplot2::labs(x = "Group score", y = "score distribution") +
+          ggplot2::theme_minimal() +
+          ggplot2::scale_color_manual(values = c("Normal" = "black", "Outlier" = "#E74C3C"))
+
+        plotly::ggplotly(p)
+      })
+
+
+    })
+
+
+
 
     observeEvent(input$delete_row, {
       index <- input$delete_row
@@ -1005,27 +1094,36 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
   if (is.null(covariatesDistribution) || nrow(covariatesDistribution) == 0) return(NULL)
   if (!all(c("value", "n") %in% colnames(covariatesDistribution))) return(NULL)
 
-  # Calculate IQR boundaries for outliers
-  Q1 <- quantile(covariatesDistribution$value, 0.25, na.rm = TRUE)
-  Q3 <- quantile(covariatesDistribution$value, 0.75, na.rm = TRUE)
+  values_expanded <- rep(covariatesDistribution$value, covariatesDistribution$n)
+
+  # Calculate IQR to detect outliers on the score values
+  Q1 <- quantile(values_expanded, 0.25, na.rm = TRUE)
+  Q3 <- quantile(values_expanded, 0.75, na.rm = TRUE)
   IQR <- Q3 - Q1
   lowerBound <- Q1 - 1.5 * IQR
   upperBound <- Q3 + 1.5 * IQR
 
   covariatesDistribution$isOutlier <- with(covariatesDistribution, ifelse(value < lowerBound | value > upperBound,"outlier_group_value",""))
 
-  plot <- apexcharter::apex(
-        covariatesDistribution,
-        apexcharter::aes(x = value, y = n, fill = as.factor(isOutlier)),
-        type = "column",
-        height = 150,
-        width = 250
-      ) |>
-        apexcharter::ax_colors(c("#3498DB", "#E74C3C")) |>
-        apexcharter::ax_chart(toolbar = list(show = FALSE)) |>
-        apexcharter::ax_xaxis(type = "numeric") |>
-        apexcharter::ax_legend(show = FALSE)
+  plot <- plotly::plot_ly(
+    data = covariatesDistribution,
+    x = ~as.factor(value),
+    y = ~n,
+    type = "bar",
+    marker = list(color = ~ifelse(isOutlier == "outlier_group_value", "#E74C3C", "#3498DB"))
+  ) %>%
+    plotly::layout(
+      height = 150,
+      width = 250,
+      xaxis = list(title = "Group score"),
+      yaxis = list(title = "Freq"),
+      showlegend = FALSE
+    ) %>%
+    plotly::config(displayModeBar = FALSE)
 
-  htmltools::tags$div(style = "width: 250px; height: 150px;", plot)
+
+  htmltools::tags$div( title = "Click for larger view",
+                       style = "width: 250px; height: 150px; cursor: pointer;",
+                       plot)
 }
 
