@@ -413,8 +413,6 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
 
       dist_data$isOutlier <- ifelse(dist_data$value < lowerBound | dist_data$value > upperBound, "outlier_group_value", "")
 
-      print(dist_data)
-
       showModal(modalDialog(
         title = "Grouped covariates score distribution - Detailed View",
         easyClose = TRUE,
