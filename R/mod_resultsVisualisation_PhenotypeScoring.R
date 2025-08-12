@@ -437,7 +437,7 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
           y = ~n,
           type = 'bar',
           marker = list(color = ifelse(dist_data$isOutlier == "outlier_group_value", "#E74C3C", "#3498DB"))
-        ) %>%
+        ) |>
           plotly::layout(
             xaxis = list(
               title = "Group score",
@@ -1109,14 +1109,14 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
     y = ~n,
     type = "bar",
     marker = list(color = ~ifelse(isOutlier == "outlier_group_value", "#E74C3C", "#3498DB"))
-  ) %>%
+  ) |>
     plotly::layout(
       height = 150,
       width = 250,
       xaxis = list(title = "Group score"),
       yaxis = list(title = "Freq"),
       showlegend = FALSE
-    ) %>%
+    ) |>
     plotly::config(displayModeBar = FALSE)
 
 
