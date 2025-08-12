@@ -2,7 +2,7 @@
 # SELECT DATABASE and CO2 CONFIGURATION
 #
 
-# Sys.setenv(HADESEXTAS_TESTING_ENVIRONMENT = "Eunomia-GiBleed")
+Sys.setenv(HADESEXTAS_TESTING_ENVIRONMENT = "Eunomia-GiBleed")
 # Sys.setenv(HADESEXTAS_TESTING_ENVIRONMENT = "AtlasDevelopment-DBI")
 # Sys.setenv(HADESEXTAS_TESTING_ENVIRONMENT = "Eunomia-FinnGen")
 #Sys.setenv(HADESEXTAS_TESTING_ENVIRONMENT = "Synthea-S10")
@@ -129,7 +129,7 @@ if (testingDatabase |> stringr::str_detect("Synthea")) {
     pathToYalmFile = testthat::test_path("config", "databasesConfig.yml")
   )
 
-  if (testingDatabase |> stringr::str_ends("S10")) {    
+  if (testingDatabase |> stringr::str_ends("S10")) {
     test_cohortTableHandlerConfig <- test_databasesConfig$S10$cohortTableHandler
   }
   if (testingDatabase |> stringr::str_ends("S10k")) {
