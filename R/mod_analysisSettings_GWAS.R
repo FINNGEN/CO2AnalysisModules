@@ -246,8 +246,8 @@ mod_analysisSettings_GWAS_server <- function(id, r_connectionHandler) {
       ttestResult <- yearOfBirthComparison_results[["ttestResult"]]
 
 
-      if (fisher_results$p.value < 0.05 & ttestResult$p.value < 0.05) {
-        message <- paste0(message, "\u26A0\uFE0F Cases and control cohorts, seem to have the same sex and year of birth distribution. \n")
+      if (fisher_results$p.value > 0.05 & ttestResult$p.value > 0.05) {
+        message <- paste0(message, "\u26A0\uFE0F Case and control cohorts seem to have the same sex and year of birth distribution. \n")
         message <- paste0(message, "It is not recommended to run GWAS with explicitly matched cohorts. GWAS analysis accounts for sex and year of birth in the model. Explicit matching may introduce bias.\n")
       }
 
