@@ -170,6 +170,48 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
     })
 
     #
+    # JS function to filter numberic values in reactable columns
+    #
+    numericRangeFilter <- htmlwidgets::JS(
+      "function(rows, columnId, filterValue) {
+         const val = filterValue.trim();
+         if (!val) return rows;
+
+         if (/^\\d+(\\.\\d+)?-\\d+(\\.\\d+)?$/.test(val)) {
+           const [min, max] = val.split('-').map(Number);
+           return rows.filter(row => {
+             const v = row.values[columnId];
+             return v >= min && v <= max;
+           });
+         }
+
+         if (/^>=\\s*\\d+(\\.\\d+)?$/.test(val)) {
+           const num = parseFloat(val.replace(/>=/, ''));
+           return rows.filter(row => row.values[columnId] >= num);
+         }
+
+         if (/^<=\\s*\\d+(\\.\\d+)?$/.test(val)) {
+           const num = parseFloat(val.replace(/<=/, ''));
+           return rows.filter(row => row.values[columnId] <= num);
+         }
+
+         if (/^>\\s*\\d+(\\.\\d+)?$/.test(val)) {
+           const num = parseFloat(val.replace(/>/, ''));
+           return rows.filter(row => row.values[columnId] > num);
+         }
+
+         if (/^<\\s*\\d+(\\.\\d+)?$/.test(val)) {
+           const num = parseFloat(val.replace(/</, ''));
+           return rows.filter(row => row.values[columnId] < num);
+         }
+
+         const num = parseFloat(val);
+         return rows.filter(row => row.values[columnId] === num);
+       }"
+    )
+
+
+    #
     # When r$codeWasCovariatesTibble is ready, plot it
     #
     output$codeWasCovariatesTable <- reactable::renderReactable({
@@ -192,9 +234,16 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
         vocabularyId = reactable::colDef(name = "Vocabulary", minWidth = 40),
         conceptCode = reactable::colDef(name = "Concept Code", minWidth = 40),
         covariateName = reactable::colDef(name = "Covariate Name", minWidth = 200),
-        nCasesYes = reactable::colDef(name = "N Cases", minWidth = 40),
-        mplog = reactable::colDef(name = "mplog", minWidth = 40, format = reactable::colFormat(digits = 2)),
-        beta = reactable::colDef(name = "beta", minWidth = 40, format = reactable::colFormat(digits = 2)),
+        nCasesYes = reactable::colDef(name = "N Cases", minWidth = 40,filterable = TRUE,
+                                      filterMethod = numericRangeFilter),
+        mplog = reactable::colDef(name = "mplog", minWidth = 40,
+                                  filterable = TRUE,
+                                  filterMethod = numericRangeFilter,
+                                  format = reactable::colFormat(digits = 2)),
+        beta = reactable::colDef(name = "beta", minWidth = 40,
+                                 filterable = TRUE,
+                                 filterMethod = numericRangeFilter,
+                                 format = reactable::colFormat(digits = 2)),
         isDataAvailable = reactable::colDef(name = "Data Available", minWidth = 40)
       )
 
@@ -1124,4 +1173,5 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
                        style = "width: 250px; height: 150px; cursor: pointer;",
                        plot)
 }
+
 
