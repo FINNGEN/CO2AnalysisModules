@@ -446,53 +446,99 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
       )
     })
 
+
     observeEvent(input$showDistPlot, {
 
       idx <- input$showDistPlot
       dist_data <- r_groupedCovariates$groupedCovariatesTibble$covariatesDistribution[[idx]]
-
       values_expanded <- rep(dist_data$value, dist_data$n)
 
-      # Calculate IQR to detect outliers on the score values
-      Q1 <- quantile(values_expanded, 0.25, na.rm = TRUE)
-      Q3 <- quantile(values_expanded, 0.75, na.rm = TRUE)
-      IQR <- Q3 - Q1
-      lowerBound <- Q1 - 1.5 * IQR
-      upperBound <- Q3 + 1.5 * IQR
+      modal_inputs <- reactiveValues(
+        method = "iqr",
+        madLevel = 4
+      )
 
-      dist_data$isOutlier <- ifelse(dist_data$value < lowerBound | dist_data$value > upperBound, "outlier_group_value", "")
-
+      # Show modal with inputs for outlier detection
       showModal(modalDialog(
         title = "Grouped covariates score distribution - Detailed View",
         easyClose = TRUE,
         footer = modalButton("Close"),
         size = "l",
-        tabsetPanel(
-          tabPanel("Histogram",
-                   plotly::plotlyOutput(ns("modalHistPlot"), height = "400px")
+        tagList(
+          fluidRow(
+            column(4,
+                   radioButtons(ns("modalOutlierMethod"), "Outlier detection method:",
+                                choices = c("IQR (using interquartile range)" = "iqr",
+                                            "MAD (using median absolute deviation)" = "mad"),
+                                selected = modal_inputs$method)
+            ),
+            column(4,
+                   conditionalPanel(
+                     condition = sprintf("input.%s == 'mad'", ns("modalOutlierMethod")),
+                     numericInput(ns("modalMadLevel"), "MAD multiplier (Median ± multiplier * MAD):",
+                                  value = modal_inputs$madLevel, min = 2, max = 10, step = 0.5)
+                   )
+            ),
+            column(4,
+                   checkboxInput(ns("modalShowOutliers"), "Show all data (including outliers)", value = TRUE)
+            )
           ),
-          tabPanel("Boxplot",
-                   plotly::plotlyOutput(ns("modalBoxPlot"), height = "400px")
+          tabsetPanel(
+            tabPanel("Histogram",
+                     plotly::plotlyOutput(ns("modalHistPlot"), height = "400px")
+            ),
+            tabPanel("Boxplot",
+                     plotly::plotlyOutput(ns("modalBoxPlot"), height = "400px")
+            )
           )
         )
       ))
 
-      output$modalHistPlot <- plotly::renderPlotly({
-        req(dist_data)
+      # Update reactive values when user changes inputs
+      observe({
+        modal_inputs$method <- input$modalOutlierMethod
+        if (!is.null(input$modalMadLevel)) modal_inputs$madLevel <- input$modalMadLevel
+      })
 
+      # Reactive expression for outlier calculation
+      outlier_data <- reactive({
+        if (modal_inputs$method == "mad") {
+          med <- median(values_expanded)
+          mad_val <- mad(values_expanded, constant = 1)
+          lowerBound <- med - modal_inputs$madLevel * mad_val
+          upperBound <- med + modal_inputs$madLevel * mad_val
+        } else {
+          Q1 <- quantile(values_expanded, 0.25)
+          Q3 <- quantile(values_expanded, 0.75)
+          IQR_val <- Q3 - Q1
+          lowerBound <- Q1 - 1.5 * IQR_val
+          upperBound <- Q3 + 1.5 * IQR_val
+        }
+
+        dist_data$isOutlier <- ifelse(dist_data$value < lowerBound | dist_data$value > upperBound,
+                                      "outlier_group_value", "")
+
+        # Filter if user wants only non-outliers
+        if (!input$modalShowOutliers) {
+          dist_data <- dist_data[dist_data$isOutlier != "outlier_group_value", ]
+        }
+
+        dist_data
+      })
+
+
+      # Histogram
+      output$modalHistPlot <- plotly::renderPlotly({
+        df <- outlier_data()
         plotly::plot_ly(
-          dist_data,
+          df,
           x = ~value,
           y = ~n,
           type = 'bar',
-          marker = list(color = ifelse(dist_data$isOutlier == "outlier_group_value", "#E74C3C", "#3498DB"))
+          marker = list(color = ifelse(df$isOutlier == "outlier_group_value", "#E74C3C", "#3498DB"))
         ) |>
           plotly::layout(
-            xaxis = list(
-              title = "Group score",
-              dtick = 1,  # forces ticks at every integer
-              tickmode = "linear"
-            ),
+            xaxis = list(title = "Group score", dtick = 1, tickmode = "linear"),
             yaxis = list(title = "Frequency"),
             showlegend = FALSE
           )
@@ -500,34 +546,20 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
 
       # Boxplot
       output$modalBoxPlot <- plotly::renderPlotly({
-        req(dist_data)
-
-        # Create a dataframe with value and outlier status for each point
-        df_expanded <- do.call(rbind, lapply(seq_len(nrow(dist_data)), function(i) {
-          data.frame(
-            value = rep(dist_data$value[i], dist_data$n[i]),
-            isOutlier = rep(dist_data$isOutlier[i], dist_data$n[i])
-          )
+        df <- outlier_data()
+        df_expanded <- do.call(rbind, lapply(seq_len(nrow(df)), function(i) {
+          data.frame(value = rep(df$value[i], df$n[i]), isOutlier = rep(df$isOutlier[i], df$n[i]))
         }))
-
-        df_expanded$isOutlier = as.factor(df_expanded$isOutlier)
-
         df_expanded$outlier_flag <- ifelse(df_expanded$isOutlier == "outlier_group_value", "Outlier", "Normal")
-
         p <- ggplot2::ggplot(df_expanded, ggplot2::aes(x = "", y = value)) +
-          ggplot2::geom_boxplot(outlier.shape = NA) +  # hide default outliers
-          ggplot2::geom_jitter(aes(color = outlier_flag), width = 0.2, size = 2)  +
+          ggplot2::geom_boxplot(outlier.shape = NA) +
+          ggplot2::geom_jitter(aes(color = outlier_flag), width = 0.2, size = 2) +
           ggplot2::labs(x = "Group score", y = "score distribution") +
           ggplot2::theme_minimal() +
           ggplot2::scale_color_manual(values = c("Normal" = "black", "Outlier" = "#E74C3C"))
-
         plotly::ggplotly(p)
       })
-
-
     })
-
-
 
 
     observeEvent(input$delete_row, {
@@ -695,8 +727,6 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
     rf_flagsTable_list <- mod_fct_phenotypeFlags_server("phenotypeFlags_flags", r_groupedCovariates)
     rf_flagsTable <- rf_flagsTable_list[["r_flagstable"]]
     rf_flagsTableOrder <- rf_flagsTable_list[["r_roworder"]]
-
-
 
     #
     # Evaluate the flag formulas
