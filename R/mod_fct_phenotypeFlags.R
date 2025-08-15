@@ -6,6 +6,32 @@ mod_fct_phenotypeFlags_ui <- function(id) {
         #reactable::reactableOutput(ns("flagTable_sortableTable")),
         shinyjqui::jqui_sortable(shinyjqui::sortableTableOutput(ns("flagTable_sortableTable"))),
 
+        # Custom CSS for grab/grabbing cursor on the sortable rows
+        shiny::tags$style(HTML(sprintf("
+         #%s table tr {
+          cursor: grab;
+          transition: background-color 0.2s ease;
+          }
+          #%s table tr:active {
+            cursor: grabbing;
+            border: 2px solid #ffa500;
+            background-color: #eaffaa;
+            box-shadow: 0 0 5px rgba(0,0,0,0.2);
+          }
+          #%s table tr:hover {
+            background-color: #f0fff0;
+          }
+          #%s table tr i.fa-grip-vertical {
+            cursor: grab;
+            color: #888;
+          }
+
+          #%s table th:nth-child(7) {
+            display: none;  /* hide the drag column headers */
+          }
+        ", ns("flagTable_sortableTable"), ns("flagTable_sortableTable"), ns("flagTable_sortableTable"),
+          ns("flagTable_sortableTable"),ns("flagTable_sortableTable")))),
+
         # Custom CSS to remove grey background and border from verbatimTextOutput
         shiny::tags$style(HTML(sprintf("
           #%s {
@@ -287,6 +313,7 @@ mod_fct_phenotypeFlags_server <- function(id, r_groupedCovariates) {
 
           # Build the table manually with HTML
           df_display <- df
+
           df_display$flagColor <- sprintf(
             "<div style='width:40px;height:20px;background:%s;cursor:pointer;border:1px solid #ccc;'
              onclick=\"Shiny.setInputValue('%s', %d, {priority: 'event'})\"></div>",
@@ -307,11 +334,19 @@ mod_fct_phenotypeFlags_server <- function(id, r_groupedCovariates) {
             ns("delete_flag"), seq_len(nrow(df))
           )
 
-          # Select and order columns to display
-          df_display <- df_display[, c("flagName", "flagColor", "flagRulePretty", "edit", "delete")]
+
+          # Drag handle column
+          df_display$orderFlags <- sprintf(
+                "<div style='display:flex; justify-content:center; align-items:center; height:32px;'>
+                 <i class='fa fa-grip-vertical'></i>
+               </div>"
+              )
+
+          #column to display
+          df_display <- df_display[, c("flagName", "flagColor", "flagRulePretty", "edit", "delete","orderFlags")]
 
           df_display
-        }, rownames = TRUE, sanitize.text.function = function(x) x)  # allows HTML rendering
+        }, rownames = TRUE, sanitize.text.function = function(x) x)
 
 
         # edit color from rows
