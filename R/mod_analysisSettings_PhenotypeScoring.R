@@ -18,42 +18,85 @@ mod_analysisSettings_phenotypeScoring_ui <- function(id) {
   ns <- shiny::NS(id)
   htmltools::tagList(
     shinyjs::useShinyjs(),
-    #
-    shiny::tags$h4("Cohorts"),
-    shinyWidgets::pickerInput(
-      inputId = ns("selectCaseCohort_pickerInput"),
-      label = "Select case cohort:",
-      choices = NULL,
-      selected = NULL,
-      multiple = FALSE),
-    shinyWidgets::pickerInput(
-      inputId = ns("selectControlCohort_pickerInput"),
-      label = "Select control cohort:",
-      choices = NULL,
-      selected = NULL,
-      multiple = FALSE),
-    htmltools::hr(),
-    shiny::tags$h4("Settings"),
-    #
-    mod_fct_covariateSelector_ui(
-      inputId = ns("features_pickerInput"),
-      label = "Select features to compare between cases and controls:",
-      analysisIdsToShow = c(
-        1, 2, 10, 41,
-        101, 141,
-        301, 342,
-        501, 541,
-        701, 741,
-        801, 841,
-        601, 641
-        ),
-      analysisIdsSelected = c(1,2,10,41,141,342)
+
+    shiny::fluidRow(
+      # Cohorts panel
+      shiny::column(
+        width = 6,
+        shiny::wellPanel(
+          shiny::tags$h4("Cohorts"),
+          shinyWidgets::pickerInput(
+            inputId = ns("selectCaseCohort_pickerInput"),
+            label = "Select case cohort:",
+            choices = NULL,
+            selected = NULL,
+            multiple = FALSE
+          ),
+          shinyWidgets::pickerInput(
+            inputId = ns("selectControlCohort_pickerInput"),
+            label = "Select control cohort:",
+            choices = NULL,
+            selected = NULL,
+            multiple = FALSE
+          )
+        )
+      ),
+
+      # Upload panel
+      shiny::column(
+        width = 6,
+        shiny::wellPanel(
+          shiny::tags$h4("Upload Previous Result"),
+          shiny::helpText(
+            "Upload a previously run codeWAS result file (.duckdb):"
+          ),
+          shiny::fileInput(
+            inputId = ns("upload_result_duckdb"),
+            label = NULL,
+            accept = c(".duckdb", ".db"),
+            buttonLabel = "Browse...",
+            placeholder = "No file selected"
+          ),
+          shiny::actionButton(
+            ns("viewPreviousResult_actionButton"),
+            "Open previous result for phenotype scoring",
+            class = "btn-primary"
+          )
+        )
+      )
     ),
+
     htmltools::hr(),
+
+    shiny::tags$h4("Settings"),
+    shiny::fluidRow(
+      # run codeWAS settings
+      shiny::column(
+        width = 12,
+        mod_fct_covariateSelector_ui(
+          inputId = ns("features_pickerInput"),
+          label = "Select features to compare between cases and controls:",
+          analysisIdsToShow = c(
+            1, 2, 10, 41,
+            101, 141,
+            301, 342,
+            501, 541,
+            701, 741,
+            801, 841,
+            601, 641
+          ),
+          analysisIdsSelected = c(1, 2, 10, 41, 141, 342)
+        )
+      )
+    ),
+
+    htmltools::hr(),
+
     shiny::tags$h4("Pre-run info"),
     shiny::verbatimTextOutput(ns("info_text"), placeholder = TRUE)
   )
 }
+
 
 #' @title PhenotypeScorings Analysis Settings Server
 #' @description Server module for handling the logic of the cohort overlaps analysis settings UI. This module updates the UI elements based on the selected cohorts and returns the analysis settings as a reactive expression.
@@ -103,6 +146,46 @@ mod_analysisSettings_phenotypeScoring_server <- function(id, r_connectionHandler
         choices = cohortIdAndNamesList,
         selected = character(0)
       )
+    })
+
+    #
+    # Enable previous result Viewer button only if a file has been uploaded
+    #
+
+    shiny::observe({
+      file_uploaded <- shiny::isTruthy(input$upload_result_duckdb)
+      shinyjs::toggleState("viewPreviousResult_actionButton", condition = file_uploaded)
+    })
+
+    #
+    # if file is uploaded open a tab of visualization
+    #
+    shiny::observeEvent(input$viewPreviousResult_actionButton, {
+      shiny::req(input$upload_result_duckdb)
+
+      tryCatch({
+        # Normalize and encode path
+        uploaded_file <- normalizePath(input$upload_result_duckdb$datapath, winslash = "/")
+        uploaded_file <- utils::URLencode(uploaded_file)
+
+        if (!file.exists(input$upload_result_duckdb$datapath)) {
+          stop("Uploaded file not found! It may have been deleted.")
+        }
+
+        # Construct URL (this has to come from the calling module, and should be sth like url_visualiseResults, hard coded for now )
+        base_url <- "http://localhost:8561"
+        url <- paste0(
+          base_url, "/?analysisType=phenotypeScoring&pathToResultsDatabase=",
+          uploaded_file
+        )
+
+
+        message("Attempting to open URL: ", url)
+        shinyjs::runjs(paste0("window.open('", url, "')"))
+
+      }, error = function(e) {
+        shiny::showNotification(paste("Error:", e$message), type = "error")
+      })
     })
 
     #
