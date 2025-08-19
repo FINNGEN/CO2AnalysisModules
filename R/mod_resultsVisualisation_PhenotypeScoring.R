@@ -174,41 +174,80 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
     #
     numericRangeFilter <- htmlwidgets::JS(
       "function(rows, columnId, filterValue) {
-         const val = filterValue.trim();
+         if (!filterValue) return rows;
+
+         // trim and remove all spaces
+         const val = filterValue.trim().replace(/\\s+/g, '');
          if (!val) return rows;
 
+         const EPS = 1e-9; // tolerance for floating-point comparisons
+
+         const safeNum = (x) => {
+           const n = parseFloat(x);
+           return isNaN(n) ? null : n;
+         };
+
+         // handle range values (1-10)
          if (/^\\d+(\\.\\d+)?-\\d+(\\.\\d+)?$/.test(val)) {
-           const [min, max] = val.split('-').map(Number);
+           const [min, max] = val.split('-').map(safeNum);
            return rows.filter(row => {
-             const v = row.values[columnId];
-             return v >= min && v <= max;
+             const v = Number(row.values[columnId]);
+             return v != null && !isNaN(v) &&
+                    (v > min - EPS) && (v < max + EPS);
            });
          }
 
-         if (/^>=\\s*\\d+(\\.\\d+)?$/.test(val)) {
-           const num = parseFloat(val.replace(/>=/, ''));
-           return rows.filter(row => row.values[columnId] >= num);
+         // handle something like >=X
+         if (/^>=\\d+(\\.\\d+)?$/.test(val)) {
+           const num = safeNum(val.replace('>=', ''));
+           return rows.filter(row => {
+             const v = Number(row.values[columnId]);
+             return v != null && !isNaN(v) && (v > num || Math.abs(v - num) < EPS);
+           });
          }
 
-         if (/^<=\\s*\\d+(\\.\\d+)?$/.test(val)) {
-           const num = parseFloat(val.replace(/<=/, ''));
-           return rows.filter(row => row.values[columnId] <= num);
+         if (/^<=\\d+(\\.\\d+)?$/.test(val)) {
+           const num = safeNum(val.replace('<=', ''));
+           return rows.filter(row => {
+             const v = Number(row.values[columnId]);
+             return v != null && !isNaN(v) && (v < num || Math.abs(v - num) < EPS);
+           });
          }
 
-         if (/^>\\s*\\d+(\\.\\d+)?$/.test(val)) {
-           const num = parseFloat(val.replace(/>/, ''));
-           return rows.filter(row => row.values[columnId] > num);
+         if (/^>\\d+(\\.\\d+)?$/.test(val)) {
+           const num = safeNum(val.replace('>', ''));
+           return rows.filter(row => {
+             const v = Number(row.values[columnId]);
+             return v != null && !isNaN(v) && v > num + EPS;
+           });
          }
 
-         if (/^<\\s*\\d+(\\.\\d+)?$/.test(val)) {
-           const num = parseFloat(val.replace(/</, ''));
-           return rows.filter(row => row.values[columnId] < num);
+         if (/^<\\d+(\\.\\d+)?$/.test(val)) {
+           const num = safeNum(val.replace('<', ''));
+           return rows.filter(row => {
+             const v = Number(row.values[columnId]);
+             return v != null && !isNaN(v) && v < num - EPS;
+           });
          }
 
-         const num = parseFloat(val);
-         return rows.filter(row => row.values[columnId] === num);
+         if (/^==\\d+(\\.\\d+)?$/.test(val)) {
+           const num = safeNum(val.replace('==', ''));
+           return rows.filter(row => {
+             const v = Number(row.values[columnId]);
+             return v != null && !isNaN(v) && Math.abs(v - num) < EPS;
+           });
+         }
+
+         // for exact number (for example just '10' with no operator)
+         const num = safeNum(val);
+         if (num == null) return rows;
+         return rows.filter(row => {
+           const v = Number(row.values[columnId]);
+           return v != null && !isNaN(v) && Math.abs(v - num) < EPS;
+         });
        }"
     )
+
 
 
     #
