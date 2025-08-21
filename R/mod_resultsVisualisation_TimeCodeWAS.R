@@ -281,6 +281,15 @@ mod_resultsVisualisation_TimeCodeWAS_ui <- function(id) {
           shiny::div(
             style = "margin-top: 10px; margin-bottom: 10px;",
             shiny::downloadButton(ns("downloadDataFiltered"), "Download filtered"),
+            # tags$button(
+            #   shiny::icon("download"),
+            #   "Download filtered",
+            #   class = "btn btn-default",
+            #   onclick = sprintf(
+            #     "Reactable.downloadDataCSV('%s', 'timecodewas_filtered_' + new Date().toISOString().slice(0,16).replace(/[-:T]/g,'_') + '.csv')",
+            #     ns("reactableData")
+            #     )
+            # ),
             shiny::downloadButton(ns("downloadDataAll"), "Download all"),
           )
         ) # tabPanel
@@ -334,6 +343,7 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
       # data and filtered data
       timeCodeWASData = NULL,
       filteredTimeCodeWASData = NULL,
+      browserFilteredTimeCodeWASData = NULL,
       timePeriods = NULL,
       # copies of views to save as PDF
       savedProportionsView = NULL,
@@ -1013,7 +1023,7 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
           TRUE ~ round(OR, 3)
         )) |>
         dplyr::select(
-          GROUP, name, conceptCode, vocabularyId, code, analysisName, domain, upIn,
+          id,GROUP, name, conceptCode, vocabularyId, code, analysisName, domain, upIn,
           nCasesYes, nControlsYes, meanCases, meanControls, sdCases, sdControls,
           OR, mlogp, beta, model, notes)
 
@@ -1029,7 +1039,7 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
         TRUE ~ df
       )
 
-      reactable::reactable(
+      timecodewasTbl <- reactable::reactable(
         df,
         filterable = TRUE,
         bordered = TRUE,
@@ -1086,21 +1096,22 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
               }
             }
           ),
+          id = reactable::colDef(show = FALSE),
           code = reactable::colDef(show = FALSE),
           conceptCode = reactable::colDef(name = "Concept Code", minWidth = 100),
           vocabularyId = reactable::colDef(name = "Vocabulary", minWidth = 86),
           analysisName = reactable::colDef(name = "Analysis Name", minWidth = 120, maxWidth = 120),
           domain = reactable::colDef(name = "Domain", minWidth = 120, maxWidth = 120),
           upIn = reactable::colDef(name = "Type", minWidth = 50),
-          nCasesYes = reactable::colDef(name = "N cases", minWidth = 70, maxWidth = 70),
-          nControlsYes = reactable::colDef(name = "N ctrls", minWidth = 70, maxWidth = 70),
-          meanCases = reactable::colDef(name = "Ratio|Mean cases", minWidth = 120),
-          meanControls = reactable::colDef(name = "Ratio|Mean ctrls", minWidth = 120),
-          sdCases = reactable::colDef(name = "SD cases", minWidth = 90, maxWidth = 90),
-          sdControls = reactable::colDef(name = "SD ctrls", minWidth = 90, maxWidth = 90),
-          OR = reactable::colDef( name = "OR", minWidth = 80),
-          mlogp = reactable::colDef(name = "mlogp", minWidth = 80),
-          beta = reactable::colDef(name = "Beta", minWidth = 80),
+          nCasesYes = reactable::colDef(name = "N cases", minWidth = 70, maxWidth = 70,filterable = TRUE,sortable=TRUE,filterMethod = .numericRangeFilter),
+          nControlsYes = reactable::colDef(name = "N ctrls", minWidth = 70, maxWidth = 70,filterable = TRUE,sortable=TRUE,filterMethod = .numericRangeFilter),
+          meanCases = reactable::colDef(name = "Ratio|Mean cases", minWidth = 120,filterable = TRUE,sortable=TRUE,filterMethod = .numericRangeFilter),
+          meanControls = reactable::colDef(name = "Ratio|Mean ctrls", minWidth = 120,filterable = TRUE,sortable=TRUE,filterMethod = .numericRangeFilter),
+          sdCases = reactable::colDef(name = "SD cases", minWidth = 90, maxWidth = 90,filterable = TRUE,sortable=TRUE,filterMethod = .numericRangeFilter),
+          sdControls = reactable::colDef(name = "SD ctrls", minWidth = 90, maxWidth = 90,filterable = TRUE,sortable=TRUE,filterMethod = .numericRangeFilter),
+          OR = reactable::colDef( name = "OR", minWidth = 80,filterable = TRUE,sortable=TRUE,filterMethod = .numericRangeFilter),
+          mlogp = reactable::colDef(name = "mlogp", minWidth = 80,filterable = TRUE,sortable=TRUE,filterMethod = .numericRangeFilter),
+          beta = reactable::colDef(name = "Beta", minWidth = 80,filterable = TRUE,sortable=TRUE,filterMethod = .numericRangeFilter),
           model = reactable::colDef(name = "Model", minWidth = 80),
           notes = reactable::colDef(name = "Notes", minWidth = 100)
         ),
@@ -1111,6 +1122,17 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
         defaultPageSize = rows_to_show_debounced(),
         showPageSizeOptions = FALSE
       )
+
+      # Capture filtered row IDs in the browser
+      htmlwidgets::onRender(timecodewasTbl, sprintf("
+        function(el, x) {
+          Reactable.onStateChange('%s', function(state) {
+            var filteredIds = state.sortedData.map(row => row.id);
+            Shiny.setInputValue('%s', filteredIds);
+          });
+        }
+      ", ns("reactableData"), ns("filtered_rows_input")))
+
     }
 
     #
@@ -1122,6 +1144,14 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
       .renderTable(r$filteredTimeCodeWASData)
     })
 
+    # monitor browser filtered data.
+    # To DO: use this browser filtered data plotting or highlighting those that are browser filtered in plots
+    observeEvent(input$filtered_rows_input, {
+        r$browserFilteredTimeCodeWASData <- r$filteredTimeCodeWASData |>
+          dplyr::filter(as.numeric(id) %in% as.numeric(input$filtered_rows_input))
+    })
+
+
     #
     # download filtered data as a table
     #
@@ -1130,8 +1160,13 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
         paste('timecodewas_filtered_', format(lubridate::now(), "%Y_%m_%d_%H%M"), '.csv', sep='')
       },
       content = function(fname){
-        readr::write_csv(r$filteredTimeCodeWASData |> dplyr::select(-label), fname)
-        return(fname)
+        if(!is.null(r$browserFilteredTimeCodeWASData)){
+          readr::write_csv(r$browserFilteredTimeCodeWASData |> dplyr::select(-label), fname)
+          return(fname)
+        }else{
+          readr::write_csv(r$filteredTimeCodeWASData |> dplyr::select(-label), fname)
+          return(fname)
+        }
       }
     )
 
