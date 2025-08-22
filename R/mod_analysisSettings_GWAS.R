@@ -48,8 +48,8 @@ mod_analysisSettings_GWAS_ui <- function(id) {
       selected = "additive",
       multiple = FALSE
     ),
-    shiny::textInput(ns("phenotypeName_textInput"), label = "Phenotype Name:"),
-    shiny::textInput(ns("description_textInput"), label = "Description:"),
+    shiny::textInput(ns("phenotypeName_textInput"), label = "Phenotype Name:",placeholder = "PHENOTYPE_NAME"),
+    shiny::textInput(ns("description_textInput"), label = "Description:",placeholder = "Brief description of the GWAS analysis"),
     htmltools::hr(),
     shiny::tags$h4("Pre-ran info"),
     shiny::verbatimTextOutput(ns("info_text"), placeholder = TRUE),
@@ -149,15 +149,15 @@ mod_analysisSettings_GWAS_server <- function(id, r_connectionHandler) {
         dplyr::pull(cohortName)
 
       defaultPhenotypeName <- paste0(
-        casesCohortName |> stringr::str_replace_all("[[:punct:]]|[^[:alnum:]]|[:blank:]", "") |> toupper(),
-        controlsCohortName |> stringr::str_replace_all("[[:punct:]]|[^[:alnum:]]|[:blank:]", "") |> toupper(),
+        casesCohortName |> stringr::str_replace_all("[[:punct:]]|[^[:alnum:]]|[:blank:]", "") |> toupper(),"_",
+        controlsCohortName |> stringr::str_replace_all("[[:punct:]]|[^[:alnum:]]|[:blank:]", "") |> toupper(),"_",
         input$selectAnalysisType_pickerInput |> toupper()
       )
       dbName <- cohortTableHandler$databaseName
+
       defaultDescription <- paste0(
-        "Cases-cohort: ", casesCohortName, "; Controls-cohort: ",
-        controlsCohortName, " (db: ", dbName, ")",
-        "; Analysis type: ", input$selectAnalysisType_pickerInput
+        "Comparison of ", casesCohortName, " (cases) and ", controlsCohortName,
+        " (controls) using ", input$selectAnalysisType_pickerInput, " analysis and database ", dbName
       )
 
       shiny::updateTextInput(session, "phenotypeName_textInput", value = defaultPhenotypeName)
@@ -170,8 +170,8 @@ mod_analysisSettings_GWAS_server <- function(id, r_connectionHandler) {
     shiny::observeEvent(input$phenotypeName_textInput, {
       shinyFeedback::feedbackWarning(
         inputId = "phenotypeName_textInput",
-        stringr::str_detect(input$phenotypeName_textInput, "[^[:alnum:]]|[:lower:]"),
-        text = "Name must use only upper case characters or numbers"
+        nzchar(input$phenotypeName_textInput) && stringr::str_detect(input$phenotypeName_textInput, "^(?![A-Za-z][A-Za-z0-9_]*$)"),
+        text = "Phenotype name must start with a letter and contain only letters, numbers, or underscores"
       )
     })
 
