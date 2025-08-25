@@ -123,7 +123,7 @@ test_that("mod_analysisSettings_CodeWAS works", {
       print(output$info_text)
 
       output$info_text |> expect_match("No subjects overlap between case and control cohorts")
-      output$info_text |> output$info_text |> expect_match("mean year of birth: Cases=.*Controls=.*")
+      output$info_text |> expect_match("mean year of birth: Cases=.*Controls=.*")
       output$info_text |> expect_match("There is a significant difference in the shapes of year of birth distributions|There is a significant difference in the mean year of birth|There is significant difference both in the mean year of birth")
 
 
