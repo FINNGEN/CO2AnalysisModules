@@ -135,6 +135,10 @@ mod_resultsVisualisation_PhenotypeScoring_ui <- function(id) {
 #'
 #'
 #' @export
+#' @importFrom stats mad median quantile
+#' @importFrom utils write.table
+#' @importFrom DT datatable
+#' @importFrom plotly plot_ly ggplotly
 mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults) {
   shiny::moduleServer(id, function(input, output, session) {
     ns <- session$ns
@@ -433,7 +437,7 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
             column(4,
                    conditionalPanel(
                      condition = sprintf("input.%s == 'mad'", ns("modalOutlierMethod")),
-                     numericInput(ns("modalMadLevel"), "MAD multiplier (Median ± multiplier * MAD):",
+                     numericInput(ns("modalMadLevel"), "MAD multiplier (Median +/- multiplier * MAD):",
                                   value = modal_inputs$madLevel, min = 2, max = 10, step = 0.5)
                    )
             ),
@@ -804,7 +808,8 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
         ggplot2::scale_fill_manual(values = setNames(flagsTable$flagColor, flagsTable$flagName)) +
         #ggplot2::scale_alpha_identity(guide = "none") +
         ggplot2::theme_minimal() +
-        ggplot2::labs(x = "Total Score", y = "Number of Patients")
+        ggplot2::labs(x = "Total Score", y = "Number of Patients") +
+        ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45, hjust = 1))
 
       plotly::ggplotly(p) |> plotly::layout(legend = list(title = list(text = "Flag and score")))
     })
@@ -930,8 +935,8 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
         # filter by score range
         if (isTRUE(input$downloadInRangeOnly)) {
           df <- df |> dplyr::filter(
-            totalScoreBin |> as.integer() >= input$scoreRange[1],
-            totalScoreBin |> as.integer() <= input$scoreRange[2]
+            totalScore |> as.integer() >= input$scoreRange[1],
+            totalScore |> as.integer() <= input$scoreRange[2]
           )
         }
 
@@ -976,6 +981,7 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
 #' @param analysisResults A database connection containing analysis results tables
 #' @param covariateIds A vector of covariate ids
 #' @param groupedCovariatesTibble A tibble containing the grouped covariates
+#' @param newGroupName Character string giving the name for the new covariate group.
 #' @param groupedCovariatesPerPersonTibble A tibble containing the grouped covariates per person
 #' @return A list containing the updated group of covariates object
 #' @importFrom dplyr tbl left_join filter distinct mutate collect

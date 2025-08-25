@@ -7,6 +7,7 @@
 .appendCovariateGroup(
   analysisResults,
   covariateIds,
+  newGroupName,
   groupedCovariatesTibble,
   groupedCovariatesPerPersonTibble
 )
@@ -15,6 +16,8 @@
 \item{analysisResults}{A database connection containing analysis results tables}
 
 \item{covariateIds}{A vector of covariate ids}
+
+\item{newGroupName}{Character string giving the name for the new covariate group.}
 
 \item{groupedCovariatesTibble}{A tibble containing the grouped covariates}
 

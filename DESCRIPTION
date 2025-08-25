@@ -23,6 +23,8 @@ Imports:
     shiny,
     shinyjs,
     shinyWidgets,
+    DT,
+    plotly,
     yaml,
     duckdb,
     DBI,
