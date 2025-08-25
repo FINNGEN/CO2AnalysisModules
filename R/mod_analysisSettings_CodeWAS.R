@@ -45,11 +45,11 @@ mod_analysisSettings_codeWAS_ui <- function(id) {
         801, 841, 909,
         501, 541, 907,
         910, 911 ),
-        analysisRegexToShowTibble  = tibble::tribble(
-          ~analysisId, ~analysisName, ~analysisRegex,
-          999, "Endpoints", "^(?!.*\\[CohortLibrary\\]).*_case$",
-          998, "CohortLibrary", ".*\\[CohortLibrary\\]"
-        ),
+      analysisRegexToShowTibble  = tibble::tribble(
+        ~analysisId, ~analysisName, ~analysisRegex,
+        999, "Endpoints", "^(?!.*\\[CohortLibrary\\]).*_case$",
+        998, "CohortLibrary", ".*\\[CohortLibrary\\]"
+      ),
       analysisIdsSelected = c(141, 1, 2, 8, 10, 41, 641, 342, 701, 702, 841, 541, 999)
     ),
     shinyWidgets::radioGroupButtons(
@@ -194,23 +194,9 @@ mod_analysisSettings_codeWAS_server <- function(id, r_connectionHandler) {
 
       cohortTableHandler <- r_connectionHandler$cohortTableHandler
 
-      cohortsOverlap <- cohortTableHandler$getCohortsOverlap()
-      cohortCounts <-  cohortTableHandler$getCohortCounts()
-      nSubjectsOverlap <- cohortsOverlap |>
-        dplyr::filter(
-          stringr::str_detect(cohortIdCombinations, paste0("-", input$selectCaseCohort_pickerInput, "-")) &
-            stringr::str_detect(cohortIdCombinations, paste0("-", input$selectControlCohort_pickerInput, "-"))
-        ) |>
-        dplyr::pull(numberOfSubjects)  |>
-        sum()
-      nSubjectsCase <- cohortCounts |>
-        dplyr::filter(cohortId == input$selectCaseCohort_pickerInput) |>
-        dplyr::pull(cohortSubjects)
-      nSubjectsControl <- cohortCounts |>
-        dplyr::filter(cohortId == input$selectControlCohort_pickerInput) |>
-        dplyr::pull(cohortSubjects)
-
-      cohortsSumary  <- cohortTableHandler$getCohortsSummary()
+      nSubjectsOverlap <- cohortTableHandler$getNumberOfOverlappingSubjects(selected_cohortId1=input$selectCaseCohort_pickerInput,selected_cohortId2=input$selectControlCohort_pickerInput)
+      nSubjectsCase <- cohortTableHandler$getNumberOfSubjects(input$selectCaseCohort_pickerInput)
+      nSubjectsControl <- cohortTableHandler$getNumberOfSubjects(input$selectControlCohort_pickerInput)
 
       # cores
       message <- paste0("\u2139\uFE0F Analysis will use : ", cores, " cores\n")
@@ -222,7 +208,7 @@ mod_analysisSettings_codeWAS_server <- function(id, r_connectionHandler) {
 
       # counts
       if( nSubjectsCase > nSubjectsControl ){
-        message <- paste0(message, "\u274C There are more subjects in  case cohort (", nSubjectsCase,") that in control cohort (", nSubjectsControl,"). Are you sure they are correct?\n")
+        message <- paste0(message, "\u274C There are more subjects in  case cohort (", nSubjectsCase,") than in control cohort (", nSubjectsControl,"). Are you sure they are correct?\n")
       }
 
       # overlap
@@ -230,7 +216,7 @@ mod_analysisSettings_codeWAS_server <- function(id, r_connectionHandler) {
         message <- paste0(message, "\u2705 No subjects overlap between case and control cohorts\n")
       }else{
         if(nSubjectsOverlap > nSubjectsCase * .20){
-          message <- paste0(message, "\u274C There are many subjects, ",nSubjectsOverlap, ", that overlap  berween case and control cohorts. Consider removing them in Operate Cohorts tab\n")
+          message <- paste0(message, "\u274C There are many subjects, ",nSubjectsOverlap, ", that overlap  between case and control cohorts. Consider removing them in Operate Cohorts tab\n")
         }else{
           message <- paste0(message, "\u26A0\uFE0F There are few subjects, ",nSubjectsOverlap, ", that overlap between case and control cohorts. \n")
         }
@@ -238,23 +224,9 @@ mod_analysisSettings_codeWAS_server <- function(id, r_connectionHandler) {
 
       # sex
       if(!(input$statistics_type_option == "full" & input$controlSex_checkboxInput)){
-        sexCase <- cohortsSumary |>
-          dplyr::filter(cohortId == input$selectCaseCohort_pickerInput) |>
-          dplyr::pull(sexCounts)
-        sexControl <- cohortsSumary |>
-          dplyr::filter(cohortId == input$selectControlCohort_pickerInput) |>
-          dplyr::pull(sexCounts)
-        nMaleCases <- sexCase[[1]]  |> dplyr::filter(sex == "MALE")  |> dplyr::pull(n)
-        nMaleCases <- ifelse(length(nMaleCases)==0, 0, nMaleCases)
-        nFemaleCases <- sexCase[[1]]  |> dplyr::filter(sex == "FEMALE")  |> dplyr::pull(n)
-        nFemaleCases <- ifelse(length(nFemaleCases)==0, 0, nFemaleCases)
-        nMaleControls <- sexControl[[1]]  |> dplyr::filter(sex == "MALE") |> dplyr::pull(n)
-        nMaleControls <- ifelse(length(nMaleControls)==0, 0, nMaleControls)
-        nFemaleControls <- sexControl[[1]]  |> dplyr::filter(sex == "FEMALE") |> dplyr::pull(n)
-        nFemaleControls <- ifelse(length(nFemaleControls)==0, 0, nFemaleControls)
 
-        data <-matrix(c(nMaleCases,nFemaleCases,nMaleControls,nFemaleControls),ncol=2)
-        fisher_results <- stats::fisher.test(data)
+        fisher_results = cohortTableHandler$getSexFisherTest(selected_cohortId1=input$selectCaseCohort_pickerInput,
+                                                             selected_cohortId2=input$selectControlCohort_pickerInput)
 
         if(fisher_results$p.value < 0.05){
           message <- paste0(message, "\u26A0\uFE0F There is a significant difference in sex distribution between case and control cohorts. (Fisher's test p = ", scales::scientific(fisher_results$p.value)," ) \n")
@@ -264,19 +236,61 @@ mod_analysisSettings_codeWAS_server <- function(id, r_connectionHandler) {
 
       # year of birth
       if(!(input$statistics_type_option == "full" & input$controlYearOfBirth_checkboxInput)){
-        yearOfBirthCase <- cohortsSumary |>
-          dplyr::filter(cohortId == input$selectCaseCohort_pickerInput) |>
-          dplyr::pull(histogramBirthYear)
-        yearOfBirthControl <- cohortsSumary |>
-          dplyr::filter(cohortId == input$selectControlCohort_pickerInput) |>
-          dplyr::pull(histogramBirthYear)
 
-        ttestResult <- t.test(yearOfBirthCase[[1]]  |> tidyr::uncount(n), yearOfBirthControl[[1]]  |> tidyr::uncount(n))
+        yearOfBirthComparison_results = cohortTableHandler$getYearOfBirthTests(selected_cohortId1=input$selectCaseCohort_pickerInput,
+                                                             selected_cohortId2=input$selectControlCohort_pickerInput)
 
-        if(ttestResult$p.value < 0.05){
-          message <- paste0(message, "\u26A0\uFE0F There is a significant difference in year of birth distribution between case and control cohorts. (t-test p = ", scales::scientific(ttestResult$p.value)," ) \n")
-          message <- paste0(message, "Consider controling for year of birth using regresion statistics or creating a new control cohort that match case cohort by year of birth in the Match Cohorts tab\n")
+
+        ttestResult <- yearOfBirthComparison_results[["ttestResult"]]
+        ks_result <- yearOfBirthComparison_results[["ksResult"]]
+        cohen_d  <- yearOfBirthComparison_results[["cohendResult"]]["cohend"]
+        meanCases <- yearOfBirthComparison_results[["cohendResult"]]["meanInCases"]
+        meanControls <- yearOfBirthComparison_results[["cohendResult"]]["meanInControls"]
+        pooled_sd <- yearOfBirthComparison_results[["cohendResult"]]["pooledsd"]
+
+        p_ttest <- ttestResult$p.value
+        p_ks <- ks_result$p.value
+        d <- abs(cohen_d)
+
+        sig_t <- p_ttest < 0.05
+        sig_ks <- p_ks < 0.05
+        small_d <- d < 0.2
+
+        if (sig_ks && !sig_t) {
+          message <- paste0(message,
+                            "\u26A0\uFE0F There is a significant difference in the shapes of year of birth distributions between the case and control cohorts (KS test), but the mean year of births are similar (t-test).\n",
+                            "- t-test p = ", scales::scientific(p_ttest), "\n",
+                            "- KS test p = ", scales::scientific(p_ks), "\n",
+                            "- Cohen's d = ", round(d, 3), " (mean year of birth: Cases=",round(meanCases),", Controls=",round(meanControls),". Cohen's d, the effect size of the difference in means is negligible if less than 0.2) \n"
+          )
+            message <- paste0(message, "\n=> Consider adjusting for year of birth with the regression analysis option or re-matching controls if the Cohen's d effect size is greater than 0.2.\n")
+
+        } else if (sig_t && !sig_ks) {
+          message <- paste0(message,
+                            "\u26A0\uFE0F There is a significant difference in the mean year of birth between case and control cohorts (t-test), but year of birth distributions are similar in shape (KS test).\n",
+                            "- t-test p = ", scales::scientific(p_ttest), "\n",
+                            "- KS test p = ", scales::scientific(p_ks), "\n",
+                            "- Cohen's d = ", round(d, 3), " (mean year of birth: Cases=",round(meanCases),", Controls=",round(meanControls),". Cohen's d, the effect size of the difference in means is negligible if less than 0.2) \n"
+          )
+          if (small_d) {
+            message <- paste0(message, "\u2139\uFE0F Effect size is small - practical difference may be negligible.\n")
+          } else {
+            message <- paste0(message, "\n=> Consider adjusting for year of birth with the regression analysis option or re-matching controls.\n")
+          }
+        } else if (sig_t && sig_ks) {
+          message <- paste0(message,
+                            "\u26A0\uFE0F There is significant difference both in the mean year of birth between case and control cohorts (t-test) - and the shapes of year of birth distributions (KS test).\n",
+                            "- t-test p = ", scales::scientific(p_ttest), "\n",
+                            "- KS test p = ", scales::scientific(p_ks), "\n",
+                            "- Cohen's d = ", round(d, 3)," (mean year of birth: Cases=",round(meanCases),", Controls=",round(meanControls),". Cohen's d, the effect size of the difference in means is negligible if less than 0.2)  \n"
+          )
+          if (small_d) {
+            message <- paste0(message, "\u2139\uFE0F Effect size is small - practical difference may be negligible but the birth year distributions are significantly different .\n")
+          }
+          message <- paste0(message, "\n=> Consider adjusting for year of birth with the regression analysis option or re-matching controls.\n")
         }
+
+
       }
       return(message)
     })
@@ -333,7 +347,6 @@ mod_analysisSettings_codeWAS_server <- function(id, r_connectionHandler) {
 
   })
 }
-
 
 
 
