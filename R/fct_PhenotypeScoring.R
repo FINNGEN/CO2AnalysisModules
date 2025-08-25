@@ -58,7 +58,7 @@ execute_PhenotypeScoring <- function(
   cohortIdCases <- analysisSettings$cohortIdCases
   cohortIdControls <- analysisSettings$cohortIdControls
   analysisIds <- analysisSettings$analysisIds
-
+  includeDaysToFirstEvent <- analysisSettings$includeDaysToFirstEvent
   #
   # Calculate a codeWas
   #
@@ -147,7 +147,8 @@ execute_PhenotypeScoring <- function(
   covariatesPerPerson <- .extractCovariatesPerPerson(
     cohortTableHandler = cohortTableHandler,
     cohortId = cohortIdCases,
-    covariatesTable = covariatesNoDemographics
+    covariatesTable = covariatesNoDemographics, 
+    includeDaysToFirstEvent = includeDaysToFirstEvent
   )
 
   #
@@ -297,6 +298,8 @@ assertAnalysisSettings_PhenotypeScoring <- function(analysisSettings) {
     )
   )
 
+  analysisSettings$includeDaysToFirstEvent |> checkmate::assertLogical(len = 1)
+
   return(analysisSettings)
 }
 
@@ -356,11 +359,11 @@ checkResults_PhenotypeScoring <- function(pathToResultsDatabase) {
   return(errors)
 }
 
-
 .extractCovariatesPerPerson <- function(
     cohortTableHandler,
     cohortId,
-    covariatesTable) {
+    covariatesTable,
+    includeDaysToFirstEvent = FALSE) {
   connection <- cohortTableHandler$connectionHandler$getConnection()
   cdmDatabaseSchema <- cohortTableHandler$cdmDatabaseSchema
   cohortDatabaseSchema <- cohortTableHandler$cohortDatabaseSchema
@@ -371,6 +374,7 @@ checkResults_PhenotypeScoring <- function(pathToResultsDatabase) {
     domainTable = c("condition_occurrence", "drug_exposure", "procedure_occurrence", "measurement"),
     domainConceptId = c("condition_concept_id", "drug_concept_id", "procedure_concept_id", "measurement_concept_id"),
     domainSourceConceptId = c("condition_source_concept_id", "drug_source_concept_id", "procedure_source_concept_id", "measurement_source_concept_id"),
+    domainStartDate = c("condition_start_date", "drug_exposure_start_date", "procedure_date", "measurement_date"),
     domainEndDate = c("condition_end_date", "drug_exposure_end_date", "procedure_end_date", "measurement_date")
   )
 
@@ -405,13 +409,13 @@ checkResults_PhenotypeScoring <- function(pathToResultsDatabase) {
     # Binary covariates no drugs
     #
     if (isBinary && domainId != "Drug") {
-    
       ParallelLogger::logInfo(paste0("Binary covariates no drugs"))
 
       tableInfo <- domainTablesInfo |>
         dplyr::filter(domainId == {{ domainId }})
 
       domainTable <- tableInfo$domainTable
+      domainStartDate <- tableInfo$domainStartDate
       domainEndDate <- tableInfo$domainEndDate
       domainConceptId <- ifelse(isSourceConcept, tableInfo$domainSourceConceptId, tableInfo$domainConceptId)
 
@@ -419,8 +423,8 @@ checkResults_PhenotypeScoring <- function(pathToResultsDatabase) {
       SELECT DISTINCT
           person.person_source_value as person_source_value,
           cov.covariate_id as covariate_id,
-          COUNT(DISTINCT events.visit_occurrence_id) as value,
-          'count' as unit
+          COUNT(DISTINCT events.visit_occurrence_id) as counts,
+          {@includeDaysToFirstEvent} ? {MIN(DATEDIFF(DAY, cohort.cohort_start_date, events.@domain_start_date))} : {NULL} as days_to_first_event
       FROM @cohort_database_schema.@cohort_table cohort
       INNER JOIN @cdm_database_schema.person person
           ON cohort.subject_id = person.person_id
@@ -444,12 +448,14 @@ checkResults_PhenotypeScoring <- function(pathToResultsDatabase) {
         analysis_id = analysisId,
         domain_table = domainTable,
         domain_concept_id = domainConceptId,
+        domain_start_date = domainStartDate,
         domain_end_date = domainEndDate,
+        includeDaysToFirstEvent = includeDaysToFirstEvent,
         warnOnMissingParameters = TRUE
       )
 
       sql <- SqlRender::translate(sql, targetDialect = connection@dbms)
-
+      
       covariates <- DatabaseConnector::querySql(connection, sql) |>
         dplyr::as_tibble() |>
         SqlRender::snakeCaseToCamelCaseNames()
@@ -468,13 +474,14 @@ checkResults_PhenotypeScoring <- function(pathToResultsDatabase) {
 
       domainTable <- tableInfo$domainTable
       domainConceptId <- tableInfo$domainConceptId
+      domainStartDate <- tableInfo$domainStartDate
       domainEndDate <- tableInfo$domainEndDate
       sql <- "
       SELECT DISTINCT
           person.person_source_value as person_source_value,
           cov.covariate_id as covariate_id,
-          COUNT(DISTINCT events.visit_occurrence_id) as value,
-          'count' as unit
+          COUNT(DISTINCT events.visit_occurrence_id) as counts,
+          {@includeDaysToFirstEvent} ? {MIN(DATEDIFF(DAY, cohort.cohort_start_date, events.@domain_start_date))} : {NULL} as days_to_first_event
       FROM @cohort_database_schema.@cohort_table cohort
       INNER JOIN @cdm_database_schema.person person
           ON cohort.subject_id = person.person_id
@@ -500,7 +507,9 @@ checkResults_PhenotypeScoring <- function(pathToResultsDatabase) {
         analysis_id = analysisId,
         domain_table = domainTable,
         domain_concept_id = domainConceptId,
+        domain_start_date = domainStartDate,
         domain_end_date = domainEndDate,
+        includeDaysToFirstEvent = includeDaysToFirstEvent,
         warnOnMissingParameters = TRUE
       )
 
@@ -512,9 +521,36 @@ checkResults_PhenotypeScoring <- function(pathToResultsDatabase) {
 
       covariatesPerPerson <- dplyr::bind_rows(covariatesPerPerson, covariates)
     }
-
   }
-  
+
+
+  if (!includeDaysToFirstEvent) {
+    covariatesPerPerson <- covariatesPerPerson |>
+      dplyr::transmute(
+        personSourceValue = personSourceValue,
+        covariateId = covariateId,
+        value = counts,
+        unit = "counts"
+      )
+  } else {
+    covariatesPerPerson <- dplyr::bind_rows(
+      covariatesPerPerson |>
+        dplyr::transmute(
+          personSourceValue = personSourceValue,
+          covariateId = covariateId,
+          value = counts,
+          unit = "counts"
+        ),
+      covariatesPerPerson |>
+        dplyr::transmute(
+          personSourceValue = personSourceValue,
+          covariateId = covariateId + 10,
+          value = daysToFirstEvent,
+          unit = "days"
+        )
+    )
+  }
+
   # TEMP: visit with null values result in 0 counts, make them at least 1
   covariatesPerPerson <- covariatesPerPerson |>
     dplyr::mutate(value = dplyr::if_else(value == 0, 1, value))
