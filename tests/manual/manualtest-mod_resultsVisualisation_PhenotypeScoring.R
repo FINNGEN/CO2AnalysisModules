@@ -23,7 +23,8 @@ analysisSettings <- list(
       2, # DemographicsAge
       10, # DemographicsTimeInCohort
       41 # year of birth
-    )
+    ),  
+    includeDaysToFirstEvent = TRUE
 )
 
 # function

@@ -701,21 +701,44 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
 #' @importFrom dplyr tbl left_join filter distinct mutate collect
 #' @importFrom stats na.omit
 .getcodeWasCovariatesTibble <- function(analysisResults) {
-  analysisResults |>
+
+  # TEMP this will be moved to the fct_PhenotypeScoring.R
+  codewasResultsTibble <- analysisResults |>
     dplyr::tbl("codewasResults") |>
     dplyr::left_join(analysisResults |> dplyr::tbl("covariateRef"), by = c("covariateId" = "covariateId")) |>
     dplyr::left_join(analysisResults |> dplyr::tbl("analysisRef"), by = c("analysisId" = "analysisId")) |>
     # TEMP
-    dplyr::filter(!(vocabularyId == "ATC" & nchar(conceptCode) < 7)) |>
-    # END TEMP
-    dplyr::left_join(
-      analysisResults |> dplyr::tbl("covariatesPerPerson") |>
+    dplyr::filter(!(vocabularyId == "ATC" & nchar(conceptCode) < 7)) |> 
+    dplyr::collect()
+
+    covariatesPerPersonTibble <- analysisResults |> dplyr::tbl("covariatesPerPerson") |>
         dplyr::distinct(covariateId) |>
-        dplyr::mutate(isDataAvailable = 1),
-      by = c("covariateId" = "covariateId")
-    ) |>
-    dplyr::collect() |>
-    dplyr::mutate(isDataAvailable = ifelse(is.na(isDataAvailable), FALSE, TRUE))
+        dplyr::mutate(isDataAvailable = 1) |>
+        dplyr::collect()
+
+    includeDaysToFirstEvent <- any(c(151, 152) %in% (covariatesPerPersonTibble$covariateId %% 1000))
+
+    if (includeDaysToFirstEvent) {
+      codewasResultsTibble <- dplyr::bind_rows(
+        codewasResultsTibble,
+        codewasResultsTibble |>
+          dplyr::filter(analysisId %in% c(141, 142)) |>
+          dplyr::mutate(
+            analysisId = analysisId + 10,
+          covariateId = covariateId + 10,
+          analysisName = paste0(analysisName, " (days to first event)"),
+          covariateName = paste0(covariateName, " (days to first event)")
+          )
+      )
+    }
+
+    # END TEMP
+  # END TEMP
+    codewasResultsTibble <- codewasResultsTibble |>
+      dplyr::left_join(covariatesPerPersonTibble, by = c("covariateId" = "covariateId")) |>
+      dplyr::mutate(isDataAvailable = ifelse(is.na(isDataAvailable), FALSE, TRUE))
+
+    return(codewasResultsTibble)
 }
 
 
