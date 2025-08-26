@@ -265,6 +265,7 @@ mod_resultsVisualisation_CodeWAS_ui <- function(id) {
 #' @importFrom lubridate now
 #' @importFrom htmltools hr
 #' @importFrom grid unit
+#' @importFrom htmlwidgets onRender
 #'
 #' @export
 mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {

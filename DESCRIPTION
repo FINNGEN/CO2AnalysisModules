@@ -54,7 +54,8 @@ Imports:
     ggh4x,
     apexcharter,
     colourpicker,
-    shinyjqui
+    shinyjqui,
+    htmlwidgets
 Remotes: 
     FINNGEN/HadesExtras,
     FINNGEN/FinnGenUtilsR,

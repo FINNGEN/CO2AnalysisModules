@@ -326,6 +326,7 @@ mod_resultsVisualisation_TimeCodeWAS_ui <- function(id) {
 #' @importFrom ggplotify as.ggplot
 #' @importFrom grDevices cairo_pdf dev.off
 #' @importFrom shinyjs toggle
+#' @importFrom htmlwidgets onRender
 #'
 #' @export
 #'
