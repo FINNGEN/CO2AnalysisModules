@@ -52,7 +52,11 @@ app_ui <- function(request) {
       ui <- mod_resultsVisualisation_ui("timeCodeWAS", mod_resultsVisualisation_TimeCodeWAS_ui, pathAboutModule, "TimeCodeWAS", pathToLogsFromOptions)
       return(ui)
     }
-
+    if (analysisTypeFromOptions == "phenotypeScoring") {
+      pathAboutModule <- system.file("modulesDocumentation/about_phenotypeScoring.md", package = "CO2AnalysisModules")
+      ui <- mod_resultsVisualisation_ui("phenotypeScoring", mod_resultsVisualisation_PhenotypeScoring_ui, pathAboutModule, "Phenotype Scoring", pathToLogsFromOptions)
+      return(ui)
+    }
 
     return(
       shiny::tagList(

@@ -92,7 +92,7 @@ mod_analysisSettings_codeWAS_ui <- function(id) {
       max = 1000
     ),
     htmltools::hr(),
-    shiny::tags$h4("Pre-ran info"),
+    shiny::tags$h4("Pre-run info"),
     shiny::verbatimTextOutput(ns("info_text"), placeholder = TRUE)
   )
 }
@@ -187,8 +187,8 @@ mod_analysisSettings_codeWAS_server <- function(id, r_connectionHandler) {
     #
     output$info_text <- shiny::renderText({
       if (!shiny::isTruthy(r_connectionHandler$hasChangeCounter) ||
-          !shiny::isTruthy(input$selectCaseCohort_pickerInput) ||
-          !shiny::isTruthy(input$selectControlCohort_pickerInput)) {
+      !shiny::isTruthy(input$selectCaseCohort_pickerInput) ||
+      !shiny::isTruthy(input$selectControlCohort_pickerInput)) {
         return("")
       }
 
