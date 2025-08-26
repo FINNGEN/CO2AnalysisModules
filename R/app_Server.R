@@ -76,6 +76,9 @@ app_server <- function(input, output, session) {
         if (analysisTypeFromOptions == "timeCodeWAS") {
           mod_resultsVisualisation_server("timeCodeWAS", mod_resultsVisualisation_TimeCodeWAS_server, analysisResults)
         }
+        if (analysisTypeFromOptions == "phenotypeScoring") {
+          mod_resultsVisualisation_server("phenotypeScoring", mod_resultsVisualisation_PhenotypeScoring_server, analysisResults)
+        }
       }
     }
 
