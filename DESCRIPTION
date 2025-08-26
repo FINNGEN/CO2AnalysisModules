@@ -4,7 +4,7 @@ Version: 2.3.3
 Authors@R: 
     person("Javier", "Gracia-Tabuenca", , "javier.graciatabuenca@tuni.fi", role = c("aut", "cre"),
            comment = c(ORCID = "0000-0002-2455-0598"))
-Description: Analysis modules to be added to CO2
+Description: Analysis modules to be added to CO2.
 License: MIT + file LICENSE
 Encoding: UTF-8
 Language: en-US
@@ -54,7 +54,8 @@ Imports:
     ggh4x,
     apexcharter,
     colourpicker,
-    shinyjqui
+    shinyjqui,
+    htmlwidgets
 Remotes: 
     FINNGEN/HadesExtras,
     FINNGEN/FinnGenUtilsR,

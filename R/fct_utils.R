@@ -80,9 +80,14 @@
 
 
 
-# .numericRangeFilter: internal JS function to filter numeric values in reactable columns.
-# Supports ranges (e.g., -2--0.5, 1-4), comparison operators (>=, <=, >, <, ==), and bare numbers.
-
+#' @title Numeric Range Filter
+#' @description Internal JS function to filter numeric values in reactable columns.
+#' Supports ranges (e.g., -2--0.5, 1-4), comparison operators (>=, <=, >, <, ==), and bare numbers.
+#'
+#' @return Returns a list of rows that match the filter.
+#'
+#' @importFrom htmlwidgets JS
+#'
 .numericRangeFilter <- htmlwidgets::JS(
   "function(rows, columnId, filterValue) {
          if (!filterValue) return rows;
