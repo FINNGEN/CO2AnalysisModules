@@ -84,10 +84,6 @@
 #' @description Internal JS function to filter numeric values in reactable columns.
 #' Supports ranges (e.g., -2--0.5, 1-4), comparison operators (>=, <=, >, <, ==), and bare numbers.
 #'
-#' @param rows A list of rows to filter.
-#' @param columnId A string representing the column ID.
-#' @param filterValue A string representing the filter value.
-#'
 #' @return Returns a list of rows that match the filter.
 #'
 #' @importFrom htmlwidgets JS
