@@ -50,7 +50,7 @@ mod_resultsVisualisation_PhenotypeScoring_ui <- function(id) {
             tabPanel("Score Table", DT::dataTableOutput(ns("totalScoreTable")))
           ),
           shiny::br(), shiny::hr(),
-          shiny::textOutput(ns("selectedPatientsCount")),
+          shiny::uiOutput(ns("selectedPatientsCount")),
           shiny::sliderInput(
             ns("scoreRange"),
             "Score Range",
@@ -71,22 +71,17 @@ mod_resultsVisualisation_PhenotypeScoring_ui <- function(id) {
           shiny::hr(),
           mod_fct_phenotypeFlags_ui(ns("phenotypeFlags_flags")),
           shiny::br(),
-          shiny::tags$h4("Flags message:"),
+          shiny::tags$h4(""), # No need for message about the possible phenotype flag errors
           shiny::verbatimTextOutput(ns("phenotypeFlags_text"), placeholder = TRUE),
           shiny::hr(),
           shiny::hr(),
           shiny::h4("Download Data:"),
           shiny::selectInput(
             ns("downloadFlagSelection"),
-            "Select Group to Download:",
+            "Selection for Download:",
             choices = c("All Data"),
             selected = "All Data"
           ),
-           shiny::checkboxInput(
-             ns("downloadInRangeOnly"),
-             "Download only in selected score range",
-             value = FALSE
-           ),
           shiny::downloadButton(
             ns("exportSelectedSubjects"),
             "Export Selected Subjects"
@@ -165,6 +160,9 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
       groupedCovariatesPerPersonTibble_totalScore = NULL,
       groupedCovariatesPerPersonTibble_flag = NULL
     )
+
+    # track total score range
+    rv_scoreRanges <- shiny::reactiveValues()
 
     #
     # Start up: get the list of codes from database into r$codeWasCovariatesTibble
@@ -775,6 +773,7 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
         value = c(min_score, max_score),
         step = 1
       )
+      rv_scoreRanges$defaultRange <- c(min_score, max_score)
     })
 
     #
@@ -862,19 +861,46 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
     #
     # When r$groupOfCovariatesObject is ready or slider is changed, update the selected patients count
     #
-    output$selectedPatientsCount <- shiny::renderText({
+    output$selectedPatientsCount <- shiny::renderUI({
       shiny::req(r_groupedCovariates$groupedCovariatesPerPersonTibble |> nrow() > 0, input$scoreRange)
       shiny::req(r_groupedCovariates$groupedCovariatesPerPersonTibble_totalScore)
 
       groupedCovariatesPerPersonTibble <- r_groupedCovariates$groupedCovariatesPerPersonTibble |>
         dplyr::left_join(r_groupedCovariates$groupedCovariatesPerPersonTibble_totalScore, by = "personSourceValue")
 
+
       # Count subjects in the selected range
       nSelected <- groupedCovariatesPerPersonTibble |>
         dplyr::filter(totalScore >= input$scoreRange[1], totalScore <= input$scoreRange[2]) |>
         nrow()
 
-      paste("Number of patients selected:", nSelected)
+     if(nrow(rf_flagsTable()) > 0){
+
+       groupedCovariatesPerPersonTibble <-  groupedCovariatesPerPersonTibble |>
+         dplyr::left_join(r_groupedCovariates$groupedCovariatesPerPersonTibble_flag, by = "personSourceValue")
+
+       df_selected <- groupedCovariatesPerPersonTibble |>
+         dplyr::filter(totalScore >= input$scoreRange[1], totalScore <= input$scoreRange[2])
+
+       # Counts by flag
+       countsByFlag <- df_selected |>
+         dplyr::group_by(flag) |>
+         dplyr::summarise(n = dplyr::n(), .groups = "drop")
+
+
+       flag_text <- if(nrow(countsByFlag) > 0){
+         paste0(apply(countsByFlag, 1, function(x) paste0(x["flag"], ": ", x["n"])), collapse = "; ")
+       } else {
+         ""
+       }
+       dispText = paste0("Number of patients selected: ", nSelected, "<br>", "[ Counts by flag: ",flag_text," ]","<br>")
+
+     }else{
+
+       dispText = paste0("Number of patients selected: ", nSelected)
+     }
+
+      htmltools::HTML(dispText)
     })
 
     #
@@ -899,8 +925,11 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
     #
     output$exportSelectedSubjects <- shiny::downloadHandler(
       filename = function() {
+
         flag <- input$downloadFlagSelection
-        range_label <- if (isTRUE(input$downloadInRangeOnly)) {
+        userRange <- !identical(as.numeric(input$scoreRange), as.numeric(rv_scoreRanges$defaultRange))
+
+        range_label <- if(userRange==T) {
           paste0("in_range_", input$scoreRange[1], "_to_", input$scoreRange[2])
         } else {
           "full_score_range"
@@ -932,13 +961,12 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
           df <- df |> dplyr::filter(flag == input$downloadFlagSelection)
         }
 
-        # filter by score range
-        if (isTRUE(input$downloadInRangeOnly)) {
-          df <- df |> dplyr::filter(
+        # filter by the score range
+        df <- df |> dplyr::filter(
             totalScore |> as.integer() >= input$scoreRange[1],
             totalScore |> as.integer() <= input$scoreRange[2]
           )
-        }
+
 
         write.table(df, file, sep = "\t", row.names = FALSE, na = "", quote = FALSE)
       }
