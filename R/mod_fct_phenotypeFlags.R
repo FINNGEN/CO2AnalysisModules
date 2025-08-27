@@ -26,7 +26,7 @@ mod_fct_phenotypeFlags_ui <- function(id) {
             color: #888;
           }
 
-          #%s table th:nth-child(7) {
+          #%s table th:nth-child(8) {
             display: none;  /* hide the drag column headers */
           }
         ", ns("flagTable_sortableTable"), ns("flagTable_sortableTable"), ns("flagTable_sortableTable"),
@@ -57,7 +57,8 @@ mod_fct_phenotypeFlags_server <- function(id, r_groupedCovariates) {
                 flagName = character(),
                 flagColor = character(),
                 flagRulePretty = character(),
-                flagRule = character()
+                flagRule = character(),
+                nPersonsInFlag = numeric()
             ),
             flagBeingEditedIndex = NULL,
             editingColorIndex = NULL,
@@ -208,7 +209,8 @@ mod_fct_phenotypeFlags_server <- function(id, r_groupedCovariates) {
                     flagName = input$flagName_textinput,
                     flagColor = input$flagColor_colorinput,
                     flagRulePretty = flagRuleFormula$formulaPretty,
-                    flagRule = flagRuleFormula$formula
+                    flagRule = flagRuleFormula$formula,
+                    nPersonsInFlag = numberOfPersonsInFlag
                 )
             }
 
@@ -343,10 +345,10 @@ mod_fct_phenotypeFlags_server <- function(id, r_groupedCovariates) {
               )
 
           #column to display
-          df_display <- df_display[, c("flagName", "flagColor", "flagRulePretty", "edit", "delete","orderFlags")]
+          df_display <- df_display[, c("flagName", "flagColor", "flagRulePretty", "nPersonsInFlag", "edit", "delete","orderFlags")]
 
           df_display
-        }, rownames = TRUE, sanitize.text.function = function(x) x)
+        }, rownames = TRUE, sanitize.text.function = function(x) x,align = "l")
 
 
         # edit color from rows
