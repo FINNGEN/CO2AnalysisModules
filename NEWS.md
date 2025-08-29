@@ -1,8 +1,7 @@
 # CO2AnalysisModules 2.4.0
-- Simplified importing from file dialog
-- GWAS naming less restrictive now
-- Add session token to the logs for tracking
-- other minor bug fixes
+- Adding the PhenotypeScoring module
+- Fixed bug on warning on different sex and birth year
+- Add filters for the CodeWAS and TimeCodeWAS result tables
 
 # CO2AnalysisModules 2.3.3
 - Added ATC DDD to CodeWAS and TimeCodeWAS
