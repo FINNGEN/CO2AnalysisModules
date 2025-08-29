@@ -1,10 +1,10 @@
 Package: CO2AnalysisModules
 Title: CO2AnalysisModules
-Version: 2.3.3
+Version: 2.4.0
 Authors@R: 
     person("Javier", "Gracia-Tabuenca", , "javier.graciatabuenca@tuni.fi", role = c("aut", "cre"),
            comment = c(ORCID = "0000-0002-2455-0598"))
-Description: Analysis modules to be added to CO2
+Description: Analysis modules to be added to CO2.
 License: MIT + file LICENSE
 Encoding: UTF-8
 Language: en-US
@@ -15,7 +15,7 @@ Imports:
     dplyr,
     dbplyr,
     HadesExtras,
-    ParallelLogger, 
+    ParallelLogger,
     shinydashboard,
     shinycssloaders,
     UpSetR,
@@ -23,14 +23,15 @@ Imports:
     shiny,
     shinyjs,
     shinyWidgets,
-    yaml, 
-    duckdb, 
+    DT,
+    plotly,
+    yaml,
+    duckdb,
     DBI,
     htmltools,
     reactable,
     shinybrowser,
     tibble,
-    markdown, 
     DatabaseConnector,
     FeatureExtraction,
     SqlRender,
@@ -40,7 +41,6 @@ Imports:
     ggrepel,
     gtable,
     grid,
-    htmlwidgets,
     lubridate,
     purrr,
     readr,
@@ -51,9 +51,11 @@ Imports:
     shinyFeedback,
     CohortGenerator,
     FinnGenUtilsR,
-    httr,
-    jsonlite,
-    ggh4x
+    ggh4x,
+    apexcharter,
+    colourpicker,
+    shinyjqui,
+    htmlwidgets
 Remotes: 
     FINNGEN/HadesExtras,
     FINNGEN/FinnGenUtilsR,

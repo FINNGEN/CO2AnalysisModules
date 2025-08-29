@@ -1,22 +1,20 @@
-
-
-helper_createNewCohortTableHandler <- function(addCohorts = NULL){
-
+helper_createNewCohortTableHandler <- function(addCohorts = NULL) {
   addCohorts |> checkmate::assertCharacter(len = 1, null.ok = TRUE)
   addCohorts |> checkmate::assertSubset(c(
-    "EunomiaDefaultCohorts", "HadesExtrasFractureCohorts","HadesExtrasAsthmaCohorts",
-    "HadesExtrasFractureCohortsMatched","HadesExtrasAsthmaCohortsMatched"
+    "EunomiaDefaultCohorts", "HadesExtrasFractureCohorts", "HadesExtrasAsthmaCohorts",
+    "HadesExtrasFractureCohortsMatched", "HadesExtrasAsthmaCohortsMatched", 
+    "DiabetesSyntheaCohorts"
   ), empty.ok = TRUE)
 
   # by default use the one from setup.R
   cohortTableHandlerConfig <- test_cohortTableHandlerConfig # set by setup.R
 
-  loadConnectionChecksLevel = "basicChecks"
+  loadConnectionChecksLevel <- "basicChecks"
 
   cohortTableHandler <- HadesExtras::createCohortTableHandlerFromList(cohortTableHandlerConfig, loadConnectionChecksLevel)
 
-  if(!is.null(addCohorts) ){
-    if(addCohorts == "EunomiaDefaultCohorts"){
+  if (!is.null(addCohorts)) {
+    if (addCohorts == "EunomiaDefaultCohorts") {
       cohortDefinitionSet <- CohortGenerator::getCohortDefinitionSet(
         settingsFileName = "testdata/name/Cohorts.csv",
         jsonFolder = "testdata/name/cohorts",
@@ -27,7 +25,7 @@ helper_createNewCohortTableHandler <- function(addCohorts = NULL){
         verbose = FALSE
       )
     }
-      if(addCohorts == "HadesExtrasFractureCohorts"){
+    if (addCohorts == "HadesExtrasFractureCohorts") {
       cohortDefinitionSet <- CohortGenerator::getCohortDefinitionSet(
         settingsFileName = "testdata/fracture/Cohorts.csv",
         jsonFolder = "testdata/fracture/cohorts",
@@ -39,7 +37,7 @@ helper_createNewCohortTableHandler <- function(addCohorts = NULL){
         verbose = T
       )
     }
-    if(addCohorts == "HadesExtrasAsthmaCohorts"){
+    if (addCohorts == "HadesExtrasAsthmaCohorts") {
       cohortDefinitionSet <- CohortGenerator::getCohortDefinitionSet(
         settingsFileName = "testdata/asthma/Cohorts.csv",
         jsonFolder = "testdata/asthma/cohorts",
@@ -51,7 +49,7 @@ helper_createNewCohortTableHandler <- function(addCohorts = NULL){
         verbose = FALSE
       )
     }
-    if(addCohorts == "HadesExtrasFractureCohortsMatched"){
+    if (addCohorts == "HadesExtrasFractureCohortsMatched") {
       cohortDefinitionSet <- CohortGenerator::getCohortDefinitionSet(
         settingsFileName = "testdata/fracture/Cohorts.csv",
         jsonFolder = "testdata/fracture/cohorts",
@@ -83,7 +81,7 @@ helper_createNewCohortTableHandler <- function(addCohorts = NULL){
       cohortDefinitionSet <- cohortDefinitionSet |>
         CohortGenerator::addCohortSubsetDefinition(subsetDef, targetCohortIds = 2)
     }
-    if(addCohorts == "HadesExtrasAsthmaCohortsMatched"){
+    if (addCohorts == "HadesExtrasAsthmaCohortsMatched") {
       # cohorts from eunomia
       cohortDefinitionSet <- CohortGenerator::getCohortDefinitionSet(
         settingsFileName = "testdata/asthma/Cohorts.csv",
@@ -115,7 +113,17 @@ helper_createNewCohortTableHandler <- function(addCohorts = NULL){
 
       cohortDefinitionSet <- cohortDefinitionSet |>
         CohortGenerator::addCohortSubsetDefinition(subsetDef, targetCohortIds = 2)
-
+    }
+    if (addCohorts == "DiabetesSyntheaCohorts") {
+      #  cohorts(1783314)
+      cohortDefinitionSet <-  CohortGenerator::getCohortDefinitionSet(
+        settingsFileName = "inst/testdata/diabetes/Cohorts.csv",
+        jsonFolder = "inst/testdata/diabetes/cohorts",
+        sqlFolder = "inst/testdata/diabetes/sql/sql_server",
+        cohortFileNameFormat = "%s",
+        cohortFileNameValue = c("cohortId"),
+        verbose = FALSE
+      )
     }
 
     cohortTableHandler$insertOrUpdateCohorts(cohortDefinitionSet)
@@ -124,15 +132,13 @@ helper_createNewCohortTableHandler <- function(addCohorts = NULL){
   return(cohortTableHandler)
 }
 
- helper_addCohortAndCohortDefinitionTables <- function(cohortTableHandlerConfig, cohortTablesToAdd = "Diabetes"){
-
+helper_addCohortAndCohortDefinitionTables <- function(cohortTableHandlerConfig, cohortTablesToAdd = "Diabetes") {
   connectionDetailsSettings <- cohortTableHandlerConfig$connection$connectionDetailsSettings
   connectionDetails <- rlang::exec(DatabaseConnector::createConnectionDetails, !!!connectionDetailsSettings)
-  connection  <- DatabaseConnector::connect(connectionDetails)
+  connection <- DatabaseConnector::connect(connectionDetails)
 
   if (cohortTablesToAdd == "Diabetes") {
-
-    testCohortTable <-  tibble::tribble(
+    testCohortTable <- tibble::tribble(
       ~cohort_definition_id, ~subject_id, ~cohort_start_date, ~cohort_end_date,
       1, 1, as.Date("2000-01-01"), as.Date("2000-12-01"),
       1, 2, as.Date("2000-01-01"), as.Date("2000-12-01"),
@@ -140,35 +146,32 @@ helper_createNewCohortTableHandler <- function(addCohorts = NULL){
       1, 4, as.Date("2000-01-01"), as.Date("2000-12-01"),
       1, 5, as.Date("2000-01-01"), as.Date("2000-12-01"),
       1, 5, as.Date("2004-01-01"), as.Date("2004-12-01"),
-
-      2, 2, as.Date("2001-01-01"), as.Date("2002-12-01"),# non overplaping
-      2, 3, as.Date("2000-06-01"), as.Date("2000-09-01"),# inside
-      2, 4, as.Date("2000-06-01"), as.Date("2010-12-01"),# overlap
-      2, 5, as.Date("2004-06-01"), as.Date("2010-12-01"),# overlap with second
+      2, 2, as.Date("2001-01-01"), as.Date("2002-12-01"), # non overplaping
+      2, 3, as.Date("2000-06-01"), as.Date("2000-09-01"), # inside
+      2, 4, as.Date("2000-06-01"), as.Date("2010-12-01"), # overlap
+      2, 5, as.Date("2004-06-01"), as.Date("2010-12-01"), # overlap with second
       2, 6, as.Date("2000-01-01"), as.Date("2010-12-01"),
-
       4, 1, as.Date("2000-01-01"), as.Date("2000-12-01"),
       4, 2, as.Date("2000-01-01"), as.Date("2000-12-01"),
       4, 3, as.Date("2000-01-01"), as.Date("2000-12-01"),
       4, 4, as.Date("2000-01-01"), as.Date("2000-12-01"),
       4, 5, as.Date("2000-01-01"), as.Date("2000-12-01"),
       4, 5, as.Date("2004-01-01"), as.Date("2004-12-01"),
-
-      5, 2, as.Date("2001-01-01"), as.Date("2002-12-01"),# non overplaping
-      5, 3, as.Date("2000-06-01"), as.Date("2000-09-01"),# inside
-      5, 4, as.Date("2000-06-01"), as.Date("2010-12-01"),# overlap
-      5, 5, as.Date("2004-06-01"), as.Date("2010-12-01"),# overlap with second
+      5, 2, as.Date("2001-01-01"), as.Date("2002-12-01"), # non overplaping
+      5, 3, as.Date("2000-06-01"), as.Date("2000-09-01"), # inside
+      5, 4, as.Date("2000-06-01"), as.Date("2010-12-01"), # overlap
+      5, 5, as.Date("2004-06-01"), as.Date("2010-12-01"), # overlap with second
       5, 6, as.Date("2000-01-01"), as.Date("2010-12-01")
     )
 
     testCohortDefinitionTable <- tibble::tribble(
       ~cohort_definition_id, ~cohort_definition_name, ~cohort_definition_description, ~definition_type_concept_id, ~cohort_definition_syntax, ~subject_concept_id, ~cohort_initiation_date,
-      1, 'Diabetes Cohort_case', 'Cohort of patients diagnosed with diabetes', 1234, 'SELECT * FROM patients WHERE diagnosis = "Diabetes"', 5678, as.Date('2022-01-01'),
-      2, 'Hypertension Cohort_case', 'Cohort of patients diagnosed with hypertension', 1234, 'SELECT * FROM patients WHERE diagnosis = "Hypertension"', 5678, as.Date('2022-01-01'),
-      3, 'Obesity Cohort', 'Cohort of patients diagnosed with obesity', 1234, 'SELECT * FROM patients WHERE diagnosis = "Obesity"', 5678, as.Date('2022-01-01'),
+      1, "Diabetes Cohort_case", "Cohort of patients diagnosed with diabetes", 1234, 'SELECT * FROM patients WHERE diagnosis = "Diabetes"', 5678, as.Date("2022-01-01"),
+      2, "Hypertension Cohort_case", "Cohort of patients diagnosed with hypertension", 1234, 'SELECT * FROM patients WHERE diagnosis = "Hypertension"', 5678, as.Date("2022-01-01"),
+      3, "Obesity Cohort", "Cohort of patients diagnosed with obesity", 1234, 'SELECT * FROM patients WHERE diagnosis = "Obesity"', 5678, as.Date("2022-01-01"),
       #
-      4, 'Hypertension Cohort lib [CohortLibrary]', 'Cohort of patients diagnosed with hypertension', 1234, 'SELECT * FROM patients WHERE diagnosis = "Hypertension"', 5678, as.Date('2022-01-01'),
-      5, 'Obesity Cohort lib [CohortLibrary]', 'Cohort of patients diagnosed with obesity', 1234, 'SELECT * FROM patients WHERE diagnosis = "Obesity"', 5678, as.Date('2022-01-01')
+      4, "Hypertension Cohort lib [CohortLibrary]", "Cohort of patients diagnosed with hypertension", 1234, 'SELECT * FROM patients WHERE diagnosis = "Hypertension"', 5678, as.Date("2022-01-01"),
+      5, "Obesity Cohort lib [CohortLibrary]", "Cohort of patients diagnosed with obesity", 1234, 'SELECT * FROM patients WHERE diagnosis = "Obesity"', 5678, as.Date("2022-01-01")
     )
   }
 
@@ -186,8 +189,8 @@ helper_createNewCohortTableHandler <- function(addCohorts = NULL){
 }
 
 
-helper_FinnGen_getDatabaseFile <- function(){
-   if( Sys.getenv("EUNOMIA_DATA_FOLDER") == "" ){
+helper_FinnGen_getDatabaseFile <- function() {
+  if (Sys.getenv("EUNOMIA_DATA_FOLDER") == "") {
     message("EUNOMIA_DATA_FOLDER not set. Please set this environment variable to the path of the Eunomia data folder.")
     stop()
   }
@@ -196,8 +199,7 @@ helper_FinnGen_getDatabaseFile <- function(){
   eunomiaDataFolder <- Sys.getenv("EUNOMIA_DATA_FOLDER")
 
   # Download the database if it doesn't exist
-  if (!file.exists(file.path(eunomiaDataFolder, "FinnGenR12_v5.4.zip")) | !file.exists(file.path(eunomiaDataFolder, "FinnGenR12_v5.4.sqlite"))){
-
+  if (!file.exists(file.path(eunomiaDataFolder, "FinnGenR12_v5.4.zip")) | !file.exists(file.path(eunomiaDataFolder, "FinnGenR12_v5.4.sqlite"))) {
     result <- utils::download.file(
       url = urlToFinnGenEunomiaZip,
       destfile = file.path(eunomiaDataFolder, "FinnGenR12_v5.4.zip"),
@@ -207,7 +209,7 @@ helper_FinnGen_getDatabaseFile <- function(){
     Eunomia::extractLoadData(
       from = file.path(eunomiaDataFolder, "FinnGenR12_v5.4.zip"),
       to = file.path(eunomiaDataFolder, "FinnGenR12_v5.4.sqlite"),
-      cdmVersion = '5.4',
+      cdmVersion = "5.4",
       verbose = TRUE
     )
   }

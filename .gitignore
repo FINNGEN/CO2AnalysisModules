@@ -12,3 +12,4 @@ renv.lock
 errorReportSql.txt
 *.data
 .sandbox_token
+*.db

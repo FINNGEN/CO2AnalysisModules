@@ -222,6 +222,15 @@ mod_resultsVisualisation_CodeWAS_ui <- function(id) {
                      shiny::div(
                        style = "margin-top: 10px; margin-bottom: 10px;",
                        shiny::downloadButton(ns("downloadCodeWASFiltered"), "Download filtered", icon = shiny::icon("download")),
+                       # tags$button(
+                       #   shiny::icon("download"),
+                       #   "Download filtered",
+                       #   class = "btn btn-default",
+                       #   onclick = sprintf(
+                       #     "Reactable.downloadDataCSV('%s', 'codewas_filtered_' + new Date().toISOString().slice(0,16).replace(/[-:T]/g,'_') + '.csv')",
+                       #      ns("codeWAStable")
+                       #     )
+                       #   ),
                        shiny::downloadButton(ns("downloadCodeWASAll"), "Download all", icon = shiny::icon("download"))
                      )
                    )# tabPanel
@@ -256,6 +265,7 @@ mod_resultsVisualisation_CodeWAS_ui <- function(id) {
 #' @importFrom lubridate now
 #' @importFrom htmltools hr
 #' @importFrom grid unit
+#' @importFrom htmlwidgets onRender
 #'
 #' @export
 mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
@@ -268,6 +278,7 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
     r <- shiny::reactiveValues(
       codeWASData = NULL,
       filteredCodeWASData = NULL,
+      browserFilteredCodeWASData = NULL,
       lastPlot = NULL
     )
 
@@ -299,7 +310,8 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
         dplyr::mutate(covariateName = ifelse(is.na(name), domain, name)) |>
         dplyr::mutate(name = ifelse(is.na(name), domain, name)) |>
         dplyr::mutate(covariateName = stringr::str_remove(covariateName, "^[:blank:]")) |>
-        dplyr::mutate(domain = stringr::str_remove(domain, "^[:blank:]"))
+        dplyr::mutate(domain = stringr::str_remove(domain, "^[:blank:]")) |>
+        dplyr::mutate(id = dplyr::row_number())
     })
 
     #
@@ -391,9 +403,9 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
                     ),
                   ) # column
                 ) # fluidRow
-            ) # tagList
-        ) # div
-      ) # div
+            ) # div collapsible-content
+        ) # div menu-section
+      ) # div tagList
 
       session$onFlushed(function() {
         session$sendCustomMessage("setupCollapsiblesAgain", list())
@@ -464,7 +476,7 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
         # filter the data
         r$filteredCodeWASData <- r$codeWASData |>
           dplyr::select(
-            databaseId, domainId, conceptCode, vocabularyId, analysisName, covariateId, covariateName, nCasesYes, nControlsYes,
+            id, databaseId, domainId, conceptCode, vocabularyId, analysisName, covariateId, covariateName, nCasesYes, nControlsYes,
             meanCases, sdCases, meanControls, sdControls, oddsRatio, pValue, beta, modelType, runNotes
           ) |>
           dplyr::filter(
@@ -519,7 +531,7 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
         dplyr::mutate(sdControls = round(sdControls, 3)) |>
         dplyr::mutate(covariateId = round(covariateId/1000)) |>
         dplyr::select(
-          covariateName, covariateId, conceptCode, vocabularyId, analysisName, domainId,
+          id,covariateName, covariateId, conceptCode, vocabularyId, analysisName, domainId,
           nCasesYes, nControlsYes, meanCases, sdCases, meanControls, sdControls,
           oddsRatio, mlogp, beta, modelType, runNotes
         )
@@ -538,7 +550,7 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
 
       sticky_style <- list(backgroundColor = "#f7f7f7")
 
-      reactable::reactable(
+      codewasTbl <- reactable::reactable(
         df,
         filterable = TRUE,
         bordered = TRUE,
@@ -552,7 +564,6 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
             textOverflow = "ellipsis"
           )
         ),
-        # defaultSorted = list(mlogp = "desc", oddsRatio = "desc"),
         sortable = FALSE,
         columns = list(
           covariateName = reactable::colDef(
@@ -566,13 +577,24 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
             ),
             minWidth = 220,
             cell = function(name, rowIndex) {
-              htmltools::tags$a(
-                href = paste0(atlasUrl, "/#/concept/", df$covariateId[ rowIndex ]),
-                target = "_blank", df$covariateName[ rowIndex ],
-                content = name
-              )
-            }
-          ),
+              if (df$vocabularyId[rowIndex] %in% c("CohortLibrary", "Endpoints", "None")) {
+                # No Atlas link: just show truncated text with tooltip
+                htmltools::span(
+                  title = name,
+                  style = "display: inline-block; max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;",
+                  stringr::str_trunc(name, width = 50, ellipsis = "...")
+                )
+              } else {
+                # With Atlas link and tooltip
+                htmltools::a(
+                  href = paste0(atlasUrl, "/#/concept/", df$covariateId[rowIndex]),
+                  target = "_blank",
+                  title = name,  # Tooltip
+                  style = "display: inline-block; max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-decoration: none;",
+                  stringr::str_trunc(name, width = 50, ellipsis = "...")
+                )
+              }
+            }          ),
           conceptCode = reactable::colDef(
             name = "Concept Code",
             sticky = "left",
@@ -584,19 +606,20 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
               backgroundColor = "#f7f7f7"
             ),
           ),
+          id = reactable::colDef(show = FALSE),
           covariateId = reactable::colDef(show = FALSE),
           analysisName = reactable::colDef(name = "Analysis Name", width = 160),
           vocabularyId = reactable::colDef(name = "Vocabulary", width = 86, maxWidth = 86),
           domainId = reactable::colDef(name = "Domain", width = 120, maxWidth = 120),
-          nCasesYes = reactable::colDef(name = "N cases", width = 70, maxWidth = 70),
-          nControlsYes = reactable::colDef(name = "N ctrls", width = 70, maxWidth = 70),
-          meanCases = reactable::colDef(name = "Ratio|Mean cases", width = 120, maxWidth = 120),
-          sdCases = reactable::colDef(name = "SD cases", width = 90, maxWidth = 90),
-          meanControls = reactable::colDef(name = "Ratio| Mean ctrls", width = 120, maxWidth = 120),
-          sdControls = reactable::colDef(name = "SD ctrls", width = 90, maxWidth = 90),
-          oddsRatio = reactable::colDef(name = "OR", width = 80, maxWidth = 80),
-          mlogp = reactable::colDef(name = "mlogp", width = 80, maxWidth = 80),
-          beta = reactable::colDef(name = "Beta", width = 80, maxWidth = 80),
+          nCasesYes = reactable::colDef(name = "N cases", width = 70, maxWidth = 70,filterable = TRUE,sortable=TRUE,filterMethod = .numericRangeFilter),
+          nControlsYes = reactable::colDef(name = "N ctrls", width = 70, maxWidth = 70,filterable = TRUE,sortable=TRUE,filterMethod = .numericRangeFilter),
+          meanCases = reactable::colDef(name = "Ratio|Mean cases", width = 120, maxWidth = 120,filterable = TRUE,sortable=TRUE,filterMethod = .numericRangeFilter),
+          sdCases = reactable::colDef(name = "SD cases", width = 90, maxWidth = 90,filterable = TRUE,sortable=TRUE,filterMethod = .numericRangeFilter),
+          meanControls = reactable::colDef(name = "Ratio| Mean ctrls", width = 120, maxWidth = 120,filterable = TRUE,sortable=TRUE,filterMethod = .numericRangeFilter),
+          sdControls = reactable::colDef(name = "SD ctrls", width = 90, maxWidth = 90,filterable = TRUE,sortable=TRUE,filterMethod = .numericRangeFilter),
+          oddsRatio = reactable::colDef(name = "OR", width = 80, maxWidth = 80,filterable = TRUE,sortable=TRUE,filterMethod = .numericRangeFilter),
+          mlogp = reactable::colDef(name = "mlogp", width = 80, maxWidth = 80,filterable = TRUE,sortable=TRUE,filterMethod = .numericRangeFilter),
+          beta = reactable::colDef(name = "Beta", width = 80, maxWidth = 80,filterable = TRUE,sortable=TRUE,filterMethod = .numericRangeFilter),
           modelType = reactable::colDef(name = "Model", width = 80, maxWidth = 80),
           runNotes = reactable::colDef(name = "Notes", width = 200, maxWidth = 200)
         ),
@@ -608,29 +631,52 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
         showPageSizeOptions = FALSE
       ) # reactable
 
+      # Capture filtered row IDs in the browser
+      htmlwidgets::onRender(codewasTbl, sprintf("
+        function(el, x) {
+          Reactable.onStateChange('%s', function(state) {
+            var filteredIds = state.sortedData.map(row => row.id);
+            Shiny.setInputValue('%s', filteredIds);
+          });
+        }
+      ", ns("codeWAStable"), ns("filtered_rows_input")))
+
+    })
+
+    # monitor browser filtered data.
+    # To DO: use this browser filtered data plotting or highlighting those that are browser filtered in plots
+    observeEvent(input$filtered_rows_input, {
+
+        r$browserFilteredCodeWASData <- r$filteredCodeWASData |>
+          dplyr::filter(as.numeric(id) %in% as.numeric(input$filtered_rows_input))
+
     })
 
     #
-    # Download the CodeWAS results table as a csv file
+    # Download the filtered CodeWAS results table as a csv file, now handled from the browser
     #
     output$downloadCodeWASFiltered <- downloadHandler(
       filename = function() {
         paste('codewas_filtered_', format(lubridate::now(), "%Y_%m_%d_%H%M"), '.csv', sep='')
       },
       content = function(file) {
-        write.csv(r$filteredCodeWASData, file, row.names = FALSE)
+        # Use browser-filtered data if available, or server-side pre-filtered data
+        data_to_save <- r$browserFilteredCodeWASData %||% r$filteredCodeWASData
+        if (!is.null(data_to_save) && nrow(data_to_save) > 0) {
+          write.csv(data_to_save |> dplyr::select(-id), file, row.names = FALSE)
+        }
       }
     )
 
     #
-    # Download the CodeWAS results table as a csv file
+    # Download the full CodeWAS results table as a csv file
     #
     output$downloadCodeWASAll <- downloadHandler(
       filename = function() {
         paste('codewas_all_', format(lubridate::now(), "%Y_%m_%d_%H%M"), '.csv', sep='')
       },
       content = function(file) {
-        write.csv(r$codeWASData, file, row.names = FALSE)
+        write.csv(r$codeWASData |> dplyr::select(-id), file, row.names = FALSE)
       }
     )
 

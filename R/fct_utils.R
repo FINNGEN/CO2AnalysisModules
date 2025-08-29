@@ -77,3 +77,117 @@
 
   return(error_message)
 }
+
+
+
+#' @title Numeric Range Filter
+#' @description Internal JS function to filter numeric values in reactable columns.
+#' Supports ranges (e.g., -2--0.5, 1-4), comparison operators (>=, <=, >, <, ==), and bare numbers.
+#'
+#' @return Returns a list of rows that match the filter.
+#'
+#' @importFrom htmlwidgets JS
+#'
+.numericRangeFilter <- htmlwidgets::JS(
+  "function(rows, columnId, filterValue) {
+         if (!filterValue) return rows;
+
+         // Normalize: trim + remove all spaces (so '-2 - -0.5' -> '-2--0.5')
+         const val = filterValue.trim().replace(/\\s+/g, '');
+         if (!val) return rows;
+
+         const EPS = 1e-9;
+
+         // Number pattern: optional '-', decimals, optional scientific notation
+         const NUM = '-?\\\\d+(?:\\\\.\\\\d+)?(?:[eE][+-]?\\\\d+)?';
+
+         const reRange = new RegExp(`^(${NUM})-(${NUM})$`);
+         const reGte   = new RegExp(`^>=(${NUM})$`);
+         const reLte   = new RegExp(`^<=(${NUM})$`);
+         const reGt    = new RegExp(`^>(${NUM})$`);
+         const reLt    = new RegExp(`^<(${NUM})$`);
+         const reEq    = new RegExp(`^==(${NUM})$`);
+         const reNum   = new RegExp(`^${NUM}$`);
+
+         const toNum = (x) => {
+           const n = parseFloat(x);
+           return Number.isNaN(n) ? null : n;
+         };
+
+         // Range: e.g., 5-10, -2--0.5
+         let m = val.match(reRange);
+         if (m) {
+           let min = toNum(m[1]);
+           let max = toNum(m[2]);
+           if (min == null || max == null) return rows;
+           if (min > max) { const t = min; min = max; max = t; } // tolerate reversed ranges
+           return rows.filter(row => {
+             const v = Number(row.values[columnId]);
+             return v != null && !Number.isNaN(v) && (v > min - EPS) && (v < max + EPS);
+           });
+         }
+
+         // >=X (supports negatives)
+         m = val.match(reGte);
+         if (m) {
+           const num = toNum(m[1]);
+           return rows.filter(row => {
+             const v = Number(row.values[columnId]);
+             return v != null && !Number.isNaN(v) && (v > num || Math.abs(v - num) < EPS);
+           });
+         }
+
+         // <=X
+         m = val.match(reLte);
+         if (m) {
+           const num = toNum(m[1]);
+           return rows.filter(row => {
+             const v = Number(row.values[columnId]);
+             return v != null && !Number.isNaN(v) && (v < num || Math.abs(v - num) < EPS);
+           });
+         }
+
+         // >X
+         m = val.match(reGt);
+         if (m) {
+           const num = toNum(m[1]);
+           return rows.filter(row => {
+             const v = Number(row.values[columnId]);
+             return v != null && !Number.isNaN(v) && v > num + EPS;
+           });
+         }
+
+         // <X
+         m = val.match(reLt);
+         if (m) {
+           const num = toNum(m[1]);
+           return rows.filter(row => {
+             const v = Number(row.values[columnId]);
+             return v != null && !Number.isNaN(v) && v < num - EPS;
+           });
+         }
+
+         // ==X
+         m = val.match(reEq);
+         if (m) {
+           const num = toNum(m[1]);
+           return rows.filter(row => {
+             const v = Number(row.values[columnId]);
+             return v != null && !Number.isNaN(v) && Math.abs(v - num) < EPS;
+           });
+         }
+
+         // Bare number (no operator): treat as equality with tolerance
+         if (reNum.test(val)) {
+           const num = toNum(val);
+           return rows.filter(row => {
+             const v = Number(row.values[columnId]);
+             return v != null && !Number.isNaN(v) && Math.abs(v - num) < EPS;
+           });
+         }
+
+         // If input doesn't match any pattern, don't filter
+         return rows;
+       }"
+)
+

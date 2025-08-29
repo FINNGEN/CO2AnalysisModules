@@ -13,7 +13,11 @@ DT
 DuckDB
 FinnGen
 GWAS
+JS
 Lifecycle
+PhenotypeScoring
+PhenotypeScorings
+Tibble
 TimeCodeWAS
 UI
 UpSet
@@ -28,6 +32,7 @@ continuousPValue
 continuousTest
 datetime
 duckdb
+groupOfCovariatesObject
 meanValueCases
 meanValueControls
 reactable

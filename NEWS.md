@@ -1,3 +1,8 @@
+# CO2AnalysisModules 2.4.0
+- Adding the PhenotypeScoring module
+- Fixed bug on warning on different sex and birth year
+- Add filters for the CodeWAS and TimeCodeWAS result tables
+
 # CO2AnalysisModules 2.3.3
 - Added ATC DDD to CodeWAS and TimeCodeWAS
 - Changes in UI for small screens
