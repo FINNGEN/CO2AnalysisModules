@@ -1,3 +1,9 @@
+# CO2AnalysisModules 2.4.0
+- Simplified importing from file dialog
+- GWAS naming less restrictive now
+- Add session token to the logs for tracking
+- other minor bug fixes
+
 # CO2AnalysisModules 2.3.3
 - Added ATC DDD to CodeWAS and TimeCodeWAS
 - Changes in UI for small screens
