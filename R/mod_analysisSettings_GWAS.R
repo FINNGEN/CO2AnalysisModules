@@ -51,7 +51,7 @@ mod_analysisSettings_GWAS_ui <- function(id) {
     shiny::textInput(ns("phenotypeName_textInput"), label = "Phenotype Name:",placeholder = "PHENOTYPE_NAME"),
     shiny::textInput(ns("description_textInput"), label = "Description:",placeholder = "Brief description of the GWAS analysis"),
     htmltools::hr(),
-    shiny::tags$h4("Pre-ran info"),
+    shiny::tags$h4("Pre-run info"),
     shiny::verbatimTextOutput(ns("info_text"), placeholder = TRUE),
     htmltools::hr()
   )
