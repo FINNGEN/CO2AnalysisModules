@@ -1,3 +1,6 @@
+# CO2AnalysisModules 2.4.1
+- Fix regex pattern in assertion string
+
 # CO2AnalysisModules 2.4.0
 - Adding the PhenotypeScoring module
 - Fixed bug on warning on different sex and birth year
