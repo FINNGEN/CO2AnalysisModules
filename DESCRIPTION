@@ -9,12 +9,12 @@ License: MIT + file LICENSE
 Encoding: UTF-8
 Language: en-US
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.3.2
+RoxygenNote: 7.3.3
 Imports: 
     checkmate,
     dplyr,
     dbplyr,
-    HadesExtras,
+    HadesExtras (>= 2.0.0),
     ParallelLogger,
     shinydashboard,
     shinycssloaders,
@@ -59,7 +59,7 @@ Imports:
 Remotes: 
     FINNGEN/HadesExtras,
     FINNGEN/FinnGenUtilsR,
-    javier-gracia-tabuenca-tuni/DatabaseConnector@BQ-DBI
+    javier-gracia-tabuenca-tuni/DatabaseConnector@bigquery-DBI-2 
 Suggests: 
     devtools,
     testthat (>= 3.0.0), 

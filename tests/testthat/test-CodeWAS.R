@@ -456,7 +456,7 @@ test_that("executeCodeWAS works when n multiple events per subject", {
 
 test_that("executeCodeWAS works to get lab values", {
   skip_if(testingDatabase != "Eunomia-FinnGen",
-          "Skip test, it is only for EunomiaFinnGen")
+          "Skip test, it is only for Eunomia-FinnGen")
 
   # set up
   cohortTableHandler <-
@@ -611,8 +611,8 @@ cohortsInfo <-
 
 
 test_that("executeCodeWAS works with ATC groups and DDDs", {
-  skip_if(testingDatabase != "AtlasDevelopment-DBI",
-          "Skip test, it is only for AtlasDevelopment-DBI")
+  skip_if(testingDatabase  |> stringr::str_starts("AtlasDevelopment"),
+          "Skip test, it is only for AtlasDevelopment databases")
   # set up
   cohortTableHandler <-
     helper_createNewCohortTableHandler(addCohorts = "HadesExtrasAsthmaCohorts")
