@@ -221,18 +221,15 @@ execute_CodeWAS <- function(
     ) sub
     WHERE rn = 1;
     "
-    sql <- SqlRender::render(
+
+    DatabaseConnector::renderTranslateExecuteSql(
+      connection = connection,
       sql = sql,
       cohort_database_schema = cohortDatabaseSchema,
       cohortTable = cohortTable,
       newCohortTable = newCohortTable,
       warnOnMissingParameters = TRUE
     )
-    sql <- SqlRender::translate(
-      sql = sql,
-      targetDialect = connection@dbms
-    )
-    DatabaseConnector::dbExecute(connection, sql)
 
     cohortTable <- newCohortTable
   }

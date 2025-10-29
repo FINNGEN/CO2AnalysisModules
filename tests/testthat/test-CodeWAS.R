@@ -611,7 +611,7 @@ cohortsInfo <-
 
 
 test_that("executeCodeWAS works with ATC groups and DDDs", {
-  skip_if(testingDatabase  |> stringr::str_starts("AtlasDevelopment"),
+  skip_if_not(testingDatabase  |> stringr::str_starts("AtlasDevelopment"),
           "Skip test, it is only for AtlasDevelopment databases")
   # set up
   cohortTableHandler <-
