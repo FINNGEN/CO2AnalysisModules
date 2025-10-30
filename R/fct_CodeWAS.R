@@ -567,14 +567,27 @@ execute_CodeWAS <- function(
     dplyr::collect() |>
     dplyr::distinct() |>
     dplyr::rename(concept_id = conceptId)
-  conceptIdsTbl <- dplyr::copy_to(connection, conceptIds, overwrite = TRUE, temporary = TRUE)
+  
+  DatabaseConnector::insertTable(
+    connection = connection,
+    tableName = "temp_concept_ids",
+    data = conceptIds,
+    tempTable = TRUE,
+    dropTableIfExists = TRUE
+  )
 
-  conceptIdsAndCodes <- dplyr::tbl(connection, dbplyr::in_schema(vocabularyDatabaseSchema, "concept")) |>
-    dplyr::left_join(conceptIdsTbl, by = "concept_id") |>
-    dplyr::select(concept_id, concept_code, vocabulary_id, standard_concept) |>
-    dplyr::collect() |>
-    # rename all to camelCase
-    SqlRender::snakeCaseToCamelCaseNames()
+  sql <- "
+  SELECT c.concept_id, c.concept_code, c.vocabulary_id, c.standard_concept
+  FROM @vocabulary_database_schema.concept AS c
+  INNER JOIN #temp_concept_ids AS tci ON c.concept_id = tci.concept_id
+  "
+  conceptIdsAndCodes  <- DatabaseConnector::renderTranslateQuerySql(
+    connection = connection,
+    sql = sql,
+    vocabulary_database_schema = vocabularyDatabaseSchema,
+    snakeCaseToCamelCase = TRUE
+  ) |>
+    tibble::as_tibble()
 
   covariateRef <- covariateRef |>
     dplyr::left_join(conceptIdsAndCodes, by = "conceptId")
