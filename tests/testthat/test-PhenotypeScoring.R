@@ -61,7 +61,6 @@ test_that("executePhenotypeScoring works", {
   nrow() |> 
   expect_equal(0)
  
- 
  })
 
 

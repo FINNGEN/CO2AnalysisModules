@@ -1,5 +1,6 @@
 
 test_that("mod_analysisSettings_timetimeCodeWAS works", {
+  skip_if(testingDatabase != "Eunomia-GiBleed", "Skip test, it is only for Eunomia-GiBleed")
 
   # set up
   cohortTableHandler <- helper_createNewCohortTableHandler(addCohorts = "HadesExtrasFractureCohortsMatched")
