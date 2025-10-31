@@ -57,11 +57,12 @@ jobs:
           r-version: ${{ matrix.config.r }}
           http-user-agent: ${{ matrix.config.http-user-agent }}
           use-public-rspm: true
-
+          
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
           extra-packages: any::rcmdcheck
           needs: check
+          cache-version: 2
 
       - name: Create GCP service key
         run: echo $GCP_SERVICE_KEY_JSON  > /tmp/gcp-credentials.json
