@@ -38,7 +38,7 @@ mod_fct_formTimeWindows_ui <- function(id) {
           shiny::selectInput(
             inputId = ns("window_type"),
             label = "Windows as",
-            choices = c("months", "years"),
+            choices = c("days", "months", "years"),
             selected = "years",
           )
         ), # column
@@ -86,6 +86,13 @@ mod_fct_formTimeWindows_ui <- function(id) {
                         shiny::verbatimTextOutput(ns("output_approximate_windows"))),
           class = "custom-container"
         ), # div
+        # # debugging the exact windows
+        # shiny::div(
+        #   shiny::column(12, offset = 0, style = "margin-top: 0px;",
+        #                 shiny::tags$h5("Time windows (exact, no overlap)"),
+        #                 shiny::verbatimTextOutput(ns("output_window_as_days"))),
+        #   class = "custom-container"
+        # ) # div
       ) # fixedRow
     ), # div
   )
@@ -141,7 +148,12 @@ mod_fct_formTimeWindows_server <- function(id, session) {
         shinyFeedback::hideFeedback("window_breakpoints")
         values <- as.numeric(unlist(strsplit(input$window_breakpoints, ",")))
         values <- values[!is.na(values)] |> unique() |> sort()
-        time_windows(round(values * ifelse(input$window_type == "months", 30.44, 365.25)))
+        time_windows(
+          round(dplyr::case_when(
+            input$window_type == "days" ~ values,
+            input$window_type == "months" ~ round(values * 30.44),
+            input$window_type == "years" ~ round(values * 365.25)
+          )))
       }
     })
 
@@ -210,6 +222,9 @@ mod_fct_formTimeWindows_server <- function(id, session) {
     # helper function to format the window
     #
     .format_window <- function(days, window_type = "years"){
+
+      if(window_type == "days") return(as.character(days))
+
       months <- round(lubridate::days(days)/months(1), 0)
       months_remaining <- sign(months) * (abs(months) %% 12)
 
