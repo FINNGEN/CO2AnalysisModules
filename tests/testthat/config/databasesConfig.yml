@@ -124,3 +124,28 @@ BQ5:
     cohortTable:
         cohortDatabaseSchema: atlas-development-270609.sandbox
         cohortTableName: hadesextras_test_cohort_table_<timestamp>
+# Synthea 10k
+S10:
+  cohortTableHandler:
+    database:
+      databaseId: S10
+      databaseName: Synthea 10
+      databaseDescription: Synthea 10 database
+    connection:
+      connectionDetailsSettings:
+          dbms: postgresql
+          server: localhost/synthea
+          user: syntheauser
+          password: mypass
+          port: 5432
+    cdm:
+        cdmDatabaseSchema: cdm_synthea10
+        vocabularyDatabaseSchema: cdm_synthea10
+    cohortTable:
+        cohortDatabaseSchema: cdm_synthea10_result
+        cohortTableName: test_cohort_table_<timestamp>
+  atlasConfig:
+    webapiurl: https://api.ohdsi.org/WebAPI
+    sourcekey:
+    resultsshchema:
+    regexPersonSourceValue: ^00[0-9a-f]{6}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12} 
