@@ -1,3 +1,8 @@
+# CO2AnalysisModules 
+- Updated to use DatabaseConnector v7
+- Label both cases and controls in CodeWAS results visualization
+- Have covariate group names instead of group ids
+
 # CO2AnalysisModules 2.4.1
 - Fix regex pattern in assertion string
 
