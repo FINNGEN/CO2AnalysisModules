@@ -1,6 +1,6 @@
 Package: CO2AnalysisModules
 Title: CO2AnalysisModules
-Version: 2.4.1
+Version: 3.0.0
 Authors@R: 
     person("Javier", "Gracia-Tabuenca", , "javier.graciatabuenca@tuni.fi", role = c("aut", "cre"),
            comment = c(ORCID = "0000-0002-2455-0598"))
@@ -9,12 +9,12 @@ License: MIT + file LICENSE
 Encoding: UTF-8
 Language: en-US
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.3.2
+RoxygenNote: 7.3.3
 Imports: 
     checkmate,
     dplyr,
     dbplyr,
-    HadesExtras,
+    HadesExtras (>= 2.0.0),
     ParallelLogger,
     shinydashboard,
     shinycssloaders,
@@ -59,7 +59,7 @@ Imports:
 Remotes: 
     FINNGEN/HadesExtras,
     FINNGEN/FinnGenUtilsR,
-    javier-gracia-tabuenca-tuni/DatabaseConnector@BQ-DBI
+    javier-gracia-tabuenca-tuni/DatabaseConnector@bigquery-DBI-2 
 Suggests: 
     devtools,
     testthat (>= 3.0.0), 

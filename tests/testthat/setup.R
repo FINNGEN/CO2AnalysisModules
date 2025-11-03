@@ -2,25 +2,20 @@
 # SELECT DATABASE and CO2 CONFIGURATION
 #
 
-#Sys.setenv(HADESEXTAS_TESTING_ENVIRONMENT = "Eunomia-GiBleed")
-# Sys.setenv(HADESEXTAS_TESTING_ENVIRONMENT = "AtlasDevelopment-DBI")
+# Sys.setenv(HADESEXTAS_TESTING_ENVIRONMENT = "Eunomia-GiBleed")
+# Sys.setenv(HADESEXTAS_TESTING_ENVIRONMENT = "Eunomia-MIMIC")
 # Sys.setenv(HADESEXTAS_TESTING_ENVIRONMENT = "Eunomia-FinnGen")
-#Sys.setenv(HADESEXTAS_TESTING_ENVIRONMENT = "Synthea-S10")
-#Sys.setenv(HADESEXTAS_TESTING_ENVIRONMENT = "Synthea-S10k")
+# Sys.setenv(HADESEXTAS_TESTING_ENVIRONMENT = "AtlasDevelopment-5k")
+# Sys.setenv(HADESEXTAS_TESTING_ENVIRONMENT = "AtlasDevelopment-full")
+# Sys.setenv(HADESEXTAS_TESTING_ENVIRONMENT = "Synthea-S10")
 testingDatabase <- Sys.getenv("HADESEXTAS_TESTING_ENVIRONMENT")
 
 testingCO2AnalysisModulesConfig <- "AtlasDemo"
 
 # check correct settings
-possibleDatabases <- c("Eunomia-GiBleed", "Eunomia-MIMIC", "Eunomia-FinnGen", "AtlasDevelopment", "AtlasDevelopment-DBI", "Synthea-S10", "Synthea-S10k")
-if( !(testingDatabase %in% possibleDatabases) ){
-  message("Please select a valid database from: ", paste(possibleDatabases, collapse = ", "))
-  stop()
-}
-
-possibleCO2AnalysisModulesConfig <- c("AtlasDemo", "PrivateAtlas")
-if( !(testingCO2AnalysisModulesConfig %in% possibleCO2AnalysisModulesConfig) ){
-  message("Please select a valid CO2 analysis modules configuration from: ", paste(possibleCO2AnalysisModulesConfig, collapse = ", "))
+possibleDatabases <- c("Eunomia-GiBleed", "Eunomia-MIMIC", "Eunomia-FinnGen", "AtlasDevelopment-5k", "AtlasDevelopment-full", "Synthea-S10")
+if (!(testingDatabase %in% possibleDatabases)) {
+  message("Please set a valid testing environment in envar HADESEXTAS_TESTING_ENVIRONMENT, from: ", paste(possibleDatabases, collapse = ", "))
   stop()
 }
 
@@ -33,34 +28,24 @@ if (testingDatabase |> stringr::str_starts("Eunomia")) {
     stop()
   }
 
-  pathToGiBleedEunomiaSqlite <- ""
-  pathToMIMICEunomiaSqlite <- ""
-  pathToFinnGenEunomiaSqlite <- ""
-  if (testingDatabase |> stringr::str_ends("GiBleed")) {
-    pathToGiBleedEunomiaSqlite <- Eunomia::getDatabaseFile("GiBleed", overwrite = FALSE)
-  }
-  if (testingDatabase |> stringr::str_ends("MIMIC")) {
-    pathToMIMICEunomiaSqlite <- Eunomia::getDatabaseFile("MIMIC", overwrite = FALSE)
-  }
-  if (testingDatabase |> stringr::str_ends("FinnGen")) {
-    pathToFinnGenEunomiaSqlite <- helper_FinnGen_getDatabaseFile()
-  }
+  pathToGiBleedEunomiaSqlite <- Eunomia::getDatabaseFile("GiBleed", overwrite = FALSE)
+  pathToMIMICEunomiaSqlite <- Eunomia::getDatabaseFile("MIMIC", overwrite = FALSE)
 
   test_databasesConfig <- HadesExtras::readAndParseYaml(
-    pathToYalmFile = testthat::test_path("config", "eunomia_databasesConfig.yml"),
+    pathToYalmFile = testthat::test_path("config", "databasesConfig.yml"),
     pathToGiBleedEunomiaSqlite = pathToGiBleedEunomiaSqlite,
     pathToMIMICEunomiaSqlite = pathToMIMICEunomiaSqlite,
-    pathToFinnGenEunomiaSqlite = pathToFinnGenEunomiaSqlite
+    pathToFinnGenEunomiaSqlite = ""  #helper_FinnGen_getDatabaseFile()
   )
 
   if (testingDatabase |> stringr::str_ends("GiBleed")) {
-    test_cohortTableHandlerConfig <- test_databasesConfig[[1]]$cohortTableHandle
+    test_cohortTableHandlerConfig <- test_databasesConfig$E1$cohortTableHandle
   }
   if (testingDatabase |> stringr::str_ends("MIMIC")) {
-    test_cohortTableHandlerConfig <- test_databasesConfig[[2]]$cohortTableHandle
+    test_cohortTableHandlerConfig <- test_databasesConfig$E2$cohortTableHandle
   }
   if (testingDatabase |> stringr::str_ends("FinnGen")) {
-    test_cohortTableHandlerConfig <- test_databasesConfig[[4]]$cohortTableHandle
+    test_cohortTableHandlerConfig <- test_databasesConfig$E4$cohortTableHandle
   }
 
   # add test cohorts and cohort definitions
@@ -69,32 +54,9 @@ if (testingDatabase |> stringr::str_starts("Eunomia")) {
 
 
 #
-# AtlasDevelopmet Database
-#
-if (testingDatabase %in% c("AtlasDevelopment")) {
-  if (Sys.getenv("GCP_SERVICE_KEY") == "") {
-    message("GCP_SERVICE_KEY not set. Please set this environment variable to the path of the GCP service key.")
-    stop()
-  }
-
-  if (Sys.getenv("DATABASECONNECTOR_JAR_FOLDER") == "") {
-    message("DATABASECONNECTOR_JAR_FOLDER not set. Please set this environment variable to the path of the database connector jar folder.")
-    stop()
-  }
-
-  test_databasesConfig <- HadesExtras::readAndParseYaml(
-    pathToYalmFile = testthat::test_path("config", "atlasDev_databasesConfig.yml"),
-    OAuthPvtKeyPath = Sys.getenv("GCP_SERVICE_KEY"),
-    pathToDriver = Sys.getenv("DATABASECONNECTOR_JAR_FOLDER")
-  )
-
-  test_cohortTableHandlerConfig <- test_databasesConfig[[1]]$cohortTableHandler
-}
-
-#
 # AtlasDevelopmet-DBI Database
 #
-if (testingDatabase %in% c("AtlasDevelopment-DBI")) {
+if (testingDatabase |> stringr::str_starts("AtlasDevelopment")) {
   if (Sys.getenv("GCP_SERVICE_KEY") == "") {
     message("GCP_SERVICE_KEY not set. Please set this environment variable to the path of the GCP service key.")
     stop()
@@ -103,22 +65,15 @@ if (testingDatabase %in% c("AtlasDevelopment-DBI")) {
   bigrquery::bq_auth(path = Sys.getenv("GCP_SERVICE_KEY"))
 
   test_databasesConfig <- HadesExtras::readAndParseYaml(
-    pathToYalmFile = testthat::test_path("config", "atlasDev_DBI_databasesConfig.yml")
+    pathToYalmFile = testthat::test_path("config", "databasesConfig.yml")
   )
 
-  test_cohortTableHandlerConfig <- test_databasesConfig[[1]]$cohortTableHandler
-}
-
-#
-# CO2 Analysis Modules Configuration
-#
-if(testingCO2AnalysisModulesConfig == "AtlasDemo"){
-  pathToCO2AnalysisModulesConfigYalm  <-  testthat::test_path("config", "atlasDemo_CO2AnalysisModulesConfig.yml")
-  test_CO2AnalysisModulesConfig <- readAndParseYalm(pathToCO2AnalysisModulesConfigYalm)
-}
-if(testingCO2AnalysisModulesConfig == "PrivateAtlas"){
-  pathToCO2AnalysisModulesConfigYalm  <-  testthat::test_path("config", "privateAtlas_CO2AnalysisModulesConfig.yml")
-  test_CO2AnalysisModulesConfig <- readAndParseYalm(pathToCO2AnalysisModulesConfigYalm)
+  if (testingDatabase |> stringr::str_ends("5k")) {
+    test_cohortTableHandlerConfig <- test_databasesConfig$BQ5K$cohortTableHandler
+  }
+  if (testingDatabase |> stringr::str_ends("full")) {
+    test_cohortTableHandlerConfig <- test_databasesConfig$BQ5$cohortTableHandler
+  }
 }
 
 #
@@ -128,15 +83,18 @@ if (testingDatabase |> stringr::str_detect("Synthea")) {
   test_databasesConfig <- HadesExtras::readAndParseYaml(
     pathToYalmFile = testthat::test_path("config", "databasesConfig.yml")
   )
-
   if (testingDatabase |> stringr::str_ends("S10")) {
     test_cohortTableHandlerConfig <- test_databasesConfig$S10$cohortTableHandler
   }
-  if (testingDatabase |> stringr::str_ends("S10k")) {
-    test_cohortTableHandlerConfig <- test_databasesConfig$S10k$cohortTableHandler
-  }
 }
 
+#
+# CO2 Analysis Modules Configuration
+#
+if(testingCO2AnalysisModulesConfig == "AtlasDemo"){
+  pathToCO2AnalysisModulesConfigYalm  <-  testthat::test_path("config", "CO2AnalysisModulesConfig.yml")
+  test_CO2AnalysisModulesConfig <- HadesExtras::readAndParseYaml(pathToCO2AnalysisModulesConfigYalm)
+}
 
 #
 # INFORM USER

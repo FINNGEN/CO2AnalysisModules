@@ -10,6 +10,7 @@ CohortOverlaps
 CohortsOverlaps
 DDD
 DT
+DatabaseConnector
 DuckDB
 FinnGen
 GWAS
@@ -22,7 +23,6 @@ TimeCodeWAS
 UI
 UpSet
 Welch
-YAML
 addFisherTestToCodeCounts
 addTestTotibbleWithValueSummary
 appender

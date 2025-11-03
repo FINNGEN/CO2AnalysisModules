@@ -1,82 +1,89 @@
-# Synthea 10
-S10:
+# Eunomia-GiBleed
+E1:
   cohortTableHandler:
     database:
-      databaseId: S10
-      databaseName: Synthea 10
-      databaseDescription: Synthea 10 database
+      databaseId: E1
+      databaseName: GiBleed
+      databaseDescription: Eunomia database GiBleed
     connection:
       connectionDetailsSettings:
-          dbms: postgresql
-          server: localhost/synthea
-          user: syntheauser
-          password: mypass
-          port: 5433
+          dbms: sqlite
+          server: <pathToGiBleedEunomiaSqlite>
     cdm:
-        cdmDatabaseSchema: cdm_synthea10
-        vocabularyDatabaseSchema: cdm_synthea10
+        cdmDatabaseSchema: main
+        vocabularyDatabaseSchema: main
     cohortTable:
-        cohortDatabaseSchema: cdm_synthea10_result
+        cohortDatabaseSchema: main
         cohortTableName: test_cohort_table_<timestamp>
   atlasConfig:
     webapiurl: https://api.ohdsi.org/WebAPI
     sourcekey:
     resultsshchema:
-    regexPersonSourceValue: ^00[0-9a-f]{6}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12} 
-
-# Synthea 10k
-S10k:
+# Eunomia-MIMIC
+E2:
   cohortTableHandler:
     database:
-      databaseId: S10k
-      databaseName: Synthea 10k
-      databaseDescription: Synthea 10k database
+      databaseId: E2
+      databaseName: MIMIC
+      databaseDescription: Eunomia database MIMIC
     connection:
       connectionDetailsSettings:
-          dbms: postgresql
-          server: localhost/synthea
-          user: syntheauser
-          password: mypass
+          dbms: sqlite
+          server: <pathToMIMICEunomiaSqlite>
     cdm:
-        cdmDatabaseSchema: cdm_synthea10k
-        vocabularyDatabaseSchema: cdm_synthea10k
+        cdmDatabaseSchema: main
+        vocabularyDatabaseSchema: main
     cohortTable:
-        cohortDatabaseSchema: cdm_synthea10_result
+        cohortDatabaseSchema: main
         cohortTableName: test_cohort_table_<timestamp>
   atlasConfig:
     webapiurl: https://api.ohdsi.org/WebAPI
     sourcekey:
     resultsshchema:
-    regexPersonSourceValue: ^00[0-9a-f]{6}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12} 
-
-# sandbox
-DF13:
+# Eunomia-MIMICwrong
+E3:
   cohortTableHandler:
     database:
-      databaseId: DF13
-      databaseName: FinnGen DF13
-      databaseDescription: FinnGen database 13
+      databaseId: E3
+      databaseName: MIMICwrong
+      databaseDescription: Eunomia database MIMIC wrong atlas
     connection:
       connectionDetailsSettings:
-        dbms: bigquery
-        drv: bigrquery::bigquery()
-        project: <sandboxProject>
-        billing: <sandboxProject>
-        bigint: integer64
-      tempEmulationSchema: <sandboxProject>.sandbox #needed for creating tmp table in BigQuery
+          dbms: sqlite
+          server: <pathToMIMICEunomiaSqlite>
     cdm:
-      cdmDatabaseSchema: finngen-production-library.finngen_omop_r13
-      vocabularyDatabaseSchema: finngen-production-library.finngen_omop_r13
+        cdmDatabaseSchema: main
+        vocabularyDatabaseSchema: main
     cohortTable:
-      cohortDatabaseSchema: <sandboxProject>.sandbox
-      cohortTableName: co2_d13_<sessionManager>_<timestamp>
+        cohortDatabaseSchema: main
+        cohortTableName: test_cohort_table_<timestamp>
   atlasConfig:
-    webapiurl: https://ohdsi-webapi.app.finngen.fi/WebAPI
-    sourcekey: FINNGEN_CDM_R13
-    resultsshchema: finngen-production-library.finngen_omop_result_r13
-    regexPersonSourceValue: ^FG[A-Z0-9]{8}$
-# Atlas dev
-BQ5k:
+    webapiurl: https://api.ohdsi.org/wrong
+    sourcekey:
+    resultsshchema:
+# Eunomia-FinnGen
+E4:
+  cohortTableHandler:
+    database:
+      databaseId: E4
+      databaseName: FinnGen
+      databaseDescription: Eunomia database FinnGen
+    connection:
+      connectionDetailsSettings:
+          dbms: sqlite
+          server: <pathToFinnGenEunomiaSqlite>
+    cdm:
+        cdmDatabaseSchema: main
+        vocabularyDatabaseSchema: main
+    cohortTable:
+        cohortDatabaseSchema: main
+        cohortTableName: test_cohort_table_<timestamp>
+  atlasConfig:
+    webapiurl: https://api.ohdsi.org/wrong
+    sourcekey:
+    resultsshchema:
+# AtlasDevelopment-5k
+BQ5K:
   cohortTableHandler:
     database:
       databaseId: BQ5K
@@ -91,21 +98,17 @@ BQ5k:
           bigint: integer64
       tempEmulationSchema: atlas-development-270609.sandbox
     cdm:
-        cdmDatabaseSchema: atlas-development-270609.etl_sam_r12_5k_omop
-        vocabularyDatabaseSchema: atlas-development-270609.etl_sam_r12_5k_omop
+        cdmDatabaseSchema: atlas-development-270609.finngen_omop_r13_v3_5k
+        vocabularyDatabaseSchema: atlas-development-270609.finngen_omop_r13_v3_5k
     cohortTable:
         cohortDatabaseSchema: atlas-development-270609.sandbox
         cohortTableName: hadesextras_test_cohort_table_<timestamp>
-  atlasConfig:
-    webapiurl: https://api.ohdsi.org/WebAPI
-    sourcekey:
-    resultsshchema:
-    regexPersonSourceValue: ^FG[A-Z0-9]{8}$
-BQ500k:
+# AtlasDevelopment-full
+BQ5:
   cohortTableHandler:
     database:
-      databaseId: BQ500k
-      databaseName: bigquery500k
+      databaseId: BQ
+      databaseName: bigquery
       databaseDescription: BigQuery database with 500k patients
     connection:
       connectionDetailsSettings:
@@ -116,13 +119,33 @@ BQ500k:
           bigint: integer64
       tempEmulationSchema: atlas-development-270609.sandbox
     cdm:
-        cdmDatabaseSchema: atlas-development-270609.etl_sam_dev_omop
-        vocabularyDatabaseSchema: atlas-development-270609.etl_sam_dev_omop
+        cdmDatabaseSchema: atlas-development-270609.finngen_omop_r13_v3
+        vocabularyDatabaseSchema: atlas-development-270609.finngen_omop_r13_v3
     cohortTable:
         cohortDatabaseSchema: atlas-development-270609.sandbox
         cohortTableName: hadesextras_test_cohort_table_<timestamp>
+# Synthea 10k
+S10:
+  cohortTableHandler:
+    database:
+      databaseId: S10
+      databaseName: Synthea 10
+      databaseDescription: Synthea 10 database
+    connection:
+      connectionDetailsSettings:
+          dbms: postgresql
+          server: localhost/synthea
+          user: syntheauser
+          password: mypass
+          port: 5432
+    cdm:
+        cdmDatabaseSchema: cdm_synthea10
+        vocabularyDatabaseSchema: cdm_synthea10
+    cohortTable:
+        cohortDatabaseSchema: cdm_synthea10_result
+        cohortTableName: test_cohort_table_<timestamp>
   atlasConfig:
     webapiurl: https://api.ohdsi.org/WebAPI
     sourcekey:
     resultsshchema:
-    regexPersonSourceValue: ^FG[A-Z0-9]{8}$
+    regexPersonSourceValue: ^00[0-9a-f]{6}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12} 

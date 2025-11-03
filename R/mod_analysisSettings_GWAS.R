@@ -273,7 +273,7 @@ mod_analysisSettings_GWAS_server <- function(id, r_connectionHandler) {
       connectionSandboxAPI <- r$connectionSandboxAPI
 
       databaseId <- cohortTableHandler$databaseId
-      release <- paste0("Regenie", gsub("[A-Za-z]", "", cohortTableHandler$databaseId))
+      release <- paste0("Regenie", gsub("[A-Za-z]", "", sub("_.*", "", cohortTableHandler$databaseId)))
 
       analysisSettings <- list(
         cohortIdCases = input$selectCaseCohort_pickerInput |> as.integer(),

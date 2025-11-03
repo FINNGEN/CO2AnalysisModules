@@ -1,6 +1,6 @@
 
 test_that("mod_analysisSettings_CohortDemographics works", {
-
+  skip_if(testingDatabase != "Eunomia-GiBleed", "Skip test, it is only for Eunomia-GiBleed")
   # set up
   cohortTableHandler <- helper_createNewCohortTableHandler(addCohorts = "HadesExtrasFractureCohorts")
   withr::defer({rm(cohortTableHandler);gc()})

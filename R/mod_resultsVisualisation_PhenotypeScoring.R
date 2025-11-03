@@ -844,8 +844,16 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
       shiny::req(r_groupedCovariates$groupedCovariatesPerPersonTibble_totalScore)
       shiny::req(input$scoreRange)
 
-      df <- r_groupedCovariates$groupedCovariatesPerPersonTibble_totalScore |>
+      groupedCovariatesPerPers <- r_groupedCovariates$groupedCovariatesPerPersonTibble
+
+      colnames(groupedCovariatesPerPers)[-1] <- r_groupedCovariates$groupedCovariatesTibble$groupName[
+        match(colnames(groupedCovariatesPerPers)[-1],
+              r_groupedCovariates$groupedCovariatesTibble$groupId)]
+
+      df <- groupedCovariatesPerPers |>
+        dplyr::left_join(r_groupedCovariates$groupedCovariatesPerPersonTibble_totalScore, by = "personSourceValue") |>
         dplyr::filter(totalScore >= input$scoreRange[1], totalScore <= input$scoreRange[2])
+
 
       # Add flag information if it exists
       if (!is.null(r_groupedCovariates$groupedCovariatesPerPersonTibble_flag) &&
@@ -947,7 +955,13 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
         shiny::req(r_groupedCovariates$groupedCovariatesPerPersonTibble |> nrow() > 0)
         shiny::req(r_groupedCovariates$groupedCovariatesPerPersonTibble_totalScore)
 
-        df <- r_groupedCovariates$groupedCovariatesPerPersonTibble |>
+        groupedCovariatesPerPers <- r_groupedCovariates$groupedCovariatesPerPersonTibble
+
+        colnames(groupedCovariatesPerPers)[-1] <- r_groupedCovariates$groupedCovariatesTibble$groupName[
+                    match(colnames(groupedCovariatesPerPers)[-1],
+                          r_groupedCovariates$groupedCovariatesTibble$groupId)]
+
+        df <- groupedCovariatesPerPers |>
           dplyr::left_join(r_groupedCovariates$groupedCovariatesPerPersonTibble_totalScore, by = "personSourceValue")
 
         if (is.null(r_groupedCovariates$groupedCovariatesPerPersonTibble_flag)) {

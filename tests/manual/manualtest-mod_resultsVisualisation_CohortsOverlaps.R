@@ -44,7 +44,7 @@ app
 # run full app --------------------------------------------------------------
 devtools::load_all(".")
 
-pathToCO2AnalysisModulesConfigYalm  <-  testthat::test_path("config/atlasDemo_CO2AnalysisModulesConfig.yml")
+pathToCO2AnalysisModulesConfigYalm  <-  testthat::test_path("config/CO2AnalysisModulesConfig.yml")
 CO2AnalysisModulesConfig <- yaml::read_yaml(pathToCO2AnalysisModulesConfigYalm)
 options = list(launch.browser=FALSE, port = 8561)
 

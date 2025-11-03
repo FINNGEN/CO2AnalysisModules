@@ -14,6 +14,8 @@
 #' @importFrom DBI dbGetQuery
 #' @importFrom tibble tibble
 #' @importFrom yaml as.yaml
+#' @importFrom SqlRender render translate
+#' @importFrom DatabaseConnector insertTable querySql
 #'
 #' @export
 #'
@@ -149,42 +151,55 @@ execute_timeCodeWAS <- function(
 
     ParallelLogger::logInfo("calcualting number of subjects with observation case and controls in each time window")
 
-    cohortTbl <- dplyr::tbl(connection, dbplyr::in_schema(cohortDatabaseSchema, cohortTable))
-    observationPeriodTbl <- dplyr::tbl(connection, dbplyr::in_schema(cdmDatabaseSchema, "observation_period"))
-
     timeWindows <- tibble::tibble(
       id_window = as.integer(1:length(temporalStartDays)),
       start_day = as.integer(temporalStartDays),
       end_day = as.integer(temporalEndDays)
     )
-    timeWindowsTbl <- dplyr::copy_to(connection, timeWindows, overwrite = TRUE)
     
-    windowCounts <- dplyr::cross_join(
-      timeWindowsTbl,
-      cohortTbl |>
-        dplyr::filter(cohort_definition_id %in% c(cohortIdCases, cohortIdControls)) |>
-        dplyr::left_join(
-          # at the moment take the first and last
-          observationPeriodTbl |>
-            dplyr::select(person_id, observation_period_start_date, observation_period_end_date) |>
-            dplyr::group_by(person_id) |>
-            dplyr::summarise(
-              observation_period_start_date = min(observation_period_start_date, na.rm = TRUE),
-              observation_period_end_date = max(observation_period_end_date, na.rm = TRUE)
-            ),
-          by = c("subject_id" = "person_id")
-        )
-    ) |>
-      dplyr::filter(
-        # exclude if window is under the observation_period_start_date or over the observation_period_end_date
-        dbplyr::sql("NOT(
-          DATEADD('day', end_day, cohort_start_date) < observation_period_start_date OR 
-          DATEADD('day', start_day, cohort_start_date) > observation_period_end_date
-        )")
-      ) |>
-      dplyr::group_by(cohort_definition_id, id_window) |>
-    dplyr::count() |>
-      dplyr::collect()
+    DatabaseConnector::insertTable(
+      connection = connection, 
+      tableName = "temp_time_windows", 
+      data = timeWindows, 
+      tempTable = TRUE, 
+      createTable = TRUE
+    )
+    
+    sql <- "
+    SELECT 
+      cohort.cohort_definition_id,
+      tw.id_window,
+      COUNT(*) AS n
+    FROM #temp_time_windows tw
+    CROSS JOIN @cohort_database_schema.@cohort_table cohort
+    LEFT JOIN (
+      SELECT 
+        person_id,
+        MIN(observation_period_start_date) AS observation_period_start_date,
+        MAX(observation_period_end_date) AS observation_period_end_date
+      FROM @cdm_database_schema.observation_period
+      GROUP BY person_id
+    ) op
+      ON cohort.subject_id = op.person_id
+    WHERE cohort.cohort_definition_id IN (@cohort_id_cases, @cohort_id_controls)
+      AND NOT (
+        DATEADD(day, tw.end_day, cohort.cohort_start_date) < op.observation_period_start_date
+        OR DATEADD(day, tw.start_day, cohort.cohort_start_date) > op.observation_period_end_date
+      )
+    GROUP BY cohort.cohort_definition_id, tw.id_window
+    "
+    
+    windowCounts <- DatabaseConnector::renderTranslateQuerySql(
+      connection = connection, 
+      sql = sql,
+      cdm_database_schema = cdmDatabaseSchema,
+      cohort_database_schema = cohortDatabaseSchema,
+      cohort_table = cohortTable,
+      cohort_id_cases = cohortIdCases,
+      cohort_id_controls = cohortIdControls,
+      warnOnMissingParameters = TRUE
+    ) |> 
+      tibble::as_tibble()
 
     windowCounts <- windowCounts |>
       dplyr::mutate(cohort_definition_id = dplyr::case_when(
@@ -307,20 +322,33 @@ execute_timeCodeWAS <- function(
 
   covariateRef <- covariateCasesControls$covariateRef |> dplyr::collect()
 
-  # get concept_code for covariateRef
+  # Add And fix columns in covariateRef
   conceptIds <- covariateRef |>
     dplyr::select(conceptId) |>
     dplyr::collect() |>
     dplyr::distinct() |>
     dplyr::rename(concept_id = conceptId)
-  conceptIdsTbl <- dplyr::copy_to(connection, conceptIds, overwrite = TRUE, temporary = TRUE)
+  
+  DatabaseConnector::insertTable(
+    connection = connection,
+    tableName = "temp_concept_ids",
+    data = conceptIds,
+    tempTable = TRUE,
+    dropTableIfExists = TRUE
+  )
 
-  conceptIdsAndCodes <- dplyr::tbl(connection, dbplyr::in_schema(vocabularyDatabaseSchema, "concept")) |>
-    dplyr::left_join(conceptIdsTbl, by = "concept_id") |>
-    dplyr::select(concept_id, concept_code, vocabulary_id, standard_concept) |>
-    dplyr::collect() |>
-    # rename all to camelCase
-    SqlRender::snakeCaseToCamelCaseNames()
+  sql <- "
+  SELECT c.concept_id, c.concept_code, c.vocabulary_id, c.standard_concept
+  FROM @vocabulary_database_schema.concept AS c
+  INNER JOIN #temp_concept_ids AS tci ON c.concept_id = tci.concept_id
+  "
+  conceptIdsAndCodes  <- DatabaseConnector::renderTranslateQuerySql(
+    connection = connection,
+    sql = sql,
+    vocabulary_database_schema = vocabularyDatabaseSchema,
+    snakeCaseToCamelCase = TRUE
+  ) |>
+    tibble::as_tibble()
 
   covariateRef <- covariateRef |>
     dplyr::left_join(conceptIdsAndCodes, by = "conceptId") 
