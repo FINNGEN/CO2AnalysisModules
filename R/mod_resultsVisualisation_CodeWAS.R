@@ -41,19 +41,36 @@ mod_resultsVisualisation_CodeWAS_ui <- function(id) {
     shiny::tagList(
       tags$head(
         tags$style(HTML("
-          html, body {
-            height: 100%;
-            margin: 0;
-            padding: 0;
-          }
-          #main-container {
-            height: calc(100vh - 100px);
-            border: 0px solid #888;
-            padding: 0px;
-            box-sizing: border-box;
-            overflow: hidden;
-          }
+         /* Let the document grow and scroll normally */
+         html, body {
+           height: auto !important;
+           min-height: 100%;
+           margin: 0;
+           padding: 0;
+           overflow-y: auto !important;
+           overflow-x: hidden;              /* avoid accidental horizontal scrolling */
+           display: block !important;       /* ensure not flex */
+           column-count: initial !important;
+           column-width: auto !important;
+           column-gap: normal !important;
+         }
 
+         /* Main content should be a single block, full width */
+         #main-container {
+           width: 100% !important;
+           max-width: 100% !important;
+           min-height: calc(100vh - 100px);
+           height: auto;
+           display: block !important;       /* disable flex/grid if inherited */
+           float: none !important;
+           column-count: 1 !important;      /* disable multi-column layout */
+           column-gap: normal !important;
+           overflow: visible;               /* allow page scroll */
+           border: 0;
+           padding: 0;
+           box-sizing: border-box;
+         }
+         /* Collapsible menu section styles */
          .menu-section {
            margin-bottom: 10px;
            border: 1px solid #ccc;
@@ -84,9 +101,15 @@ mod_resultsVisualisation_CodeWAS_ui <- function(id) {
          .collapsible-content {
            display: none;
            padding: 10px;
-           // border-left: 1px solid #ccc;
+           /* border-left: 1px solid #ccc; */
            background-color: #f8f9fa;
          }
+
+          .tab-content > .tab-pane { display: none; }
+          .tab-content > .active { display: block; }
+           /* Make sure reactable has room to paint */
+           .reactable html-widget, .reactable { width: 100% !important; }
+
       ")),
         tags$script(HTML(paste0("
            const inputId = '", ns("free_space"), "';
@@ -142,6 +165,13 @@ mod_resultsVisualisation_CodeWAS_ui <- function(id) {
             }
           $(document).on('shiny:connected', updateTableRows);
           $(window).on('resize', updateTableRows);
+
+          // Tell the browser/layout to recompute sizes
+          window.dispatchEvent(new Event('resize'));
+          // Try to nudge reactable specifically
+          if (window.HTMLWidgets) {
+            HTMLWidgets.staticRender();
+          }
           ") # end of paste0
         ) # end of HTML
         )# end of tags$script
@@ -209,28 +239,19 @@ mod_resultsVisualisation_CodeWAS_ui <- function(id) {
                                                   checkboxInput(ns("sortSecondDesc"), "descending", value = TRUE)
                                          )
                                 )
-                         ),
+                         )
                        ) # fluidRow
                      ), # div
                      shiny::div(
-                       style = "margin-top: 0px; margin-bottom: 10px;",
+                       style = "width:100%; margin-top: 0px; margin-bottom: 10px;",
                        shinycssloaders::withSpinner(
-                         reactable::reactableOutput(ns("codeWAStable")),
+                         reactable::reactableOutput(ns("codeWAStable"), width = "100%"),
                          proxy.height = "400px"
                        )
                      ),
                      shiny::div(
                        style = "margin-top: 10px; margin-bottom: 10px;",
                        shiny::downloadButton(ns("downloadCodeWASFiltered"), "Download filtered", icon = shiny::icon("download")),
-                       # tags$button(
-                       #   shiny::icon("download"),
-                       #   "Download filtered",
-                       #   class = "btn btn-default",
-                       #   onclick = sprintf(
-                       #     "Reactable.downloadDataCSV('%s', 'codewas_filtered_' + new Date().toISOString().slice(0,16).replace(/[-:T]/g,'_') + '.csv')",
-                       #      ns("codeWAStable")
-                       #     )
-                       #   ),
                        shiny::downloadButton(ns("downloadCodeWASAll"), "Download all", icon = shiny::icon("download"))
                      )
                    )# tabPanel
@@ -627,7 +648,7 @@ mod_resultsVisualisation_CodeWAS_server <- function(id, analysisResults) {
           overflowX = "auto"  # enable horizontal scrolling if needed
         ),
         searchable = TRUE,
-        defaultPageSize = rows_to_show_debounced(),
+        defaultPageSize = max(rows_to_show_debounced(), 10),
         showPageSizeOptions = FALSE
       ) # reactable
 
