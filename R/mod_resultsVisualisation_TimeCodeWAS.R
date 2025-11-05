@@ -40,18 +40,38 @@ mod_resultsVisualisation_TimeCodeWAS_ui <- function(id) {
     shiny::tagList(
       tags$head(
         tags$style(HTML("
-          html, body {
-            height: 100%;
-            margin: 0;
-            padding: 0;
+
+       /* Let the document grow and scroll normally */
+         html, body {
+           height: auto !important;
+           min-height: 100%;
+           margin: 0;
+           padding: 0;
+           overflow-y: auto !important;
+           overflow-x: hidden;              /* avoid accidental horizontal scrolling */
+           display: block !important;       /* ensure not flex */
+           column-count: initial !important;
+           column-width: auto !important;
+           column-gap: normal !important;
+         }
+
+         /* Main content should be a single block, full width */
+         #main-container {
+           width: 100% !important;
+           max-width: 100% !important;
+           min-height: calc(100vh - 100px);
+           height: auto;
+           display: block !important;       /* disable flex/grid if inherited */
+           float: none !important;
+           column-count: 1 !important;      /* disable multi-column layout */
+           column-gap: normal !important;
+           overflow: visible;               /* allow page scroll */
+           border: 0;
+           padding: 0;
+           box-sizing: border-box;
+          margin: 0;
           }
-          #main-container {
-            height: calc(100vh - 100px);
-            border: 0px solid #888;
-            padding: 0px;
-            box-sizing: border-box;
-            overflow: hidden;
-          }
+
          .menu-section {
            margin-bottom: 10px;
            border: 1px solid #ccc;
@@ -747,9 +767,10 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
           fill = domain,
           tooltip = label,
           # size = ordered(p_group), # log10_OR
-          data_id = data_id
+          data_id = data_id,
+          alpha = 0.75
           # onclick = paste0('window.open("', link , '")')
-        ), alpha = 0.75)+
+        ))+
         ggplot2::geom_segment(
           ggplot2::aes(x = 0, y = 0,
                        xend = ifelse(facet_max_x > facet_max_y, facet_max_y, facet_max_x),
@@ -1120,7 +1141,7 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
         style = list(
           overflowX = "auto"  # enable horizontal scrolling if needed
         ),
-        defaultPageSize = rows_to_show_debounced(),
+        defaultPageSize = max(10, rows_to_show_debounced()),
         showPageSizeOptions = FALSE
       )
 

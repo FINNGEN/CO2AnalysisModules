@@ -18,19 +18,38 @@ mod_resultsVisualisation_CohortsDemographics_ui <- function(id) {
       shiny::tagList(
         tags$head(
           tags$style(HTML("
+
+         /* Let the document grow and scroll normally */
          html, body {
-           height: 100%;
+           height: auto !important;
+           min-height: 100%;
            margin: 0;
            padding: 0;
+           overflow-y: auto !important;
+           overflow-x: hidden;              /* avoid accidental horizontal scrolling */
+           display: block !important;       /* ensure not flex */
+           column-count: initial !important;
+           column-width: auto !important;
+           column-gap: normal !important;
          }
-         #main-container {
-            height: calc(100vh - 100px);
-            border: 0px solid #888;
-            padding: 0px;
-            box-sizing: border-box;
-            overflow: hidden;
-          }
 
+         /* Main content should be a single block, full width */
+         #main-container {
+           width: 100% !important;
+           max-width: 100% !important;
+           min-height: calc(100vh - 100px);
+           height: auto;
+           display: block !important;       /* disable flex/grid if inherited */
+           float: none !important;
+           column-count: 1 !important;      /* disable multi-column layout */
+           column-gap: normal !important;
+           overflow: visible;               /* allow page scroll */
+           border: 0;
+           padding: 0;
+           box-sizing: border-box;
+         }
+
+         /* Collapsible sections */
          .menu-section {
            margin-bottom: 10px;
            border: 1px solid #ccc;
@@ -141,7 +160,7 @@ mod_resultsVisualisation_CohortsDemographics_ui <- function(id) {
                 )
               ), # end of tagList
               shiny::div(
-                style = "height: calc(100vh - 350px);",
+                style = "height: calc(100vh - 350px); min-height: 400px;",
                 shiny::plotOutput(ns("demographicsPlot"), height = "100%")
               ),
               shiny::div(
@@ -387,7 +406,7 @@ mod_resultsVisualisation_CohortsDemographics_server <- function(id, analysisResu
     output$demographicsData <- reactable::renderReactable({
       reactable::reactable(
         ggplotData(),
-        defaultPageSize = rows_to_show_debounced()
+        defaultPageSize = max(10, rows_to_show_debounced())
       )
     })
 
