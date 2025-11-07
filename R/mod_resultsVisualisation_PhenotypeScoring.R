@@ -23,7 +23,52 @@ mod_resultsVisualisation_PhenotypeScoring_ui <- function(id) {
         "Create Group From Selected"
       ),
       shiny::hr(),
-      shiny::h4("Code Groups Table"),
+
+      shiny::wellPanel(
+        shiny::fluidRow(
+          # --- Left: Title ---
+          shiny::column(
+            width = 4,
+            shiny::h4("Code Groups Table")
+          ),
+          shiny::column(
+            width = 4,
+            align = "right",
+            shiny::div(
+              shiny::fileInput(
+                ns("uploadGroupedCovariates"),
+                label = "Import Code Groups",
+                accept = c( ".json",".tsv"),
+                buttonLabel = "Import",
+                placeholder = "Choose file...",
+                width = "240px"
+              )
+            )
+          ),
+          shiny::column(
+            width = 4,
+            align = "right",
+              shiny::selectInput(
+                ns("export_trigger"),
+                label = "Export Code Groups",
+                choices = c(
+                  "Select format" = "",
+                  "JSON" = "json",
+                  "TSV (wide)" = "tsv_wide",
+                  "TSV (long)" = "tsv_long"
+                ),
+                selected = "",
+                width = "200px"
+            ),
+            #  download button
+            shiny::downloadButton(
+              ns("downloadGroupedCovariates"),
+              label = "Download"
+            )
+          )
+        )
+      ),
+
       reactable::reactableOutput(ns("groupedCovariatesTable"), height = "auto"),
       shiny::hr(),
       # shiny::hr(),
@@ -91,6 +136,16 @@ mod_resultsVisualisation_PhenotypeScoring_ui <- function(id) {
       ),
       shiny::hr(),
       shiny::hr(),
+
+      # JavaScript handler for automatic download
+      shiny::tags$script(HTML("
+        Shiny.addCustomMessageHandler('triggerDownload', function(message) {
+          const id = message.id;
+          const btn = document.getElementById(id);
+          if (btn) btn.click();
+        });
+      ")),
+
       tags$script(HTML("
       Shiny.addCustomMessageHandler('focusInput', function(message) {
         var id = message.id;
@@ -104,6 +159,7 @@ mod_resultsVisualisation_PhenotypeScoring_ui <- function(id) {
         }, 200);  // small delay to ensure modal is rendered
       });
     ")),
+
       # Custom CSS to remove grey background and border from verbatimTextOutput
       shiny::tags$style(HTML(sprintf("
       #%s, #%s {
@@ -579,6 +635,128 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
 
       r_groupedCovariates$groupedCovariatesTibble[index, "groupName"] <- newName
     })
+
+    output$downloadGroupedCovariates <- shiny::downloadHandler(
+      filename = function() {
+        fmt <- input$export_trigger
+        ext <- if (fmt %in% c("tsv_long", "tsv_wide")) "tsv" else fmt
+        paste0("Grouped_covariates_fullData.", ext)
+      },
+      content = function(file) {
+        req(input$export_trigger %in% c("json", "tsv_wide","tsv_long"))
+        df <- r_groupedCovariates$groupedCovariatesTibble
+
+        if (input$export_trigger == "json") {
+          jsonlite::write_json(df, file, pretty = TRUE, auto_unbox = TRUE)
+
+        } else if (input$export_trigger == "tsv_wide") {
+          # collapse list columns into comma-separated strings
+          df_wide <- df |>
+            dplyr::mutate(
+              dplyr::across(where(is.list),
+                            ~ vapply(.x, paste, collapse = ", ", character(1)))
+            )
+          readr::write_tsv(df_wide, file)
+
+        } else if (input$export_trigger == "tsv_long") {
+          # one row per covariate per group
+          df_long <- df |>
+            # drop distribution; it's group-level, not per covariate
+            dplyr::select(
+              groupId,
+              groupName,
+              covariateIds,
+              conceptCodes,
+              covariateNames
+            ) |>
+            # unnest list-columns
+            tidyr::unnest(c(covariateIds, conceptCodes, covariateNames)) |>
+            dplyr::rename(
+              covariateId   = covariateIds,
+              conceptCode   = conceptCodes,
+              covariateName = covariateNames
+            )
+
+          readr::write_tsv(df_long, file)
+        }
+      }
+    )
+
+    shinyjs::disable("downloadGroupedCovariates")
+
+    observeEvent(input$export_trigger, {
+      if (input$export_trigger %in% c("json", "tsv_wide","tsv_long")) {
+        shinyjs::enable("downloadGroupedCovariates")
+      } else {
+        shinyjs::disable("downloadGroupedCovariates")
+      }
+    })
+
+    .parse_covariates_distribution <- function(x) {
+      if (is.na(x) || x == "") {
+        return(tibble::tibble(value = numeric(), n = integer()))
+      }
+
+      # Expected strings are like this from the tsv wide:
+      # "c(3, 4, 2, 5, 1), c(352, 300, 283, 256, 191)"
+      parts <- strsplit(x, "\\),\\s*c\\(")[[1]]
+      parts <- gsub("^c\\(", "", parts)
+      parts <- gsub("\\)$", "", parts)
+
+      # Safely parse both numeric vectors
+      vec_value <- suppressWarnings(as.numeric(strsplit(parts[1], ",\\s*")[[1]]))
+      vec_n     <- suppressWarnings(as.integer(strsplit(parts[2], ",\\s*")[[1]]))
+
+      tibble::tibble(
+        value = vec_value,
+        n = vec_n
+      )
+    }
+
+
+    observeEvent(input$uploadGroupedCovariates, {
+      req(input$uploadGroupedCovariates)
+
+      file <- input$uploadGroupedCovariates$datapath
+      ext <- tools::file_ext(input$uploadGroupedCovariates$name)
+
+      if (ext == "json") {
+        df <- jsonlite::read_json(file, simplifyVector = TRUE)
+        df <- tibble::as_tibble(df)
+
+      } else if (ext == "tsv") {
+        df_tsv <- readr::read_tsv(file, show_col_types = FALSE)
+
+        required_cols <- c("groupId", "groupName", "covariateIds", "conceptCodes", "covariateNames")
+        if (!all(required_cols %in% names(df_tsv))) {
+          shiny::showNotification("Invalid TSV format. Expected wide format tsv file.", type = "error")
+          return(NULL)
+        }
+
+        df <- df_tsv |>
+          dplyr::mutate(
+            # split list-columns by comma
+            covariateIds   = purrr::map(covariateIds,   ~ as.numeric(strsplit(.x, ",\\s*")[[1]])),
+            conceptCodes   = purrr::map(conceptCodes,   ~ strsplit(.x, ",\\s*")[[1]]),
+            covariateNames = purrr::map(covariateNames, ~ strsplit(.x, ",\\s*")[[1]]),
+            # parse the special tibble-like column
+            covariatesDistribution = purrr::map(covariatesDistribution, .parse_covariates_distribution)
+          )
+
+      } else {
+        shiny::showNotification("Unsupported file format. Please upload .json or .tsv.", type = "error")
+        return(NULL)
+      }
+
+      r_groupedCovariates$groupedCovariatesTibble <- df
+
+      shiny::showNotification("Code groups imported successfully !! ", type = "message")
+    })
+
+
+
+
+
 
     #
     # When r$groupOfCovariatesObject is ready, plot the upset plot of groups
