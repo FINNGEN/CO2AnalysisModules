@@ -92,6 +92,7 @@ mod_resultsVisualisation_PhenotypeScoring_ui <- function(id) {
             id = ns("scorePlotTabs"),
             tabPanel("Total Score Bar Plot", plotly::plotlyOutput(ns("totalScoreDistributionPlot"), height = "400px")),
             tabPanel("Density Plot", plotly::plotlyOutput(ns("totalScoreDensityPlot"), height = "400px")),
+            tabPanel("Upset Plot", shiny::plotOutput(ns("upsetPlot"), height = "400px",width = "auto")),
             tabPanel("Score Table", DT::dataTableOutput(ns("totalScoreTable")))
           ),
           shiny::br(), shiny::hr(),
@@ -748,7 +749,22 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
         return(NULL)
       }
 
-      r_groupedCovariates$groupedCovariatesTibble <- df
+      # update reactive datasets
+      for(codeGrp in 1:nrow(df)){
+
+        df_codeGroup = df[codeGrp,]
+        res <- .appendCovariateGroup(
+          analysisResults = analysisResults,
+          covariateIds = unlist(df_codeGroup$covariateIds),
+          newGroupName = df_codeGroup$groupName,
+          groupedCovariatesTibble = r_groupedCovariates$groupedCovariatesTibble,
+          groupedCovariatesPerPersonTibble = r_groupedCovariates$groupedCovariatesPerPersonTibble
+        )
+
+        r_groupedCovariates$groupedCovariatesTibble <- res$groupedCovariatesTibble
+        r_groupedCovariates$groupedCovariatesPerPersonTibble <- res$groupedCovariatesPerPersonTibble
+
+      }
 
       shiny::showNotification("Code groups imported successfully !! ", type = "message")
     })
@@ -1012,6 +1028,53 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
         ggplot2::theme_minimal()
 
       plotly::ggplotly(p)
+    })
+
+
+    #
+    # When r_groupedCovariates is ready or slider is changed, plot an upset plot for the groups, if flag data is selected, also for the flag data
+    #
+
+    output$upsetPlot <- shiny::renderPlot({
+
+      # testing version. For now no selection by score
+      shiny::req(r_groupedCovariates$groupedCovariatesPerPersonTibble)
+      groupedCovariatesPerPersonTibble <- r_groupedCovariates$groupedCovariatesPerPersonTibble
+      shiny::req(nrow(groupedCovariatesPerPersonTibble) > 0)
+
+      # Require at least two groups
+      if (ncol(groupedCovariatesPerPersonTibble) <= 2) {
+        shiny::showNotification("There are not enough code groups to generate an UpSet plot.", type = "warning")
+        return(NULL)
+      }
+
+      upset_list = list()
+      for(grp in colnames(groupedCovariatesPerPersonTibble)){
+        grpWithValues = groupedCovariatesPerPersonTibble$personSourceValue[groupedCovariatesPerPersonTibble[,grp] > 0 ]
+        upset_list[[grp]] <- grpWithValues
+      }
+
+      # Require at least two groups
+      if (sum(lapply(upset_list, length) > 0) <= 2) {
+        shiny::showNotification("There are not enough code groups to generate an UpSet plot.", type = "warning")
+        return(NULL)
+      }
+
+
+      UpSetR::upset(
+        UpSetR::fromList(upset_list[!names(upset_list) %in% "personSourceValue"]),
+        order.by = "freq",
+        sets.bar.color = "gray20",
+        main.bar.color = "black",
+        keep.order = TRUE,
+        set_size.show = F,
+        set_size.scale_max = NULL,
+        point.size = 5,
+        line.size = 1.8,
+        mb.ratio = c(0.7, 0.3),
+        text.scale = c(2.5,2.0,2.5,2.0,2.5,3.5),
+        sets.x.label = "Code group size",
+      )
     })
 
     #
