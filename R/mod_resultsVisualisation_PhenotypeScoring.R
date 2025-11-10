@@ -38,7 +38,7 @@ mod_resultsVisualisation_PhenotypeScoring_ui <- function(id) {
               shiny::fileInput(
                 ns("uploadGroupedCovariates"),
                 label = "Import Code Groups",
-                accept = c( ".json",".tsv"),
+                accept = c(".json",".tsv"),
                 buttonLabel = "Import",
                 placeholder = "Choose file...",
                 width = "240px"
@@ -644,7 +644,7 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
         paste0("Grouped_covariates_fullData.", ext)
       },
       content = function(file) {
-        req(input$export_trigger %in% c("json", "tsv_wide","tsv_long"))
+        req(input$export_trigger %in% c("json", "tsv_wide", "tsv_long"))
         df <- r_groupedCovariates$groupedCovariatesTibble
 
         if (input$export_trigger == "json") {
@@ -686,7 +686,7 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
     shinyjs::disable("downloadGroupedCovariates")
 
     observeEvent(input$export_trigger, {
-      if (input$export_trigger %in% c("json", "tsv_wide","tsv_long")) {
+      if (input$export_trigger %in% c("json", "tsv_wide", "tsv_long")) {
         shinyjs::enable("downloadGroupedCovariates")
       } else {
         shinyjs::disable("downloadGroupedCovariates")
@@ -752,7 +752,7 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
       # update reactive datasets
       for(codeGrp in 1:nrow(df)){
 
-        df_codeGroup = df[codeGrp,]
+        df_codeGroup <- df[codeGrp,]
         res <- .appendCovariateGroup(
           analysisResults = analysisResults,
           covariateIds = unlist(df_codeGroup$covariateIds),
@@ -1048,7 +1048,7 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
         return(NULL)
       }
 
-      upset_list = list()
+      upset_list <- list()
       for(grp in colnames(groupedCovariatesPerPersonTibble)){
         grpWithValues = groupedCovariatesPerPersonTibble$personSourceValue[groupedCovariatesPerPersonTibble[,grp] > 0 ]
         upset_list[[grp]] <- grpWithValues
@@ -1067,13 +1067,13 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
         sets.bar.color = "gray20",
         main.bar.color = "black",
         keep.order = TRUE,
-        set_size.show = F,
+        set_size.show = FALSE,
         set_size.scale_max = NULL,
         point.size = 5,
         line.size = 1.8,
         mb.ratio = c(0.7, 0.3),
         text.scale = c(2.5,2.0,2.5,2.0,2.5,3.5),
-        sets.x.label = "Code group size",
+        sets.x.label = "Code group size"
       )
     })
 
