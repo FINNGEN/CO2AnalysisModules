@@ -55,7 +55,8 @@ Imports:
     apexcharter,
     colourpicker,
     shinyjqui,
-    htmlwidgets
+    htmlwidgets,
+    jsonlite
 Remotes: 
     FINNGEN/HadesExtras,
     FINNGEN/FinnGenUtilsR,
