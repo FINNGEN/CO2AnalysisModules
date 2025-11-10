@@ -1042,6 +1042,11 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
       groupedCovariatesPerPersonTibble <- r_groupedCovariates$groupedCovariatesPerPersonTibble
       shiny::req(nrow(groupedCovariatesPerPersonTibble) > 0)
 
+      # use the group names
+      colnames(groupedCovariatesPerPersonTibble)[-1] <- r_groupedCovariates$groupedCovariatesTibble$groupName[
+        match(colnames(groupedCovariatesPerPersonTibble)[-1],
+              r_groupedCovariates$groupedCovariatesTibble$groupId)]
+
       # Require at least two groups
       if (ncol(groupedCovariatesPerPersonTibble) <= 2) {
         shiny::showNotification("There are not enough code groups to generate an UpSet plot.", type = "warning")
