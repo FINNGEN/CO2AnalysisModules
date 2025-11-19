@@ -78,9 +78,9 @@ test_that("executeTimeCodeWAS works with 0 as control cohort", {
   cohortsInfo <-
     analysisResults  |> dplyr::tbl("cohortsInfo")  |> dplyr::collect()
   cohortsInfo |> nrow() |> expect_equal(4)
-  cohortsInfo |> dplyr::filter(cohortId == 3) |> pull(shortName) |> expect_equal("ALL\u2229FRAC")
+  cohortsInfo |> dplyr::filter(cohortId == 3) |> pull(shortName) |> expect_equal("ALL\u2229FRACHADE1")
   cohortsInfo |> dplyr::filter(cohortId == 1) |> pull(use) |> expect_equal('cases')
-  cohortsInfo |> dplyr::filter(cohortId == 3001) |> pull(shortName) |> expect_equal("MxALL\u2229FRAC")
+  cohortsInfo |> dplyr::filter(cohortId == 3001) |> pull(shortName) |> expect_equal("MxALL\u2229FRACHADE1")
   cohortsInfo |> dplyr::filter(cohortId == 3001) |> pull(use) |> expect_equal('controls')
 
   # test that the cohorts have been deleted
