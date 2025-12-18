@@ -199,6 +199,7 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
       groupId = character(),
       groupName = character(),
       covariateIds = list(),
+      conceptIds = list(),
       conceptCodes = list(),
       covariateNames = list(),
       covariatesDistribution = list()
@@ -367,7 +368,9 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
     #
     output$groupedCovariatesTable <- reactable::renderReactable({
       toPlot <- r_groupedCovariates$groupedCovariatesTibble |>
+        dplyr::select(-conceptIds) |>
         dplyr::mutate(editButton = NA,deleteButton = NA)
+
 
       columns <- list(
         groupId = reactable::colDef(show = FALSE),
@@ -667,13 +670,15 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
               groupId,
               groupName,
               covariateIds,
+              conceptIds,
               conceptCodes,
               covariateNames
             ) |>
             # unnest list-columns
-            tidyr::unnest(c(covariateIds, conceptCodes, covariateNames)) |>
+            tidyr::unnest(c(covariateIds, conceptIds, conceptCodes, covariateNames)) |>
             dplyr::rename(
               covariateId   = covariateIds,
+              conceptId   = conceptIds,
               conceptCode   = conceptCodes,
               covariateName = covariateNames
             )
@@ -728,7 +733,7 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
       } else if (ext == "tsv") {
         df_tsv <- readr::read_tsv(file, show_col_types = FALSE)
 
-        required_cols <- c("groupId", "groupName", "covariateIds", "conceptCodes", "covariateNames")
+        required_cols <- c("groupId", "groupName", "covariateIds", "conceptIds","conceptCodes", "covariateNames")
         if (!all(required_cols %in% names(df_tsv))) {
           shiny::showNotification("Invalid TSV format. Expected wide format tsv file.", type = "error")
           return(NULL)
@@ -738,6 +743,7 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
           dplyr::mutate(
             # split list-columns by comma
             covariateIds   = purrr::map(covariateIds,   ~ as.numeric(strsplit(.x, ",\\s*")[[1]])),
+            conceptIds   = purrr::map(conceptIds,   ~ as.numeric(strsplit(.x, ",\\s*")[[1]])),
             conceptCodes   = purrr::map(conceptCodes,   ~ strsplit(.x, ",\\s*")[[1]]),
             covariateNames = purrr::map(covariateNames, ~ strsplit(.x, ",\\s*")[[1]]),
             # parse the special tibble-like column
@@ -1310,6 +1316,13 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
     dplyr::filter(covariateId %in% covariateIds) |>
     dplyr::pull(conceptCode)
 
+  # bring the concept ids (omop ids)
+  conceptIds <- analysisResults |>
+    dplyr::tbl("covariateRef") |>
+    dplyr::filter(covariateId %in% covariateIds) |>
+    dplyr::pull(conceptId)
+
+
   covariateNames <- analysisResults |>
     dplyr::tbl("covariateRef") |>
     dplyr::filter(covariateId %in% covariateIds) |>
@@ -1319,6 +1332,7 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
     groupId = paste0("g", newGroupId),
     groupName = newGroupName,
     covariateIds = list(covariateIds),
+    conceptIds = list(conceptIds),
     conceptCodes = list(conceptCodes),
     covariateNames = list(covariateNames),
     covariatesDistribution = list(covariatesDistribution)
