@@ -149,7 +149,7 @@ mod_resultsVisualisation_CohortsDemographics_ui <- function(id) {
           shiny::tabsetPanel(
             id = ns("tabset"),
             shiny::tabPanel(
-              "Plot",
+              "Bar Plot",
               shiny::tagList(
                 shiny::div(
                   tags$div(
@@ -161,13 +161,24 @@ mod_resultsVisualisation_CohortsDemographics_ui <- function(id) {
               ), # end of tagList
               shiny::div(
                 style = "height: calc(100vh - 350px); min-height: 400px;",
-                shiny::plotOutput(ns("demographicsPlot"), height = "100%")
+                shiny::plotOutput(ns("barPlot"), height = "100%")
               ),
               shiny::div(
                 style = "margin-top: 10px; margin-bottom: 10px;",
-                shiny::downloadButton(ns("downloadPlotButton"), "Download")
+                shiny::downloadButton(ns("downloadBarPlotButton"), "Download")
               )
-            ),
+            ), # end of tabPanel
+            shiny::tabPanel(
+              "Tornado Plot",
+              shiny::div(
+                style = "height: calc(100vh - 350px); min-height: 400px;",
+                shiny::plotOutput(ns("tornadoPlot"), height = "100%")
+              ),
+              shiny::div(
+                style = "margin-top: 10px; margin-bottom: 10px;",
+                shiny::downloadButton(ns("downloadTornadoPlotButton"), "Download")
+              )
+            ), # end of tabPanel
             shiny::tabPanel(
               "Table",
               reactable::reactableOutput(ns("demographicsData")),
@@ -193,10 +204,15 @@ mod_resultsVisualisation_CohortsDemographics_ui <- function(id) {
 #'
 #' @importFrom shiny moduleServer reactive req renderPlot downloadHandler renderUI isTruthy
 #' @importFrom shinyjs toggle
-#' @importFrom dplyr tbl collect mutate inner_join select filter group_by summarise ungroup across
-#' @importFrom forcats fct_reorder
-#' @importFrom stringr str_extract
-#' @importFrom ggplot2 sym aes geom_col position_dodge2 geom_text facet_grid scale_x_continuous coord_cartesian expand_limits theme_minimal element_text element_rect labs ggplot
+#' @importFrom shinyWidgets pickerInput
+#' @importFrom tidyr complete drop_na
+#' @importFrom scales number_format pretty_breaks
+#' @importFrom dplyr tbl collect mutate inner_join select filter group_by summarise ungroup across all_of pull
+#' @importFrom forcats fct_reorder fct_drop
+#' @importFrom stringr str_extract str_to_lower
+#' @importFrom ggplot2 sym aes geom_col position_dodge2 geom_text facet_grid scale_x_continuous expansion
+#' @importFrom ggplot2 coord_cartesian expand_limits theme_minimal element_text element_rect
+#' @importFrom ggplot2 bs ggplot scale_y_continuous scale_fill_manual labs geom_bar theme_bw
 #' @importFrom reactable renderReactable reactable
 #' @importFrom readr write_csv
 #' @importFrom lubridate now
@@ -219,7 +235,7 @@ mod_resultsVisualisation_CohortsDemographics_server <- function(id, analysisResu
     })
 
     # stores the last plot for download
-    last_plot <- NULL
+    last_plot <- reactiveVal(NULL)
 
     rows_to_show_debounced <- shiny::debounce(shiny::reactive(input$rows_to_show), 500)
 
@@ -229,7 +245,6 @@ mod_resultsVisualisation_CohortsDemographics_server <- function(id, analysisResu
     ggplotData <- shiny::reactive({
       shiny::req(cohortDemographicsData())
       shiny::req(input$stratifyBy)
-      # shiny::req(input$databaseId)
       shiny::req(input$shortName)
       shiny::req(input$gender)
       shiny::req(input$referenceYear)
@@ -332,9 +347,9 @@ mod_resultsVisualisation_CohortsDemographics_server <- function(id, analysisResu
         ggplot2::scale_y_continuous(labels = scales::number_format(accuracy = 1)) +
         ggplot2::theme_minimal(base_size = 13) +
         ggplot2::theme(
-          axis.text.x = ggplot2::element_text(size = 12, angle = text_angle, hjust = 0.5),
+          axis.text.x = ggplot2::element_text(size = 14, angle = text_angle, hjust = 0.5),
           strip.background = ggplot2::element_rect(fill="white"),
-          strip.text = ggplot2::element_text(colour = 'black', size = 12)
+          strip.text = ggplot2::element_text(colour = 'black', size = 14)
         ) +
         {if("gender" %in% input$stratifyBy)
           ggplot2::scale_fill_manual(values = c("Female" = "#BF616A", "Male" = "#2c5e77", "Other" = "#8C8C8C"))
@@ -344,9 +359,9 @@ mod_resultsVisualisation_CohortsDemographics_server <- function(id, analysisResu
     }
 
     #
-    # Plot demographics
+    # Bar Plot ####
     #
-    output$demographicsPlot <- shiny::renderPlot({
+    output$barPlot <- shiny::renderPlot({
       shiny::req(shiny::isTruthy(cohortDemographicsData()))
       shiny::req(ggplotData())
 
@@ -395,7 +410,77 @@ mod_resultsVisualisation_CohortsDemographics_server <- function(id, analysisResu
       }
 
       # save the last plot for download
-      last_plot <<- gg_plot
+      last_plot(gg_plot)
+
+      return(gg_plot)
+    })
+
+    #
+    # Tornado Plot ####
+    #
+    output$tornadoPlot <- shiny::renderPlot({
+      shiny::req(shiny::isTruthy(cohortDemographicsData()))
+      shiny::req(ggplotData())
+
+      # ggplot absolutely requires data to be present
+      if(nrow(ggplotData()) == 0) return(NULL)
+
+      plot_title <- ""
+
+      # use all data to build tornado plot
+      grouping_vars <- c("ageGroup", "gender", "calendarYear", "shortName")
+
+      df <- cohortDemographicsData() |>
+        mutate(gender = stringr::str_to_lower(gender)) |>
+        dplyr::filter(gender %in% c('female', 'male')) |>
+        dplyr::mutate(
+          ageGroup = forcats::fct_reorder(
+            ageGroup, as.numeric(stringr::str_extract(ageGroup, "\\d+")))
+        ) |>
+        dplyr::filter(shortName %in% input$shortName) |>
+        dplyr::filter(referenceYear == input$referenceYear) |>
+        dplyr::group_by(dplyr::across(dplyr::all_of(grouping_vars))) |>
+        dplyr::summarise(count = sum(count)) |>
+        dplyr::ungroup()
+
+      df <- df |>
+        dplyr::group_by(ageGroup, gender) |>
+        dplyr::summarise(N = sum(count), .groups = "drop") |>
+        dplyr::mutate(ageGroup = forcats::fct_drop (ageGroup) ) |>
+        tidyr::drop_na(ageGroup, gender) |>
+        tidyr::complete(ageGroup, gender, fill = list(N = 0)) |>
+        dplyr::group_by (gender) |>
+        dplyr::mutate(ALL = sum (N)) |>
+        dplyr::ungroup() |>
+        dplyr::mutate(PR = round (100 * N/ALL, 3)) |>
+        dplyr::mutate(PR = ifelse(gender == 'female', PR, -PR))
+
+      gg_plot <-
+        ggplot2::ggplot(df, aes(x = PR, y = ageGroup, fill = gender)) +
+        ggplot2::geom_bar(data = subset(df, gender == 'female'), stat = "identity") +
+        ggplot2::geom_bar(data = subset(df, gender == 'male'), stat = "identity") +
+        ggplot2::scale_x_continuous(
+          labels = abs,
+          breaks = scales::pretty_breaks(n = 5),
+          limits = range(df$PR, na.rm = TRUE),
+          expand = ggplot2::expansion(mult = 0.05)
+        ) +
+        ggplot2::theme_bw() +
+        ggplot2::theme(
+          axis.text.x = ggplot2::element_text(size = 14),
+          axis.text.y = ggplot2::element_text(size = 14),
+          strip.background = ggplot2::element_rect(fill="white"),
+          strip.text = ggplot2::element_text(colour = 'black', size = 14)
+        ) +
+        ggplot2::labs (
+          title = "",
+          x = "Percentage",
+          y = "Age Group",
+          fill = "Gender"
+        )
+
+      # save the last plot for download
+      last_plot(gg_plot)
 
       return(gg_plot)
     })
@@ -424,9 +509,9 @@ mod_resultsVisualisation_CohortsDemographics_server <- function(id, analysisResu
     )
 
     #
-    # download demographics plot ####
+    # download bar plot ####
     #
-    output$downloadPlotButton <- shiny::downloadHandler(
+    output$downloadBarPlotButton <- shiny::downloadHandler(
       filename = function(){
         paste('demographics_', format(lubridate::now(), "%Y_%m_%d_%H%M"), '.pdf', sep='')
       },
@@ -441,12 +526,35 @@ mod_resultsVisualisation_CohortsDemographics_server <- function(id, analysisResu
                              antialias = "default",
                              fallback_resolution = 300,
         )
-        print(last_plot)
+        print(last_plot())
         grDevices::dev.off()
       },
       contentType = "application/pdf"
     )
 
+    #
+    # download tornado plot ####
+    #
+    output$downloadTornadoPlotButton <- shiny::downloadHandler(
+      filename = function(){
+        paste('demographics_tornado_', format(lubridate::now(), "%Y_%m_%d_%H%M"), '.pdf', sep='')
+      },
+      content = function(fname){
+
+        grDevices::cairo_pdf(filename = fname,
+                             width = 15,
+                             height = 10,
+                             pointsize = 1.0,
+                             family = "sans",
+                             bg = "transparent",
+                             antialias = "default",
+                             fallback_resolution = 300,
+        )
+        print(last_plot())
+        grDevices::dev.off()
+      },
+      contentType = "application/pdf"
+    )
 
   })
 }
