@@ -235,7 +235,7 @@ mod_resultsVisualisation_CohortsDemographics_server <- function(id, analysisResu
     })
 
     # stores the last plot for download
-    last_plot <- NULL
+    last_plot <- reactiveVal(NULL)
 
     rows_to_show_debounced <- shiny::debounce(shiny::reactive(input$rows_to_show), 500)
 
@@ -245,7 +245,6 @@ mod_resultsVisualisation_CohortsDemographics_server <- function(id, analysisResu
     ggplotData <- shiny::reactive({
       shiny::req(cohortDemographicsData())
       shiny::req(input$stratifyBy)
-      # shiny::req(input$databaseId)
       shiny::req(input$shortName)
       shiny::req(input$gender)
       shiny::req(input$referenceYear)
@@ -411,7 +410,7 @@ mod_resultsVisualisation_CohortsDemographics_server <- function(id, analysisResu
       }
 
       # save the last plot for download
-      last_plot <<- gg_plot
+      last_plot(gg_plot)
 
       return(gg_plot)
     })
@@ -432,29 +431,29 @@ mod_resultsVisualisation_CohortsDemographics_server <- function(id, analysisResu
       grouping_vars <- c("ageGroup", "gender", "calendarYear", "shortName")
 
       df <- cohortDemographicsData() |>
+        mutate(gender = stringr::str_to_lower(gender)) |>
+        dplyr::filter(gender %in% c('female', 'male')) |>
         dplyr::mutate(
           ageGroup = forcats::fct_reorder(
             ageGroup, as.numeric(stringr::str_extract(ageGroup, "\\d+")))
         ) |>
         dplyr::filter(shortName %in% input$shortName) |>
-        # dplyr::filter(gender %in% input$gender) |>
         dplyr::filter(referenceYear == input$referenceYear) |>
         dplyr::group_by(dplyr::across(dplyr::all_of(grouping_vars))) |>
         dplyr::summarise(count = sum(count)) |>
         dplyr::ungroup()
 
       df <- df |>
-        mutate(gender = stringr::str_to_lower(gender)) |>
-        group_by(ageGroup, gender) |>
-        summarise(N = sum(count), .groups = "drop") |>
-        mutate (ageGroup = forcats::fct_drop (ageGroup) ) |>
-        tidyr::drop_na (ageGroup, gender) |>
+        dplyr::group_by(ageGroup, gender) |>
+        dplyr::summarise(N = sum(count), .groups = "drop") |>
+        dplyr::mutate(ageGroup = forcats::fct_drop (ageGroup) ) |>
+        tidyr::drop_na(ageGroup, gender) |>
         tidyr::complete(ageGroup, gender, fill = list(N = 0)) |>
-        group_by (gender) |>
-        mutate (ALL = sum (N) ) |>
-        ungroup () |>
-        mutate(PR = round (100 * N/ALL, 3)) |>
-        mutate(PR = ifelse(gender == 'female', PR, -PR))
+        dplyr::group_by (gender) |>
+        dplyr::mutate(ALL = sum (N)) |>
+        dplyr::ungroup() |>
+        dplyr::mutate(PR = round (100 * N/ALL, 3)) |>
+        dplyr::mutate(PR = ifelse(gender == 'female', PR, -PR))
 
       gg_plot <-
         ggplot2::ggplot(df, aes(x = PR, y = ageGroup, fill = gender)) +
@@ -481,7 +480,7 @@ mod_resultsVisualisation_CohortsDemographics_server <- function(id, analysisResu
         )
 
       # save the last plot for download
-      last_plot <<- gg_plot
+      last_plot(gg_plot)
 
       return(gg_plot)
     })
@@ -527,7 +526,7 @@ mod_resultsVisualisation_CohortsDemographics_server <- function(id, analysisResu
                              antialias = "default",
                              fallback_resolution = 300,
         )
-        print(last_plot)
+        print(last_plot())
         grDevices::dev.off()
       },
       contentType = "application/pdf"
@@ -551,7 +550,7 @@ mod_resultsVisualisation_CohortsDemographics_server <- function(id, analysisResu
                              antialias = "default",
                              fallback_resolution = 300,
         )
-        print(last_plot)
+        print(last_plot())
         grDevices::dev.off()
       },
       contentType = "application/pdf"
