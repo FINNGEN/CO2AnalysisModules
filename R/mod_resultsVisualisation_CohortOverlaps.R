@@ -23,7 +23,6 @@ mod_resultsVisualisation_CohortsOverlaps_ui <- function(id) {
       style = "padding: 0px;",
       title = "Cohort Overlaps",
       shinyjs::useShinyjs(),
-
       shiny::tagList(
         shiny::tags$h4("Data"),
         shiny::tabsetPanel(
@@ -39,57 +38,73 @@ mod_resultsVisualisation_CohortsOverlaps_ui <- function(id) {
                 id = ns("upset_controls"),
                 shiny::fluidRow(
                   shinyWidgets::chooseSliderSkin("Flat"),
-                  shiny::column(width = 4, align = "left",
-                                shiny::div(style = "height: 85px; width: 100%;",
-                                           shiny::sliderInput(ns("nsets"), "Number of sets", min = 1, max = 20, value = 8, step = 1),
-                                ),
-                                shiny::div(style = "height: 85px; width: 100%;",
-                                           shiny::sliderInput(ns("nintersects"), "Number of intersections", min = 1, max = 60, value = 40, step = 1),
-                                ),
-                                shiny::div(style = "height: 85px; width: 100%;",
-                                           shiny::sliderInput(ns("set_size.scale_max"), "Set size scale max", min = 0.5, max = 2.5, value = 1.3, step = 0.1),
-                                ),
+                  shiny::column(
+                    width = 4, align = "left",
+                    shiny::div(
+                      style = "height: 85px; width: 100%;",
+                      shiny::sliderInput(ns("nsets"), "Number of sets", min = 1, max = 20, value = 8, step = 1),
+                    ),
+                    shiny::div(
+                      style = "height: 85px; width: 100%;",
+                      shiny::sliderInput(ns("nintersects"), "Number of intersections", min = 1, max = 60, value = 40, step = 1),
+                    ),
+                    shiny::div(
+                      style = "height: 85px; width: 100%;",
+                      shiny::sliderInput(ns("set_size.scale_max"), "Set size scale max", min = 0.5, max = 2.5, value = 1.3, step = 0.1),
+                    ),
                   ),
-                  shiny::column(4, align = "left",
-                                shiny::div(style = "height: 85px; width: 100%;",
-                                           shiny::sliderInput(ns("text_scale"), "Text scale", min = 0.5, max = 3, value = 2.0, step = 0.1),
-                                ),
-                                shiny::div(style = "height: 85px; width: 100%;",
-                                           shiny::sliderInput(ns("point_size"), "Point size", min = 1, max = 10, value = 4, step = 1),
-                                ),
-                                shiny::div(style = "height: 85px; width: 100%;",
-                                           shiny::sliderInput(ns("number_angles"), "Number angles", min = 0, max = 45, value = 0, step = 1),
-                                ),
+                  shiny::column(4,
+                    align = "left",
+                    shiny::div(
+                      style = "height: 85px; width: 100%;",
+                      shiny::sliderInput(ns("text_scale"), "Text scale", min = 0.5, max = 3, value = 2.0, step = 0.1),
+                    ),
+                    shiny::div(
+                      style = "height: 85px; width: 100%;",
+                      shiny::sliderInput(ns("point_size"), "Point size", min = 1, max = 10, value = 4, step = 1),
+                    ),
+                    shiny::div(
+                      style = "height: 85px; width: 100%;",
+                      shiny::sliderInput(ns("number_angles"), "Number angles", min = 0, max = 45, value = 0, step = 1),
+                    ),
                   ),
-                  shiny::column(4, align = "left",
-                                shiny::div(style = "height: 85px; width: 100%;",
-                                           shiny::sliderInput(ns("set_size.numbers_size"), "Set size number size", min = 0.5, max = 30, value = 7, step = 0.1),
-                                ),
-                                shiny::div(style = "height: 85px; width: 100%;",
-                                           shiny::sliderInput(ns("plot_width"), "Plot width (in)", min = 2, max = 30, value = 12, step = 0.5),
-                                ),
-                                shiny::div(style = "height: 85px; width: 100%;",
-                                           shiny::sliderInput(ns("plot_height"), "Plot height (in)", min = 2, max = 30, value = 7, step = 0.5),
-                                ),
+                  shiny::column(4,
+                    align = "left",
+                    shiny::div(
+                      style = "height: 85px; width: 100%;",
+                      shiny::sliderInput(ns("set_size.numbers_size"), "Set size number size", min = 0.5, max = 30, value = 7, step = 0.1),
+                    ),
+                    shiny::div(
+                      style = "height: 85px; width: 100%;",
+                      shiny::sliderInput(ns("plot_width"), "Plot width (in)", min = 2, max = 30, value = 12, step = 0.5),
+                    ),
+                    shiny::div(
+                      style = "height: 85px; width: 100%;",
+                      shiny::sliderInput(ns("plot_height"), "Plot height (in)", min = 2, max = 30, value = 7, step = 0.5),
+                    ),
                   ), # column
                 ), # fluidRow
                 shiny::fluidRow(
-                  shiny::column(4, align = "left",
-                                shiny::sliderInput(ns("rm_intersection_size_n"), "Remove intersections with size less than", min = 0, max = 50, value = 0, step = 1),
+                  shiny::column(4,
+                    align = "left",
+                    shiny::sliderInput(ns("rm_intersection_size_n"), "Remove intersections with size less than", min = 0, max = 50, value = 0, step = 1),
                   ), # column
-                  shiny::column(3, align = "left",
-                                shiny::checkboxInput(ns("show_numbers"), "Show intersection sizes", value = TRUE),
-                                shiny::checkboxInput(ns("set_size_show"), "Show set sizes", value = TRUE),
+                  shiny::column(3,
+                    align = "left",
+                    shiny::checkboxInput(ns("show_numbers"), "Show intersection sizes", value = TRUE),
+                    shiny::checkboxInput(ns("set_size_show"), "Show set sizes", value = TRUE),
                   ),
                 ) # fluidRow
               ) # div
             ), # hidden
             shiny::div(
               style = "margin-left: -20px; margin-right: -20px;",
-              shiny::column(12, align = "center",
-                            shiny::div(style = "margin-bottom: 20px; margin-left: 10px; margin-right: 10px;",
-                                       shiny::plotOutput(ns("upset_plot"), height = "400px", width = "auto"),
-                            ),
+              shiny::column(12,
+                align = "center",
+                shiny::div(
+                  style = "margin-bottom: 20px; margin-left: 10px; margin-right: 10px;",
+                  shiny::plotOutput(ns("upset_plot"), height = "400px", width = "auto"),
+                ),
               ),
               shiny::div(
                 style = "margin-left:20px; margin-top: 10px; margin-bottom: 10px;",
@@ -106,9 +121,9 @@ mod_resultsVisualisation_CohortsOverlaps_ui <- function(id) {
             )
           )
         ), # tabsetPanel
-
       ),
-    ))
+    )
+  )
 }
 
 #' @title Cohort Overlaps Visualization Server
@@ -136,31 +151,41 @@ mod_resultsVisualisation_CohortsOverlaps_server <- function(id, analysisResults)
     #
     # cohort overlaps
     #
-    cohortOverlaps <- shiny::reactive({
+    cohortOverlapsData_df <- shiny::reactive({
       cohortOverlapsData <- analysisResults |>
         dplyr::tbl("cohortOverlaps") |>
         dplyr::collect() |>
         # remove cohort overlaps with size less than n
         dplyr::filter(as.numeric(numberOfSubjects) >= input$rm_intersection_size_n)
 
+      cohortDefinitionData <- analysisResults |>
+        dplyr::tbl("cohortsInfo") |>
+        dplyr::collect()
+
+
+      cohortOverlapsData <- cohortOverlapsData |>
+        dplyr::mutate(
+          cohortNameCombinations = purrr::map_chr(cohortIdCombinations, function(ids) {
+            ids_split <- unlist(strsplit(gsub("^-|-$", "", ids), "-")) |> as.integer()
+            cohortDefinitionData |>
+              dplyr::filter(cohortId %in% ids_split) |>
+              dplyr::pull(shortName) |>
+              paste(collapse = " & ")
+          }),
+          cohortIdCombinations = gsub("^-|-$", "", cohortIdCombinations) |> stringr::str_replace_all("-", "&")
+        )
+      return(cohortOverlapsData)
     })
 
-    cohortsInfo <- shiny::reactive({
-      cohortsInfoData <- analysisResults |> dplyr::tbl("cohortsInfo") |> dplyr::collect()
-    })
 
     output$overlapData <- reactable::renderReactable({
-      cohortDefinitionData <- cohortsInfo()
-      cohortOverlapsData <- cohortOverlaps()
+      req(cohortOverlapsData_df())
+      cohortOverlapsData <- cohortOverlapsData_df()
 
-      for(i in 1:nrow(cohortDefinitionData)){
-        cohortOverlapsData$cohortIdCombinations <-
-          gsub(paste0("-", cohortDefinitionData$cohortId[i], "-"), paste0("-", cohortDefinitionData$shortName[i], "-"), cohortOverlapsData$cohortIdCombinations)
-      }
-      cohortOverlapsData$cohortIdCombinations <-gsub("-", " & ", cohortOverlapsData$cohortIdCombinations)
-      cohortOverlapsData$cohortIdCombinations <- gsub("^ &|& $", "", cohortOverlapsData$cohortIdCombinations)
+      cohortOverlapsDataTable <- cohortOverlapsData |>
+        dplyr::select(cohortNameCombinations, numberOfSubjects)
 
-      reactable::reactable(cohortOverlapsData)
+      reactable::reactable(cohortOverlapsDataTable)
     })
 
     #
@@ -171,32 +196,35 @@ mod_resultsVisualisation_CohortsOverlaps_server <- function(id, analysisResults)
     })
 
     #
-    # render the upset plot
-    #
-    output$upset_plot <- shiny::renderPlot({
-
-      build_upset_plot()
-    })
-
-    #
     # build the upset plot
     #
-    build_upset_plot <- shiny::reactive({
-      req(cohortOverlaps())
+    buildUpsetPlot_rf <- shiny::reactive({
+      shiny::req(cohortOverlapsData_df())
+      cohortOverlapsData <- cohortOverlapsData_df()
 
-      cohortDefinitionData <- cohortsInfo()
-      cohortOverlapsData <- cohortOverlaps()
-
-      for(i in 1:nrow(cohortDefinitionData)){
-        cohortOverlapsData$cohortIdCombinations <-
-          gsub(paste0("-", cohortDefinitionData$cohortId[i], "-"), paste0("-", cohortDefinitionData$shortName[i], "-"), cohortOverlapsData$cohortIdCombinations)
-      }
-      cohortOverlapsData$cohortIdCombinations <-gsub("-", "&", cohortOverlapsData$cohortIdCombinations)
-      cohortOverlapsData$cohortIdCombinations <- gsub("^&|&$", "", cohortOverlapsData$cohortIdCombinations)
+      idToShortNameTable <- analysisResults |>
+        dplyr::tbl("cohortsInfo") |>
+        dplyr::select(cohortId, shortName) |>
+        dplyr::collect()
 
       upset_expr <- with(cohortOverlapsData, setNames(numberOfSubjects, cohortIdCombinations))
+      fullRidiculusTable <- UpSetR::fromExpression(upset_expr)
 
-      if(length(upset_expr) < 2){
+      # Change columns from numeric IDs to cohort short names
+      col_names <- names(fullRidiculusTable)
+      convert_id <- function(id) {
+        if (id %in% idToShortNameTable$cohortId) {
+          idToShortNameTable$shortName[match(id, idToShortNameTable$cohortId)]
+        } else {
+          id
+        }
+      }
+      # Only convert columns that are all digits (i.e., possibly cohortId)
+      new_col_names <- sapply(col_names, convert_id, USE.NAMES = FALSE)
+      colnames(fullRidiculusTable) <- new_col_names
+      fullRidiculusTable
+
+      if (length(upset_expr) < 2) {
         shiny::showModal(
           shiny::modalDialog(
             title = "Error",
@@ -208,8 +236,8 @@ mod_resultsVisualisation_CohortsOverlaps_server <- function(id, analysisResults)
         return(NULL)
       }
 
-      UpSetR::upset(
-        UpSetR::fromExpression(upset_expr),
+      upset_plot <- UpSetR::upset(
+        fullRidiculusTable,
         nsets = input$nsets,
         nintersects = input$nintersects,
         sets.bar.color = "black",
@@ -223,30 +251,37 @@ mod_resultsVisualisation_CohortsOverlaps_server <- function(id, analysisResults)
         set_size.scale_max = input$set_size.scale_max * sum(upset_expr) * 1.1, # 10% margin - is there a better way to estimate this?
         number.angles = input$number_angles,
       )
+      return(upset_plot)
+    })
+
+    #
+    # render the upset plot
+    #
+    output$upset_plot <- shiny::renderPlot({
+      buildUpsetPlot_rf()
     })
 
     #
     # download the plot as a PDF file
     #
     output$downloadPDF <- downloadHandler(
-      filename = function(){
-        paste('upset_plot_', format(lubridate::now(), "%Y_%m_%d_%H%M"), '.pdf', sep='')
+      filename = function() {
+        paste("upset_plot_", format(lubridate::now(), "%Y_%m_%d_%H%M"), ".pdf", sep = "")
       },
-
-      content = function(file){
-        grDevices::cairo_pdf(filename = file,
-                             width = input$plot_width,
-                             height = input$plot_height,
-                             pointsize = 12,
-                             family = "sans",
-                             bg = "transparent",
-                             antialias = "subpixel",
-                             fallback_resolution = 300
+      content = function(file) {
+        grDevices::cairo_pdf(
+          filename = file,
+          width = input$plot_width,
+          height = input$plot_height,
+          pointsize = 12,
+          family = "sans",
+          bg = "transparent",
+          antialias = "subpixel",
+          fallback_resolution = 300
         )
-        print(build_upset_plot())
+        print(buildUpsetPlot_rf())
         dev.off()
       },
-
       contentType = "application/pdf"
     )
 
@@ -254,26 +289,16 @@ mod_resultsVisualisation_CohortsOverlaps_server <- function(id, analysisResults)
     # download the data as a CSV file
     #
     output$downloadCSV <- downloadHandler(
-      filename = function(){
-        paste('overlap_data_', format(lubridate::now(), "%Y_%m_%d_%H%M"), '.csv', sep='')
+      filename = function() {
+        paste("overlap_data_", format(lubridate::now(), "%Y_%m_%d_%H%M"), ".csv", sep = "")
       },
-
-      content = function(file){
-        cohortDefinitionData <- cohortsInfo()
-        cohortOverlapsData <- cohortOverlaps()
-
-        for(i in 1:nrow(cohortDefinitionData)){
-          cohortOverlapsData$cohortIdCombinations <-
-            gsub(paste0("-", cohortDefinitionData$cohortId[i], "-"), paste0("-", cohortDefinitionData$shortName[i], "-"), cohortOverlapsData$cohortIdCombinations)
-        }
-        cohortOverlapsData$cohortIdCombinations <-gsub("-", " & ", cohortOverlapsData$cohortIdCombinations)
-        cohortOverlapsData$cohortIdCombinations <- gsub("^ &|& $", "", cohortOverlapsData$cohortIdCombinations)
-
-        write.csv(cohortOverlapsData, file)
+      content = function(file) {
+        cohortOverlapsData <- cohortOverlapsData_df()
+        cohortOverlapsDataTable <- cohortOverlapsData |>
+          dplyr::select(cohortNameCombinations, numberOfSubjects)
+        write.csv(cohortOverlapsDataTable, file)
       },
-
       contentType = "application/csv"
     )
-
   })
 }
