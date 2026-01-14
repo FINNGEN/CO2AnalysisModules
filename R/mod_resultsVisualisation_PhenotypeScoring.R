@@ -924,7 +924,7 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
     #
     shiny::observe({
       shiny::req(rf_flagsTable())
-      shiny::req(r_groupedCovariates$groupedCovariatesPerPersonTibble_totalScore)
+      #shiny::req(r_groupedCovariates$groupedCovariatesPerPersonTibble_totalScore)
 
       flagsTable <- rf_flagsTable()
 
@@ -1122,15 +1122,23 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
 
       r_sets_list$sets_list <- sets_list
 
-      upsetjs::upsetjs() %>%
-        upsetjs::fromList(sets_list) %>%
-        upsetjs::interactiveChart() %>%
-        upsetjs::setSelection("")
+      upsetjs::upsetjs() |>
+        upsetjs::fromList(sets_list) |>
+        upsetjs::generateDistinctIntersections() |>
+        upsetjs::chartLabels(set.name = "Code group size") |>
+        upsetjs::chartStyleFlags(export.buttons = F)
 
     })
 
     output$upsetFlagButtonUI <- shiny::renderUI({
       if (!is.null(r_upset_selection$sets) && length(r_upset_selection$sets) > 0) {
+        shiny::actionButton(
+          ns("addUpsetIntersectionFlag"),
+          paste("Add", r_upset_selection$name, "as Flag"),
+          class = "btn-primary",
+          style = "margin-top: 10px;"
+        )
+      } else if(is.null(r_upset_selection$sets) && !is.null(r_upset_selection$name)){
         shiny::actionButton(
           ns("addUpsetIntersectionFlag"),
           paste("Add", r_upset_selection$name, "as Flag"),
@@ -1157,7 +1165,7 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
         r_upset_selection$name <- intersection_name
         r_upset_selection$cardinality <- cardinality
 
-        # Optional: Show notification
+        # Show notification
         shiny::showNotification(
           sprintf("Selected intersection: %s (%d members)",
                   intersection_name, cardinality),
@@ -1170,9 +1178,30 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
     # adding of flag from upset intersection
     observeEvent(input$addUpsetIntersectionFlag, {
       if (!is.null(r_upset_selection$sets) && length(r_upset_selection$sets) > 0) {
-        # Create flag formula, e.g g1 > 0 & g2 > 0
-        flag_formula <- paste(r_upset_selection$sets, "> 0", collapse = " & ")
-        flag_name <- paste("Intersection:", paste(r_upset_selection$sets, collapse = " & "))
+
+        all_groups <- names(r_sets_list$sets_list)
+
+        sets_in <- r_upset_selection$sets
+        sets_not_in <- setdiff(all_groups, sets_in)
+
+        # Create formula that allows intersections as flag e.g (set1 > 0) & (set2 == 0) & (set3 == 0) ...
+        positive_parts <- paste(sets_in, "> 0")
+        zero_parts <- paste(sets_not_in, "== 0")
+
+        flag_formula <- paste(c(positive_parts, zero_parts), collapse = " & ")
+
+        # Create descriptive name
+        if (length(sets_in) == 1) {
+          flag_name <- paste("Only", sets_in)
+        } else {
+          flag_name <- paste("Intersection:", paste(sets_in, collapse = " & "))
+        }
+
+      } else if(is.null(r_upset_selection$sets) && !is.null(r_upset_selection$name)){
+        # Create a formula that allows adding single sets as flag (set1 > 0, other sets may be present or not)
+        flag_formula <- paste(r_upset_selection$name, "> 0", collapse = " ")
+        flag_name <- paste("Code group:", paste(r_upset_selection$name, collapse = " "))
+      }
 
         # Store in session for the flags module
         session$userData$upset_flag_data <- list(
@@ -1186,7 +1215,7 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
         # Clear selection after adding
         r_upset_selection$sets <- NULL
         r_upset_selection$name <- NULL
-      }
+
     })
 
 
@@ -1307,34 +1336,51 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
       },
       content = function(file) {
         shiny::req(r_groupedCovariates$groupedCovariatesPerPersonTibble |> nrow() > 0)
-        shiny::req(r_groupedCovariates$groupedCovariatesPerPersonTibble_totalScore)
 
-        groupedCovariatesPerPers <- r_groupedCovariates$groupedCovariatesPerPersonTibble
+        if(!is.null(r_groupedCovariates$groupedCovariatesPerPersonTibble_totalScore)){
 
-        colnames(groupedCovariatesPerPers)[-1] <- r_groupedCovariates$groupedCovariatesTibble$groupName[
-                    match(colnames(groupedCovariatesPerPers)[-1],
-                          r_groupedCovariates$groupedCovariatesTibble$groupId)]
+          groupedCovariatesPerPers <- r_groupedCovariates$groupedCovariatesPerPersonTibble
 
-        df <- groupedCovariatesPerPers |>
-          dplyr::left_join(r_groupedCovariates$groupedCovariatesPerPersonTibble_totalScore, by = "personSourceValue")
+          colnames(groupedCovariatesPerPers)[-1] <- r_groupedCovariates$groupedCovariatesTibble$groupName[
+                      match(colnames(groupedCovariatesPerPers)[-1],
+                            r_groupedCovariates$groupedCovariatesTibble$groupId)]
 
-        if (is.null(r_groupedCovariates$groupedCovariatesPerPersonTibble_flag)) {
-          df <- df |> dplyr::mutate(flag = "no-flag")
-        } else {
-          df <- df |> dplyr::left_join(r_groupedCovariates$groupedCovariatesPerPersonTibble_flag, by = "personSourceValue")
-        }
+          df <- groupedCovariatesPerPers |>
+            dplyr::left_join(r_groupedCovariates$groupedCovariatesPerPersonTibble_totalScore, by = "personSourceValue")
 
-        # filter by selected flag (unless "All Data")
-        if (!is.null(input$downloadFlagSelection) && input$downloadFlagSelection != "All Data") {
-          df <- df |> dplyr::filter(flag == input$downloadFlagSelection)
-        }
+          if (is.null(r_groupedCovariates$groupedCovariatesPerPersonTibble_flag)) {
+            df <- df |> dplyr::mutate(flag = "no-flag")
+          } else {
+            df <- df |> dplyr::left_join(r_groupedCovariates$groupedCovariatesPerPersonTibble_flag, by = "personSourceValue")
+          }
 
-        # filter by the score range
-        df <- df |> dplyr::filter(
+          # filter by selected flag (unless "All Data")
+          if (!is.null(input$downloadFlagSelection) && input$downloadFlagSelection != "All Data") {
+            df <- df |> dplyr::filter(flag == input$downloadFlagSelection)
+          }
+
+          # filter by the score range
+          df <- df |> dplyr::filter(
             totalScore |> as.integer() >= input$scoreRange[1],
             totalScore |> as.integer() <= input$scoreRange[2]
           )
 
+        }else{
+          # enable downloading of flag data when formula for total score is not set
+          groupedCovariatesPerPers <- r_groupedCovariates$groupedCovariatesPerPersonTibble
+
+          colnames(groupedCovariatesPerPers)[-1] <- r_groupedCovariates$groupedCovariatesTibble$groupName[
+            match(colnames(groupedCovariatesPerPers)[-1],
+                  r_groupedCovariates$groupedCovariatesTibble$groupId)]
+
+          df <- groupedCovariatesPerPers |>
+            dplyr::left_join(r_groupedCovariates$groupedCovariatesPerPersonTibble_flag, by = "personSourceValue")
+
+
+          if (!is.null(input$downloadFlagSelection) && input$downloadFlagSelection != "All Data") {
+            df <- df |> dplyr::filter(flag == input$downloadFlagSelection)
+          }
+        }
 
         write.table(df, file, sep = "\t", row.names = FALSE, na = "", quote = FALSE)
       }
