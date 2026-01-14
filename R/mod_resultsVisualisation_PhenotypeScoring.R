@@ -53,7 +53,7 @@ mod_resultsVisualisation_PhenotypeScoring_ui <- function(id) {
                 label = "Export Code Groups",
                 choices = c(
                   "Select format" = "",
-                  "JSON" = "json",
+                  "JSON (for use in lifetrack)" = "json",
                   "TSV (wide)" = "tsv_wide",
                   "TSV (long)" = "tsv_long"
                 ),
@@ -92,7 +92,13 @@ mod_resultsVisualisation_PhenotypeScoring_ui <- function(id) {
             id = ns("scorePlotTabs"),
             tabPanel("Total Score Bar Plot", plotly::plotlyOutput(ns("totalScoreDistributionPlot"), height = "400px")),
             tabPanel("Density Plot", plotly::plotlyOutput(ns("totalScoreDensityPlot"), height = "400px")),
-            tabPanel("Upset Plot", shiny::plotOutput(ns("upsetPlot"), height = "400px",width = "auto")),
+            #tabPanel("Upset Plot", shiny::plotOutput(ns("upsetPlot"), height = "400px",width = "auto")),
+            tabPanel("Upset Plot",
+                     shiny::div(
+                       upsetjs::upsetjsOutput(ns("upsetPlot"), height = "400px", width = "auto"),
+                       shiny::uiOutput(ns("upsetFlagButtonUI"))
+                     )
+            ),
             tabPanel("Score Table", DT::dataTableOutput(ns("totalScoreTable")))
           ),
           shiny::br(), shiny::hr(),
@@ -221,6 +227,15 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
 
     # track total score range
     rv_scoreRanges <- shiny::reactiveValues()
+
+    # track selection in upset plot
+    r_upset_selection <- shiny::reactiveValues(
+      sets = NULL,
+      name = NULL,
+      cardinality = NULL
+    )
+
+    r_sets_list <- shiny::reactiveValues(sets_list=NULL)
 
     #
     # Start up: get the list of codes from database into r$codeWasCovariatesTibble
@@ -690,11 +705,31 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
 
     shinyjs::disable("downloadGroupedCovariates")
 
+    # observeEvent(input$export_trigger, {
+    #   if (input$export_trigger %in% c("json", "tsv_wide", "tsv_long")) {
+    #     shinyjs::enable("downloadGroupedCovariates")
+    #   } else {
+    #     shinyjs::disable("downloadGroupedCovariates")
+    #   }
+    # })
+
     observeEvent(input$export_trigger, {
       if (input$export_trigger %in% c("json", "tsv_wide", "tsv_long")) {
         shinyjs::enable("downloadGroupedCovariates")
       } else {
         shinyjs::disable("downloadGroupedCovariates")
+        # prevent download if disabled
+        shinyjs::runjs(
+          sprintf(
+            "$('#%s').off('click').on('click', function(e) {
+            if ($(this).prop('disabled')) {
+              e.preventDefault();
+              e.stopImmediatePropagation();
+            }
+          });",
+            ns("downloadGroupedCovariates")
+          )
+        )
       }
     })
 
@@ -774,10 +809,6 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
 
       shiny::showNotification("Code groups imported successfully !! ", type = "message")
     })
-
-
-
-
 
 
     #
@@ -1036,12 +1067,11 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
       plotly::ggplotly(p)
     })
 
-
     #
-    # When r_groupedCovariates is ready or slider is changed, plot an upset plot for the groups, if flag data is selected, also for the flag data
+    # When r_groupedCovariates is ready or slider is changed, plot an interactive upset plot for the groups, if intersection bar is select, have the option to add it to flag table
     #
 
-    output$upsetPlot <- shiny::renderPlot({
+    output$upsetPlot <- upsetjs::renderUpsetjs({
 
       # testing version. For now no selection by score
       shiny::req(r_groupedCovariates$groupedCovariatesPerPersonTibble)
@@ -1072,21 +1102,93 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
       }
 
 
-      UpSetR::upset(
-        UpSetR::fromList(upset_list[!names(upset_list) %in% "personSourceValue"]),
-        order.by = "freq",
-        sets.bar.color = "gray20",
-        main.bar.color = "black",
-        keep.order = TRUE,
-        set_size.show = FALSE,
-        set_size.scale_max = NULL,
-        point.size = 5,
-        line.size = 1.8,
-        mb.ratio = c(0.7, 0.3),
-        text.scale = c(2.5,2.0,2.5,2.0,2.5,3.5),
-        sets.x.label = "Code group size"
-      )
+      sets_list <- upset_list[!names(upset_list) %in% "personSourceValue"]
+
+      # UpSetR::upset(
+      #   UpSetR::fromList(sets_list),
+      #   nsets = length(sets_list),
+      #   order.by = "freq",
+      #   sets.bar.color = "gray20",
+      #   main.bar.color = "black",
+      #   keep.order = TRUE,
+      #   set_size.show = FALSE,
+      #   set_size.scale_max = NULL,
+      #   point.size = 5,
+      #   line.size = 1.8,
+      #   mb.ratio = c(0.7, 0.3),
+      #   text.scale = c(2.5,2.0,2.5,2.0,2.5,3.5),
+      #   sets.x.label = "Code group size"
+      # )
+
+      r_sets_list$sets_list <- sets_list
+
+      upsetjs::upsetjs() %>%
+        upsetjs::fromList(sets_list) %>%
+        upsetjs::interactiveChart() %>%
+        upsetjs::setSelection("")
+
     })
+
+    output$upsetFlagButtonUI <- shiny::renderUI({
+      if (!is.null(r_upset_selection$sets) && length(r_upset_selection$sets) > 0) {
+        shiny::actionButton(
+          ns("addUpsetIntersectionFlag"),
+          paste("Add", r_upset_selection$name, "as Flag"),
+          class = "btn-primary",
+          style = "margin-top: 10px;"
+        )
+      }
+    })
+
+    # track clicks of intersection bars in upset plot
+    observeEvent(input$upsetPlot_click, {
+      click_data <- input$upsetPlot_click
+
+      if (!is.null(click_data$name) && click_data$name != "") {
+        # Extract intersection info from click_data
+        intersection_name <- click_data$name
+        set_names <- unlist(click_data$setNames)
+        elements <- unlist(click_data$elems)
+        cardinality <- click_data$cardinality
+
+
+        # Store clicked intersection information
+        r_upset_selection$sets <- set_names
+        r_upset_selection$name <- intersection_name
+        r_upset_selection$cardinality <- cardinality
+
+        # Optional: Show notification
+        shiny::showNotification(
+          sprintf("Selected intersection: %s (%d members)",
+                  intersection_name, cardinality),
+          type = "message",
+          duration = 3
+        )
+      }
+    })
+
+    # adding of flag from upset intersection
+    observeEvent(input$addUpsetIntersectionFlag, {
+      if (!is.null(r_upset_selection$sets) && length(r_upset_selection$sets) > 0) {
+        # Create flag formula, e.g g1 > 0 & g2 > 0
+        flag_formula <- paste(r_upset_selection$sets, "> 0", collapse = " & ")
+        flag_name <- paste("Intersection:", paste(r_upset_selection$sets, collapse = " & "))
+
+        # Store in session for the flags module
+        session$userData$upset_flag_data <- list(
+          name = flag_name,
+          formula = flag_formula
+        )
+
+        # Trigger the add flag button in flags module
+        shinyjs::click("phenotypeFlags_flags-addFlag_button")
+
+        # Clear selection after adding
+        r_upset_selection$sets <- NULL
+        r_upset_selection$name <- NULL
+      }
+    })
+
 
     #
     # When r_groupedCovariates is ready or slider is changed, show table of total scores
