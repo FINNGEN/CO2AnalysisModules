@@ -8,6 +8,9 @@ source(testthat::test_path("helper.R"))
 cohortTableHandler <- helper_createNewCohortTableHandler(addCohorts = "EunomiaDefaultCohorts")
 on.exit({rm(cohortTableHandler);gc()})
 
+# test that - doent affect the plot
+cohortTableHandler$updateCohortNames(1, 'celecoxib', 'CELE1-N')
+
 exportFolder <- file.path(tempdir(), "testCohortOverlaps")
 dir.create(exportFolder, showWarnings = FALSE)
 on.exit({unlink(exportFolder, recursive = TRUE)})

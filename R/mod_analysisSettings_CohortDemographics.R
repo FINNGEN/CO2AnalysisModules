@@ -27,22 +27,6 @@ mod_analysisSettings_cohortDemographics_ui <- function(id) {
     ),
     #
     shiny::tags$h4("Settings"),
-    shinyWidgets::pickerInput(
-      inputId = ns("groupBy_pickerInput"),
-      label = "Select counts stratification:",
-      choices = list(`Calendar Year`='calendarYear', `Age Group`='ageGroup', `Gender`="gender"),
-      selected = list(`Calendar Year`='calendarYear', `Age Group`='ageGroup', `Gender`="gender"),
-      multiple = TRUE,
-      options = list(`actions-box` = TRUE)
-    ),
-    shinyWidgets::pickerInput(
-      inputId = ns("referenceYears_pickerInput"),
-      label = "Select counts refered to:",
-      choices = list(`Cohort Onset`="cohort_start_date", `Cohort End`="cohort_end_date", `Birth`="birth_datetime"),
-      selected = list(`Cohort Onset`="cohort_start_date", `Cohort End`="cohort_end_date", `Birth`="birth_datetime"),
-      multiple = TRUE,
-      options = list(`actions-box` = TRUE)
-    ),
     shiny::numericInput(
       inputId = ns("minCellCount_numericInput"),
       label = "Min Cell Count",
@@ -100,8 +84,6 @@ mod_analysisSettings_cohortDemographics_server <- function(id, r_connectionHandl
     #
     shiny::observe({
       condition <- !is.null(input$selectCohorts_pickerInput)
-      shinyjs::toggleState("groupBy_pickerInput", condition = condition )
-      shinyjs::toggleState("referenceYears_pickerInput", condition = condition )
       shinyjs::toggleState("minCellCount_numericInput", condition = condition )
     })
 
@@ -111,8 +93,6 @@ mod_analysisSettings_cohortDemographics_server <- function(id, r_connectionHandl
     rf_analysisSettings <- shiny::reactive({
       if(
         is.null(input$selectCohorts_pickerInput) |
-        is.null(input$referenceYears_pickerInput) |
-        is.null(input$groupBy_pickerInput) |
         is.null(input$minCellCount_numericInput)
       ){
         return(NULL)
@@ -120,8 +100,8 @@ mod_analysisSettings_cohortDemographics_server <- function(id, r_connectionHandl
 
       analysisSettings <- list(
         cohortIds = input$selectCohorts_pickerInput |> as.integer(),
-        referenceYears = input$referenceYears_pickerInput,
-        groupBy = input$groupBy_pickerInput,
+        referenceYears = c("cohort_start_date", "cohort_end_date", "birth_datetime"),
+        groupBy = c("calendarYear", "ageGroup", "gender"),
         minCellCount = input$minCellCount_numericInput
       )
 

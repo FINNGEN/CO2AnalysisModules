@@ -19,6 +19,7 @@ Imports:
     shinydashboard,
     shinycssloaders,
     UpSetR,
+    upsetjs,
     ggplot2,
     shiny,
     shinyjs,

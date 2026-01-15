@@ -90,23 +90,56 @@ mod_fct_phenotypeFlags_server <- function(id, r_groupedCovariates) {
         #
         # When add flag button is clicked, show modal dialog
         #
+        # shiny::observeEvent(input$addFlag_button, {
+        #     shiny::req(r_groupedCovariates$groupedCovariatesTibble |> nrow() > 0)
+        #     shiny::req(r_groupedCovariates$groupedCovariatesPerPersonTibble)
+        #
+        #     rf_formula_res$set_formula(formula_string=NULL)
+        #
+        #     shiny::showModal(shiny::modalDialog(
+        #         shiny::tags$h4("Add Flag"),
+        #         shiny::textInput(ns("flagName_textinput"), "Flag Name", width = "100%", value = "", placeholder = "Enter flag name"),
+        #         colourpicker::colourInput(ns("flagColor_colorinput"), "Flag Color", value = "red", palette = "limited"),
+        #         mod_fct_dragAndDropFormula_ui(ns("flagFormula_formula")),
+        #         shiny::tags$h4("Flag message:"),
+        #         shiny::verbatimTextOutput(ns("flagToBeAdded_textoutput"), placeholder = TRUE),
+        #         shiny::actionButton(ns("acceptFlag_actionButton"), "Accept"),
+        #         shiny::modalButton("Cancel"),
+        #         footer = NULL
+        #     ))
+        # })
+
         shiny::observeEvent(input$addFlag_button, {
-            shiny::req(r_groupedCovariates$groupedCovariatesTibble |> nrow() > 0)
-            shiny::req(r_groupedCovariates$groupedCovariatesPerPersonTibble)
+          shiny::req(r_groupedCovariates$groupedCovariatesTibble |> nrow() > 0)
+          shiny::req(r_groupedCovariates$groupedCovariatesPerPersonTibble)
 
-            rf_formula_res$set_formula(formula_string=NULL)
+          # Check if there's flag data from an upset plot click
+          default_name <- ""
+          default_formula <- NULL
 
-            shiny::showModal(shiny::modalDialog(
-                shiny::tags$h4("Add Flag"),
-                shiny::textInput(ns("flagName_textinput"), "Flag Name", width = "100%", value = "", placeholder = "Enter flag name"),
-                colourpicker::colourInput(ns("flagColor_colorinput"), "Flag Color", value = "red", palette = "limited"),
-                mod_fct_dragAndDropFormula_ui(ns("flagFormula_formula")),
-                shiny::tags$h4("Flag message:"),
-                shiny::verbatimTextOutput(ns("flagToBeAdded_textoutput"), placeholder = TRUE),
-                shiny::actionButton(ns("acceptFlag_actionButton"), "Accept"),
-                shiny::modalButton("Cancel"),
-                footer = NULL
-            ))
+          if (!is.null(session$userData$upset_flag_data)) {
+            default_name <- session$userData$upset_flag_data$name
+            default_formula <- session$userData$upset_flag_data$formula
+
+            session$userData$upset_flag_data <- NULL
+          }
+
+          # Set the formula in the drag-and-drop module
+          rf_formula_res$set_formula(formula_string = default_formula)
+
+          # Show modal with pre-filled values
+          shiny::showModal(shiny::modalDialog(
+            shiny::tags$h4("Add Flag"),
+            shiny::textInput(ns("flagName_textinput"), "Flag Name", width = "100%",
+                             value = default_name, placeholder = "Enter flag name"),
+            colourpicker::colourInput(ns("flagColor_colorinput"), "Flag Color", value = "red", palette = "limited"),
+            mod_fct_dragAndDropFormula_ui(ns("flagFormula_formula")),
+            shiny::tags$h4("Flag message:"),
+            shiny::verbatimTextOutput(ns("flagToBeAdded_textoutput"), placeholder = TRUE),
+            shiny::actionButton(ns("acceptFlag_actionButton"), "Accept"),
+            shiny::modalButton("Cancel"),
+            footer = NULL
+          ))
         })
 
         #
