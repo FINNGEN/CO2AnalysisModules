@@ -36,6 +36,7 @@ test_that("mod_analysisSettings_timetimeCodeWAS works", {
         list(
           cohortIdCases = 1,
           cohortIdControls = 2,
+          autoMatchRatio=NULL,
           analysisIds = c(101, 141, 1, 2, 402, 702, 41),
           temporalStartDays = 0,
           temporalEndDays = 0
@@ -62,6 +63,7 @@ test_that("mod_analysisSettings_timetimeCodeWAS works", {
         list(
           cohortIdCases = 1,
           cohortIdControls = 2,
+          autoMatchRatio=NULL,
           analysisIds = c(101, 141, 1, 2, 402, 702, 41),
           temporalStartDays = 0,
           temporalEndDays = 0
@@ -90,6 +92,7 @@ test_that("mod_analysisSettings_timetimeCodeWAS works", {
         list(
           cohortIdCases = 1,
           cohortIdControls = 2001,
+          autoMatchRatio=NULL,
           analysisIds = c(101, 141, 1, 2, 402, 702, 41),
           temporalStartDays = 0,
           temporalEndDays = 0
