@@ -241,6 +241,7 @@ mod_analysisSettings_phenotypeScoring_server <- function(id, r_connectionHandler
       analysisSettings <- list(
         cohortIdCases = input$selectCaseCohort_pickerInput |> as.integer(),
         cohortIdControls = input$selectControlCohort_pickerInput |> as.integer(),
+        autoMatchRatio=10,  # This will have to be modified later to allow automatch ratio coming from user in PS
         analysisIds = analysisIds
       )
 

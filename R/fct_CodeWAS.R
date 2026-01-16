@@ -57,6 +57,7 @@ execute_CodeWAS <- function(
   # get parameters from analysisSettings
   cohortIdCases <- analysisSettings$cohortIdCases
   cohortIdControls <- analysisSettings$cohortIdControls
+  autoMatchRatio <- analysisSettings$autoMatchRatio
   analysisIds <- analysisSettings$analysisIds
   covariatesIds <- analysisSettings$covariatesIds
   minCellCount <- analysisSettings$minCellCount
@@ -75,7 +76,7 @@ execute_CodeWAS <- function(
   cohortsToDelete <- c()
   if (cohortIdControls == 0) {
     ParallelLogger::logInfo("Creating match control cohort")
-    
+
     cohortDefinitionSet <- cohortTableHandler$cohortDefinitionSet
     newCohortId <- setdiff(1:1000, cohortDefinitionSet$cohortId)[1]
     newCohortName <- paste0("Any patient not in ", cohortDefinitionSet |> dplyr::filter(cohortId == cohortIdCases) |> dplyr::pull(cohortName))
@@ -104,14 +105,16 @@ execute_CodeWAS <- function(
     cohortDefinitionSet <- dplyr::bind_rows(cohortDefinitionSet, cohortDefinitionSetAllMinusCase)
 
     ParallelLogger::logInfo("Creating match control cohort")
-    # Match to sex and bday, match ratio 10
+
+    # Match to sex and bday, with default match ratio 10 or user selected matched ratio
     subsetDef <- CohortGenerator::createCohortSubsetDefinition(
       name = "",
       definitionId = cohortIdCases,
       subsetOperators = list(
         HadesExtras::createMatchingSubset(
           matchToCohortId = cohortIdCases,
-          matchRatio = 10,
+          #matchRatio = 10,
+          matchRatio = autoMatchRatio,
           matchSex = TRUE,
           matchBirthYear = TRUE,
           matchCohortStartDateWithInDuration = FALSE,
@@ -124,7 +127,7 @@ execute_CodeWAS <- function(
     cohortDefinitionSet <- cohortDefinitionSet |>
       CohortGenerator::addCohortSubsetDefinition(subsetDef, targetCohortIds = newCohortId)
 
-    cohortDefinitionSet <- cohortDefinitionSet |> 
+    cohortDefinitionSet <- cohortDefinitionSet |>
       dplyr::mutate(shortName = dplyr::if_else(cohortId == newCohortId*1000 + cohortIdCases, paste0("Mx", newCohortShortName), shortName))
 
     cohortTableHandler$insertOrUpdateCohorts(cohortDefinitionSet)
@@ -141,7 +144,7 @@ execute_CodeWAS <- function(
   startAnalysisTime <- Sys.time()
 
   noCovariatesMode <- is.null(covariatesIds) || length(covariatesIds) == 0
-  
+
   allRegexAnalysisIds <- {
     if (!is.null(analysisRegexTibble)) analysisRegexTibble |> dplyr::pull(analysisId) else c()
   }
@@ -158,7 +161,7 @@ execute_CodeWAS <- function(
   )
 
   # regex analysis setting
-  if (length(regexAnalysisIds) > 0) { 
+  if (length(regexAnalysisIds) > 0) {
     cohortDefinitionTable <- HadesExtras::getCohortNamesFromCohortDefinitionTable(
       connection = connection,
       cohortDatabaseSchema = cdmDatabaseSchema
@@ -203,7 +206,7 @@ execute_CodeWAS <- function(
   nControlsTotal <- cohortCounts$cohortSubjects[cohortCounts$cohortId == cohortIdControls]
   nCasesEntries <- cohortCounts$cohortEntries[cohortCounts$cohortId == cohortIdCases]
   nControlsEntries <- cohortCounts$cohortEntries[cohortCounts$cohortId == cohortIdControls]
-  
+
   # if the number of entries is different that the number of subjects, cohort needs to be distinct
   if (nCasesEntries != nCasesTotal | nControlsEntries != nControlsTotal) {
     ParallelLogger::logInfo("Number of entries is different than number of subjects, cohort needs to be distinct in a temp table")
@@ -567,7 +570,7 @@ execute_CodeWAS <- function(
     dplyr::collect() |>
     dplyr::distinct() |>
     dplyr::rename(concept_id = conceptId)
-  
+
   DatabaseConnector::insertTable(
     connection = connection,
     tableName = "temp_concept_ids",
@@ -751,9 +754,9 @@ execute_CodeWAS <- function(
   #
   if (length(cohortsToDelete) > 0) {
     ParallelLogger::logInfo("Deleting match control cohorts")
-    
+
     cohortTableHandler$deleteCohorts(cohortsToDelete)
-   
+
   }
 
   return(pathToResultsDatabase)

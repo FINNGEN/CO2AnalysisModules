@@ -57,6 +57,7 @@ execute_PhenotypeScoring <- function(
   # get parameters from analysisSettings
   cohortIdCases <- analysisSettings$cohortIdCases
   cohortIdControls <- analysisSettings$cohortIdControls
+  autoMatchRatio <- analysisSettings$autoMatchRatio
   analysisIds <- analysisSettings$analysisIds
 
   #
@@ -68,6 +69,7 @@ execute_PhenotypeScoring <- function(
   analysisSettings <- list(
     cohortIdCases = cohortIdCases,
     cohortIdControls = cohortIdControls,
+    autoMatchRatio=autoMatchRatio,
     analysisIds = analysisIds,
     covariatesIds = NULL,
     minCellCount = 1
@@ -105,7 +107,7 @@ execute_PhenotypeScoring <- function(
   nCasesThreshold <- 10
 
   ATCLevelThreshold <- 7
-  
+
   # Apply filter if not demographics domain
   covariates <- codewasResultsTbl |>
     dplyr::select(covariateId, covariateType, nCasesYes, pValue, oddsRatio) |>
@@ -118,7 +120,7 @@ execute_PhenotypeScoring <- function(
       analysisRefTbl |>
         dplyr::select(analysisId, domainId),
       by = c("analysisId" = "analysisId")
-    ) 
+    )
 
   covariatesNoDemographics <- covariates |>
     dplyr::filter(domainId != "Demographics") |>
@@ -132,7 +134,7 @@ execute_PhenotypeScoring <- function(
       HadesExtras::getListOfAnalysis(),
       by = c("analysisId" = "analysisId")
     ) |>
-    dplyr::select(analysisId, domainId, covariateId, conceptId, isBinary, isSourceConcept) 
+    dplyr::select(analysisId, domainId, covariateId, conceptId, isBinary, isSourceConcept)
 
   covariatesDemographics <- covariates |>
     dplyr::filter(domainId == "Demographics") |>
@@ -160,7 +162,7 @@ execute_PhenotypeScoring <- function(
     temporalStartDays = -99999,
     temporalEndDays = 99999
   )
-  
+
   demographicsResults <- FeatureExtraction::getDbCovariateData(
       connection = connection,
       cohortTable = cohortTable,
@@ -186,19 +188,19 @@ execute_PhenotypeScoring <- function(
     cdm_database_schema = cdmDatabaseSchema,
     cohort_database_schema = cohortDatabaseSchema,
     cohort_table = cohortTable,
-    cohort_id = cohortIdCases, 
+    cohort_id = cohortIdCases,
     warnOnMissingParameters = TRUE
   )
 
   sql <- SqlRender::translate(sql, targetDialect = connection@dbms)
 
-  personIdToSourcePersonId <- DatabaseConnector::querySql(connection, sql) |> 
+  personIdToSourcePersonId <- DatabaseConnector::querySql(connection, sql) |>
     dplyr::as_tibble() |>
     SqlRender::snakeCaseToCamelCaseNames()
-  
+
   covariatesPerPersonDemographics <- demographicsResults$covariates |>
     dplyr::collect() |>
-    dplyr::left_join(personIdToSourcePersonId, by = c("rowId" = "personId"))  |> 
+    dplyr::left_join(personIdToSourcePersonId, by = c("rowId" = "personId"))  |>
     dplyr::transmute(
       personSourceValue = as.character(sourcePersonId),
       covariateId = as.double(covariateId),
@@ -212,7 +214,7 @@ execute_PhenotypeScoring <- function(
       TRUE ~ ""
     )
   )
-  
+
   covariatesPerPerson <- dplyr::bind_rows(covariatesPerPerson, covariatesPerPersonDemographics)
 
 
@@ -227,7 +229,7 @@ execute_PhenotypeScoring <- function(
   startExportTime <- Sys.time()
 
   connection <- duckdb::dbConnect(duckdb::duckdb(), pathToResultsDatabase)
-  
+
   # covariatesPerPerson ------------------------------------------------
   covariatesPerPerson <- covariatesPerPerson |>
     dplyr::mutate(
@@ -405,7 +407,7 @@ checkResults_PhenotypeScoring <- function(pathToResultsDatabase) {
     # Binary covariates no drugs
     #
     if (isBinary && domainId != "Drug") {
-    
+
       ParallelLogger::logInfo(paste0("Binary covariates no drugs"))
 
       tableInfo <- domainTablesInfo |>
@@ -514,7 +516,7 @@ checkResults_PhenotypeScoring <- function(pathToResultsDatabase) {
     }
 
   }
-  
+
   # TEMP: visit with null values result in 0 counts, make them at least 1
   covariatesPerPerson <- covariatesPerPerson |>
     dplyr::mutate(value = dplyr::if_else(value == 0, 1, value))

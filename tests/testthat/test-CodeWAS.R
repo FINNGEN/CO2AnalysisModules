@@ -16,6 +16,7 @@ test_that("executeCodeWAS works", {
   analysisSettings <- list(
     cohortIdCases = 1,
     cohortIdControls = 2,
+    autoMatchRatio=NULL,
     analysisIds = c(101, 141, 1, 2, 402, 702, 41),
     covariatesIds = c(8507001, 1041),
     minCellCount = 1
@@ -61,6 +62,7 @@ test_that("executeCodeWAS warnings with cohort overlap", {
   analysisSettings <- list(
     cohortIdCases = 1,
     cohortIdControls = 2,
+    autoMatchRatio=NULL,
     analysisIds = c(101, 141, 1, 2, 402, 702, 41),
     covariatesIds = c(8507001, 1041),
     minCellCount = 1
@@ -106,6 +108,7 @@ test_that("executeCodeWAS works spliting in chuncs", {
   analysisSettings <- list(
     cohortIdCases = 1,
     cohortIdControls = 2,
+    autoMatchRatio=NULL,
     analysisIds = c(101, 141, 1, 2, 402, 702, 41),
     covariatesIds = c(8507001, 1041),
     minCellCount = 1,
@@ -159,6 +162,7 @@ test_that("executeCodeWAS works with regex cohorts", {
   analysisSettings <- list(
     cohortIdCases = 1,
     cohortIdControls = 2,
+    autoMatchRatio=NULL,
     analysisIds = c(101, 141, 1, 2, 402, 702, 41, 999, 998),
     covariatesIds = NULL,
     minCellCount = 1,
@@ -228,6 +232,7 @@ test_that("executeCodeWAS works with regex cohorts no selected", {
   analysisSettings <- list(
     cohortIdCases = 1,
     cohortIdControls = 2,
+    autoMatchRatio=NULL,
     analysisIds = c(101, 141, 1, 2, 402, 702, 41),
     covariatesIds = NULL,
     minCellCount = 1,
@@ -352,6 +357,7 @@ test_that("executeCodeWAS works with no covariates", {
   analysisSettings <- list(
     cohortIdCases = 1,
     cohortIdControls = 2,
+    autoMatchRatio=NULL,
     analysisIds = c(101, 141, 1, 2, 402, 702, 41),
     covariatesIds = NULL,
     minCellCount = 1
@@ -422,6 +428,7 @@ test_that("executeCodeWAS works when n multiple events per subject", {
   analysisSettings <- list(
     cohortIdCases = 1,
     cohortIdControls = 2001,
+    autoMatchRatio=NULL,
     analysisIds = c(101, 141, 1, 2, 402, 702, 41),
     covariatesIds = NULL,
     minCellCount = 1
@@ -471,6 +478,7 @@ test_that("executeCodeWAS works to get lab values", {
   analysisSettings <- list(
     cohortIdCases = 1,
     cohortIdControls = 2,
+    autoMatchRatio=NULL,
     analysisIds = c(101, 141, 1, 2, 402, 701, 702, 41),
     covariatesIds = NULL,
     minCellCount = 1
@@ -523,6 +531,7 @@ test_that("executeCodeWAS works with 0 as control cohort", {
   analysisSettings <- list(
     cohortIdCases = 1,
     cohortIdControls = 0,
+    autoMatchRatio=10,
     analysisIds = c(101, 141, 1, 2, 402, 701, 702, 41),
     covariatesIds = NULL,
     minCellCount = 1
@@ -574,6 +583,7 @@ test_that("executeCodeWAS works with only binary covariates", {
   analysisSettings <- list(
     cohortIdCases = 1,
     cohortIdControls = 0,
+    autoMatchRatio=10,
     analysisIds = c(101, 102, 141),
     covariatesIds = NULL,
     minCellCount = 1
@@ -626,6 +636,7 @@ test_that("executeCodeWAS works with ATC groups and DDDs", {
   analysisSettings <- list(
     cohortIdCases = 1,
     cohortIdControls = 0,
+    autoMatchRatio=10,
     analysisIds = c(342, 343),
     covariatesIds = NULL,
     minCellCount = 1

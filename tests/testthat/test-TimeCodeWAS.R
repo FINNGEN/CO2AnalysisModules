@@ -10,6 +10,7 @@ test_that("executeTimeCodeWAS works", {
   analysisSettings <- list(
     cohortIdCases = 1,
     cohortIdControls = 2,
+    autoMatchRatio=NULL,
     analysisIds = c(101, 301, 701, 702, 741, 801, 841),
     temporalStartDays = c(   -365*2, -365*1, 0,     1,   365+1 ),
     temporalEndDays =   c( -365*1-1,     -1, 0, 365*1,   365*2)
@@ -54,6 +55,7 @@ test_that("executeTimeCodeWAS works with 0 as control cohort", {
   analysisSettings <- list(
     cohortIdCases = 1,
     cohortIdControls = 0,
+    autoMatchRatio=10,
     analysisIds = c(101, 301, 701, 702, 741, 801, 841),
     temporalStartDays = c(   -365*2, -365*1, 0,     1,   365+1 ),
     temporalEndDays =   c( -365*1-1,     -1, 0, 365*1,   365*2)

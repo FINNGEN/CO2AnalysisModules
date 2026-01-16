@@ -47,6 +47,7 @@ execute_timeCodeWAS <- function(
   # get parameters from analysisSettings
   cohortIdCases <- analysisSettings$cohortIdCases
   cohortIdControls <- analysisSettings$cohortIdControls
+  autoMatchRatio <- analysisSettings$autoMatchRatio
   analysisIds <- analysisSettings$analysisIds
   temporalStartDays <- analysisSettings$temporalStartDays
   temporalEndDays <- analysisSettings$temporalEndDays
@@ -58,7 +59,7 @@ execute_timeCodeWAS <- function(
   cohortsToDelete <- c()
   if (cohortIdControls == 0) {
     ParallelLogger::logInfo("Creating match control cohort")
-    
+
     cohortDefinitionSet <- cohortTableHandler$cohortDefinitionSet
     newCohortId <- setdiff(1:1000, cohortDefinitionSet$cohortId)[1]
     newCohortName <- paste0("Any patient not in ", cohortDefinitionSet |> dplyr::filter(cohortId == cohortIdCases) |> dplyr::pull(cohortName))
@@ -94,7 +95,8 @@ execute_timeCodeWAS <- function(
       subsetOperators = list(
         HadesExtras::createMatchingSubset(
           matchToCohortId = cohortIdCases,
-          matchRatio = 10,
+          #matchRatio = 10,
+          matchRatio = autoMatchRatio,
           matchSex = TRUE,
           matchBirthYear = TRUE,
           matchCohortStartDateWithInDuration = FALSE,
@@ -107,7 +109,7 @@ execute_timeCodeWAS <- function(
     cohortDefinitionSet <- cohortDefinitionSet |>
       CohortGenerator::addCohortSubsetDefinition(subsetDef, targetCohortIds = newCohortId)
 
-      cohortDefinitionSet <- cohortDefinitionSet |> 
+      cohortDefinitionSet <- cohortDefinitionSet |>
       dplyr::mutate(shortName = dplyr::if_else(cohortId == newCohortId*1000 + cohortIdCases, paste0("Mx", newCohortShortName), shortName))
 
     cohortTableHandler$insertOrUpdateCohorts(cohortDefinitionSet)
@@ -137,7 +139,7 @@ execute_timeCodeWAS <- function(
     cdmDatabaseSchema = cdmDatabaseSchema,
     covariateSettings = covariateSettings,
     cohortIds = c(cohortIdCases, cohortIdControls),
-    aggregated = T, 
+    aggregated = T,
     tempEmulationSchema = getOption("sqlRenderTempEmulationSchema")
   )
 
@@ -156,24 +158,24 @@ execute_timeCodeWAS <- function(
       start_day = as.integer(temporalStartDays),
       end_day = as.integer(temporalEndDays)
     )
-    
+
     DatabaseConnector::insertTable(
-      connection = connection, 
-      tableName = "temp_time_windows", 
-      data = timeWindows, 
-      tempTable = TRUE, 
+      connection = connection,
+      tableName = "temp_time_windows",
+      data = timeWindows,
+      tempTable = TRUE,
       createTable = TRUE
     )
-    
+
     sql <- "
-    SELECT 
+    SELECT
       cohort.cohort_definition_id,
       tw.id_window,
       COUNT(*) AS n
     FROM #temp_time_windows tw
     CROSS JOIN @cohort_database_schema.@cohort_table cohort
     LEFT JOIN (
-      SELECT 
+      SELECT
         person_id,
         MIN(observation_period_start_date) AS observation_period_start_date,
         MAX(observation_period_end_date) AS observation_period_end_date
@@ -188,9 +190,9 @@ execute_timeCodeWAS <- function(
       )
     GROUP BY cohort.cohort_definition_id, tw.id_window
     "
-    
+
     windowCounts <- DatabaseConnector::renderTranslateQuerySql(
-      connection = connection, 
+      connection = connection,
       sql = sql,
       cdm_database_schema = cdmDatabaseSchema,
       cohort_database_schema = cohortDatabaseSchema,
@@ -198,7 +200,7 @@ execute_timeCodeWAS <- function(
       cohort_id_cases = cohortIdCases,
       cohort_id_controls = cohortIdControls,
       warnOnMissingParameters = TRUE
-    ) |> 
+    ) |>
       tibble::as_tibble()
 
     windowCounts <- windowCounts |>
@@ -328,7 +330,7 @@ execute_timeCodeWAS <- function(
     dplyr::collect() |>
     dplyr::distinct() |>
     dplyr::rename(concept_id = conceptId)
-  
+
   DatabaseConnector::insertTable(
     connection = connection,
     tableName = "temp_concept_ids",
@@ -351,7 +353,7 @@ execute_timeCodeWAS <- function(
     tibble::as_tibble()
 
   covariateRef <- covariateRef |>
-    dplyr::left_join(conceptIdsAndCodes, by = "conceptId") 
+    dplyr::left_join(conceptIdsAndCodes, by = "conceptId")
 
   ParallelLogger::logInfo("CohortDiagnostics_runTimeCodeWAS completed")
 
@@ -477,15 +479,15 @@ execute_timeCodeWAS <- function(
   duckdb::dbDisconnect(connection)
 
   ParallelLogger::logInfo("Results exported")
-  
+
   #
   # if cohortIdControls is 0 delete the match control cohort
   #
   if (length(cohortsToDelete) > 0) {
     ParallelLogger::logInfo("Deleting match control cohorts")
-    
+
     cohortTableHandler$deleteCohorts(cohortsToDelete)
-   
+
   }
 
   return(pathToResultsDatabase)
