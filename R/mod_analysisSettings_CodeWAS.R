@@ -248,7 +248,7 @@ mod_analysisSettings_codeWAS_server <- function(id, r_connectionHandler) {
           shiny::showNotification(
             paste0(
               "Auto-matching ratio capped to ", mr,
-              " to keep total analyzed sample size ≤ 400,000."
+              " to keep total analyzed sample size less than 400k."
             ),
             type = "warning",
             duration = 6

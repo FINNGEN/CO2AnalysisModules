@@ -57,6 +57,7 @@ execute_PhenotypeScoring <- function(
   # get parameters from analysisSettings
   cohortIdCases <- analysisSettings$cohortIdCases
   cohortIdControls <- analysisSettings$cohortIdControls
+  autoMatchRatio <- analysisSettings$autoMatchRatio
   analysisIds <- analysisSettings$analysisIds
 
   #
@@ -68,7 +69,7 @@ execute_PhenotypeScoring <- function(
   analysisSettings <- list(
     cohortIdCases = cohortIdCases,
     cohortIdControls = cohortIdControls,
-    autoMatchRatio=10, # This will have to be modified later to allow automatch ratio coming from user
+    autoMatchRatio=autoMatchRatio,
     analysisIds = analysisIds,
     covariatesIds = NULL,
     minCellCount = 1
