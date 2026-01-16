@@ -24,12 +24,42 @@ mod_analysisSettings_codeWAS_ui <- function(id) {
       choices = NULL,
       selected = NULL,
       multiple = FALSE),
+
     shinyWidgets::pickerInput(
       inputId = ns("selectControlCohort_pickerInput"),
       label = "Select control cohort:",
       choices = NULL,
       selected = NULL,
       multiple = FALSE),
+
+    shiny::conditionalPanel(
+      condition = sprintf(
+        "input['%s'] == '0'",
+        ns("selectControlCohort_pickerInput")
+      ),
+      shiny::tags$div(
+        style = "margin-top: 0.5rem;",
+        shiny::tags$h5("Auto-matching ratio"),
+
+        shiny::selectizeInput(
+          inputId = ns("autoMatch_ratio"),
+          label = "Controls per case (ratio)",
+          choices = c("10" = 10, "50" = 50, "100" = 100),
+          selected = 10,
+          options = list(
+            create = TRUE,
+            persist = FALSE
+          )
+        ),
+
+        shiny::helpText(
+          "Select 10, 50, or 100 controls per case, or enter a custom ratio. ",
+          "Larger ratios may significantly increase analysis time. ",
+          "The combined case + control size is capped automatically."
+        )
+      )
+    ),
+
     htmltools::hr(),
     shiny::tags$h4("Settings"),
     #
@@ -138,6 +168,7 @@ mod_analysisSettings_codeWAS_server <- function(id, r_connectionHandler) {
       }
 
       shinyWidgets::updatePickerInput(
+        session = session,
         inputId = "selectCaseCohort_pickerInput",
         choices = cohortIdAndNamesList,
         selected = character(0)
@@ -161,20 +192,86 @@ mod_analysisSettings_codeWAS_server <- function(id, r_connectionHandler) {
         purrr::discard(~.x %in% input$selectCaseCohort_pickerInput)
 
       # Add cohort 0 with
-      cohortIdAndNamesList <- c(list(`AUTO-MATCH: Creates a control cohort from the patiens not in case cohort that matches case cohort by sex and birth year with ratio 1:10` = 0), cohortIdAndNamesList)
+      cohortIdAndNamesList <- c(list(`AUTO-MATCH: Creates a control cohort from the patients not in case cohort that matches case cohort by sex and birth year with selected ratio` = 0), cohortIdAndNamesList)
 
       shinyWidgets::updatePickerInput(
+        session = session,
         inputId = "selectControlCohort_pickerInput",
         choices = cohortIdAndNamesList,
         selected = 0
       )
     })
 
+    # Handle automatch ratio selection from user
+    autoMatch_ratio <- shiny::reactive({
+      shiny::req(input$autoMatch_ratio)
+      r <- suppressWarnings(as.integer(input$autoMatch_ratio))
+      if (is.na(r) || r < 1) 10L else r
+    })
+
+    n_cases <- shiny::reactive({
+      shiny::req(input$selectCaseCohort_pickerInput)
+      cohortTableHandler <- r_connectionHandler$cohortTableHandler
+      cohortTableHandler$getNumberOfSubjects(as.integer(input$selectCaseCohort_pickerInput))
+    })
+
+    max_ratio_allowed <- shiny::reactive({
+      shiny::req(n_cases())
+      cap <- 400000L # total size for codewas analysis
+      nc <- as.integer(n_cases())
+      if (nc <= 0) return(10L)
+
+      mr <- floor((cap - nc) / nc)
+      max(1L, mr)
+    })
+
+    shiny::observeEvent(
+      list(
+        input$selectControlCohort_pickerInput,
+        input$selectCaseCohort_pickerInput,
+        input$autoMatch_ratio
+      ),
+      {
+        ctrl <- input$selectControlCohort_pickerInput
+        if (is.null(ctrl) || length(ctrl) == 0) return()
+
+        if (as.character(ctrl) != "0") return()
+
+        if (is.null(input$autoMatch_ratio) || length(input$autoMatch_ratio) == 0) return()
+
+        r <- suppressWarnings(as.integer(input$autoMatch_ratio))
+        if (is.na(r) || r < 1) r <- 10L
+
+        mr <- max_ratio_allowed()
+
+        if (r > mr) {
+          shiny::showNotification(
+            paste0(
+              "Auto-matching ratio capped to ", mr,
+              " to keep total analyzed sample size ≤ 400,000."
+            ),
+            type = "warning",
+            duration = 6
+          )
+
+          shiny::updateSelectizeInput(
+            session,
+            "autoMatch_ratio",
+            selected = as.character(mr)
+          )
+        }
+      },
+      ignoreInit = TRUE
+    )
+
+
     #
-    # activate settings if cohors have been selected
+    # activate settings if cohorts have been selected
     #
     shiny::observe({
-      condition <- !is.null(input$selectControlCohort_pickerInput) & input$selectControlCohort_pickerInput!="NA"
+      ctrl <- input$selectControlCohort_pickerInput
+      condition <- !is.null(ctrl) && length(ctrl) == 1 && as.character(ctrl) != "NA"
+
       #shinyjs::toggleState("selectCovariates", condition = condition )
       shinyjs::toggleState("features_pickerInput", condition = condition )
       shinyjs::toggleState("statistics_type_option", condition = condition )
@@ -201,10 +298,16 @@ mod_analysisSettings_codeWAS_server <- function(id, r_connectionHandler) {
       # cores
       message <- paste0("\u2139\uFE0F Analysis will use : ", cores, " cores\n")
 
-      if(input$selectControlCohort_pickerInput == 0){
-        message <- paste0(message, "\u2139\uFE0F Analysis will create a control cohort from the patients not in case cohort that matches case cohort by sex and birth year with ratio 1:10\n")
+      if (as.character(input$selectControlCohort_pickerInput) == "0") {
+        ratio_txt <- if (shiny::isTruthy(input$autoMatch_ratio)) input$autoMatch_ratio else "10"
+        message <- paste0(
+          message,
+          "\u2139\uFE0F Analysis will create an auto-matched control cohort (sex + birth year) with ratio 1:",
+          ratio_txt, "\n"
+        )
         return(message)
       }
+
 
       # counts
       if( nSubjectsCase > nSubjectsControl ){
@@ -324,9 +427,12 @@ mod_analysisSettings_codeWAS_server <- function(id, r_connectionHandler) {
         analysisIds <- union(analysisIds, 41)
       }
 
+      is_automatched <- as.character(input$selectControlCohort_pickerInput) == "0"
+
       analysisSettings <- list(
         cohortIdCases = input$selectCaseCohort_pickerInput |> as.integer(),
         cohortIdControls = input$selectControlCohort_pickerInput |> as.integer(),
+        autoMatchRatio = if (is_automatched) autoMatch_ratio() else NULL,
         analysisIds = analysisIds,
         covariatesIds = covariatesIds,
         minCellCount = input$minCellCount_numericInput,
