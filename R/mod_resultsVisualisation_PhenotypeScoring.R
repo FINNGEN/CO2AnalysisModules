@@ -235,7 +235,7 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
       cardinality = NULL
     )
 
-    r_sets_list <- shiny::reactiveValues(sets_list=NULL)
+    r_sets_list <- shiny::reactiveValues(sets_list=NULL, set_ids=NULL)
 
     #
     # Start up: get the list of codes from database into r$codeWasCovariatesTibble
@@ -1078,6 +1078,7 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
       groupedCovariatesPerPersonTibble <- r_groupedCovariates$groupedCovariatesPerPersonTibble
       shiny::req(nrow(groupedCovariatesPerPersonTibble) > 0)
 
+      setids = colnames(groupedCovariatesPerPersonTibble)[-1]
       # use the group names
       colnames(groupedCovariatesPerPersonTibble)[-1] <- r_groupedCovariates$groupedCovariatesTibble$groupName[
         match(colnames(groupedCovariatesPerPersonTibble)[-1],
@@ -1121,6 +1122,7 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
       # )
 
       r_sets_list$sets_list <- sets_list
+      r_sets_list$set_ids <- setids
 
       upsetjs::upsetjs() |>
         upsetjs::fromList(sets_list) |>
@@ -1180,13 +1182,17 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
       if (!is.null(r_upset_selection$sets) && length(r_upset_selection$sets) > 0) {
 
         all_groups <- names(r_sets_list$sets_list)
+        all_group_ids <- r_sets_list$set_ids
 
         sets_in <- r_upset_selection$sets
         sets_not_in <- setdiff(all_groups, sets_in)
 
+        sets_in_ids = all_group_ids[match(sets_in,all_groups)]
+        sets_not_in_ids = all_group_ids[match(sets_not_in,all_groups)]
+
         # Create formula that allows intersections as flag e.g (set1 > 0) & (set2 == 0) & (set3 == 0) ...
-        positive_parts <- paste(sets_in, "> 0")
-        zero_parts <- paste(sets_not_in, "== 0")
+        positive_parts <- paste(sets_in_ids, "> 0")
+        zero_parts <- paste(sets_not_in_ids, "== 0")
 
         flag_formula <- paste(c(positive_parts, zero_parts), collapse = " & ")
 
@@ -1199,7 +1205,12 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
 
       } else if(is.null(r_upset_selection$sets) && !is.null(r_upset_selection$name)){
         # Create a formula that allows adding single sets as flag (set1 > 0, other sets may be present or not)
-        flag_formula <- paste(r_upset_selection$name, "> 0", collapse = " ")
+        all_groups <- names(r_sets_list$sets_list)
+        all_group_ids <- r_sets_list$set_ids
+
+        idForGroup = all_group_ids[match(r_upset_selection$name,all_groups)]
+
+        flag_formula <- paste(idForGroup, "> 0", collapse = " ")
         flag_name <- paste("Code group:", paste(r_upset_selection$name, collapse = " "))
       }
 
