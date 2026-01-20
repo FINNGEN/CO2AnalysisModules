@@ -20,8 +20,6 @@ test_that("mod_analysisSettings_CohortDemographics works", {
     {
       session$setInputs(
         selectCohorts_pickerInput = c(1,2),
-        groupBy_pickerInput =  c("calendarYear", "ageGroup", "gender"),
-        referenceYears_pickerInput = c("cohort_start_date", "cohort_end_date", "birth_datetime"),
         minCellCount_numericInput = 1
       )
 

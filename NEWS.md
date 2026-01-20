@@ -1,3 +1,8 @@
+# CO2AnalysisModules 3.2.0
+- Make the upset plot in phenotype scoring interactive
+- Select intersections or sets from the upset plot to create flags
+- Flexible automatch ratio setting for CodeWAS and TimeCodeWAS
+
 # CO2AnalysisModules 3.1.0
 - Added upset plot to PhenotypeScoring module
 - 

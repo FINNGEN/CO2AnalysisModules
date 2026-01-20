@@ -1,6 +1,6 @@
 Package: CO2AnalysisModules
 Title: CO2AnalysisModules
-Version: 3.1.0
+Version: 3.2.0
 Authors@R: 
     person("Javier", "Gracia-Tabuenca", , "javier.graciatabuenca@tuni.fi", role = c("aut", "cre"),
            comment = c(ORCID = "0000-0002-2455-0598"))
@@ -19,6 +19,7 @@ Imports:
     shinydashboard,
     shinycssloaders,
     UpSetR,
+    upsetjs,
     ggplot2,
     shiny,
     shinyjs,

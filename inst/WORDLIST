@@ -26,6 +26,7 @@ Welch
 addFisherTestToCodeCounts
 addTestTotibbleWithValueSummary
 appender
+automatch
 binaryTest
 continuousOddsRatio
 continuousPValue
