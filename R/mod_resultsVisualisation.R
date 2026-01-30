@@ -56,7 +56,10 @@ mod_resultsVisualisation_ui <- function(id, resultsVisualisationModuleUi, pathTo
       shiny::tags$h4("Analysis Information"),
       reactable::reactableOutput(ns("analysisInfo")),
       shiny::tags$h4("Database Information"),
-      reactable::reactableOutput(ns("databaseInfo"))
+      reactable::reactableOutput(ns("databaseInfo")),
+      shiny::tags$hr(),
+      shiny::tags$h5("Download the entire analysis result (.duckdb)"),
+      shiny::downloadButton(ns("download_results_duckdb"), "Download results")
     ),
     shinydashboard::tabItem(
       tabName = "module",
@@ -195,6 +198,29 @@ mod_resultsVisualisation_server <- function(id, resultsVisualisationModuleServer
           )# end of div
       )# end of tagList
     })
+
+    output$download_results_duckdb <- shiny::downloadHandler(
+      filename = function() {
+        analysisType <- getOption("CO2AnalysisModules.analysisType", default = "analysis")
+        sanitized <- gsub("[^[:alnum:]]+", "_", analysisType)
+        sanitized <- gsub("^_+|_+$", "", sanitized)
+        paste0(sanitized, "_analysisResults.duckdb")
+      },
+      content = function(fname) {
+        db_path <- getOption("CO2AnalysisModules.pathToResultsDatabase", default = "")
+        shiny::req(nzchar(db_path))
+        shiny::req(file.exists(db_path))
+
+        ok <- file.copy(db_path, fname, overwrite = TRUE)
+        if (!isTRUE(ok) || file.info(fname)$size == 0) {
+          stop("Download failed: could not copy DuckDB file.")
+        }
+
+        ParallelLogger::logInfo("[viewer] Download duckdb: ", db_path)
+      }
+    )
+
+
 
     resultsVisualisationModuleServer(id, analysisResults)
   })
