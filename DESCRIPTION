@@ -13,7 +13,6 @@ RoxygenNote: 7.3.3
 Imports: 
     checkmate,
     dplyr,
-    dbplyr,
     HadesExtras (>= 2.0.0),
     ParallelLogger,
     shinydashboard,
@@ -56,7 +55,8 @@ Imports:
     colourpicker,
     shinyjqui,
     htmlwidgets,
-    jsonlite
+    jsonlite,
+    httr
 Remotes: 
     FINNGEN/HadesExtras,
     javier-gracia-tabuenca-tuni/DatabaseConnector@bigquery-DBI-2 

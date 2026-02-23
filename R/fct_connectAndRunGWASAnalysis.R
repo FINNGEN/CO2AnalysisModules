@@ -42,7 +42,7 @@ createSandboxAPIConnection <- function(base_url, token) {
   }
 
   # status tibble
-  conn_status <- LogTibble$new()
+  conn_status <- HadesExtras::LogTibble$new()
   if (error_message !=""){
     conn_status$ERROR("Test connection Sandbox API", error_message)
   } else {
