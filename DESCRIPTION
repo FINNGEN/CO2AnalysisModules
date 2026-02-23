@@ -51,7 +51,6 @@ Imports:
     tidyr,
     shinyFeedback,
     CohortGenerator,
-    FinnGenUtilsR,
     ggh4x,
     apexcharter,
     colourpicker,
@@ -60,7 +59,6 @@ Imports:
     jsonlite
 Remotes: 
     FINNGEN/HadesExtras,
-    FINNGEN/FinnGenUtilsR,
     javier-gracia-tabuenca-tuni/DatabaseConnector@bigquery-DBI-2 
 Suggests: 
     devtools,
