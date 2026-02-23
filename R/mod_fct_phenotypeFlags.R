@@ -309,7 +309,7 @@ mod_fct_phenotypeFlags_server <- function(id, r_groupedCovariates) {
         #     ),
         #     flagRulePretty = reactable::colDef(name = "Rule"),
         #     editButton = reactable::colDef(
-        #       name = "",
+        #       name = "match",
         #       sortable = FALSE,
         #       cell = function(value, index) {
         #         htmltools::tags$button(
@@ -321,7 +321,7 @@ mod_fct_phenotypeFlags_server <- function(id, r_groupedCovariates) {
         #       maxWidth = 50
         #     ),
         #     deleteButton = reactable::colDef(
-        #       name = "",
+        #       name = "match",
         #       sortable = FALSE,
         #       cell = function(value, index) {
         #         htmltools::tags$button(
