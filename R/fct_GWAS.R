@@ -98,7 +98,7 @@ execute_GWAS <- function(
 
   # also later allow usesrs to add additional covariates via extra_covariates_df, and selection of finngen standard covariates from the covariates argument
 
-  result <- FinnGenUtilsR::runRegenieStandardPipeline(
+  result <- runRegenieStandardPipeline(
     connection_sandboxAPI = connectionSandboxAPI,
     cases_finngenids = casesFinngenids,
     controls_finngenids = controlsFinngenids,
