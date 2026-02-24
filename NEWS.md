@@ -1,3 +1,7 @@
+# CO2AnalysisModules 3.2.1
+- Updated to work with CohortGenerator v1
+- Copied gwas functions from FinnGenUtilsR and removed as dependency
+
 # CO2AnalysisModules 3.2.0
 - Make the upset plot in phenotype scoring interactive
 - Select intersections or sets from the upset plot to create flags

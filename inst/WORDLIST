@@ -5,6 +5,7 @@ CDM
 CodeWAS
 CodeWASs
 CohortDemographics
+CohortGenerator
 CohortOperations
 CohortOverlaps
 CohortsOverlaps
@@ -15,6 +16,7 @@ DuckDB
 FID
 FINNGENIDs
 FinnGen
+FinnGenUtilsR
 JS
 Lifecycle
 PARAM
@@ -39,6 +41,7 @@ continuousTest
 duckdb
 groupOfCovariatesObject
 gsutil
+gwas
 http
 httr
 meanValueCases
