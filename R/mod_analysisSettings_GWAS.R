@@ -202,7 +202,7 @@ mod_analysisSettings_GWAS_server <- function(id, r_connectionHandler) {
         Sys.chmod(".sandbox_token", mode = "666")
         token <- readLines(".sandbox_token")
         base_url <- "https://internal-api.app.finngen.fi/internal-api/"
-        connectionSandboxAPI <- FinnGenUtilsR::createSandboxAPIConnection(base_url, token)
+        connectionSandboxAPI <- createSandboxAPIConnection(base_url, token)
         if (connectionSandboxAPI$conn_status_tibble$logTibble$type == "ERROR") {
           message <- paste0(message, "\u274C Error connecting to the sandbox API. Error message: ", connectionSandboxAPI$conn_status_tibble$logTibble$message, "\n")
           connectionSandboxAPI <- NULL

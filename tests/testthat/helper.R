@@ -1,3 +1,8 @@
+helper_getTestCohortTableHandlerConfig <- function() {
+  return(getOption("hadesextras.cohortTableHandlerConfig"))
+}
+
+
 helper_createNewCohortTableHandler <- function(addCohorts = NULL) {
   addCohorts |> checkmate::assertCharacter(len = 1, null.ok = TRUE)
   addCohorts |> checkmate::assertSubset(c(
@@ -7,7 +12,7 @@ helper_createNewCohortTableHandler <- function(addCohorts = NULL) {
   ), empty.ok = TRUE)
 
   # by default use the one from setup.R
-  cohortTableHandlerConfig <- test_cohortTableHandlerConfig # set by setup.R
+  cohortTableHandlerConfig <- helper_getTestCohortTableHandlerConfig() # set by setup.R
 
   loadConnectionChecksLevel <- "basicChecks"
 
@@ -63,7 +68,7 @@ helper_createNewCohortTableHandler <- function(addCohorts = NULL) {
 
       # Match
       subsetDef <- CohortGenerator::createCohortSubsetDefinition(
-        name = "",
+        name = "match",
         definitionId = 1,
         subsetOperators = list(
           HadesExtras::createMatchingSubset(
@@ -96,7 +101,7 @@ helper_createNewCohortTableHandler <- function(addCohorts = NULL) {
 
       # Match to sex and bday, match ratio 10
       subsetDef <- CohortGenerator::createCohortSubsetDefinition(
-        name = "",
+        name = "match",
         definitionId = 1,
         subsetOperators = list(
           HadesExtras::createMatchingSubset(

@@ -1,6 +1,6 @@
 Package: CO2AnalysisModules
 Title: CO2AnalysisModules
-Version: 3.2.0
+Version: 3.2.1
 Authors@R: 
     person("Javier", "Gracia-Tabuenca", , "javier.graciatabuenca@tuni.fi", role = c("aut", "cre"),
            comment = c(ORCID = "0000-0002-2455-0598"))
@@ -13,7 +13,6 @@ RoxygenNote: 7.3.3
 Imports: 
     checkmate,
     dplyr,
-    dbplyr,
     HadesExtras (>= 2.0.0),
     ParallelLogger,
     shinydashboard,
@@ -51,16 +50,15 @@ Imports:
     tidyr,
     shinyFeedback,
     CohortGenerator,
-    FinnGenUtilsR,
     ggh4x,
     apexcharter,
     colourpicker,
     shinyjqui,
     htmlwidgets,
-    jsonlite
+    jsonlite,
+    httr
 Remotes: 
     FINNGEN/HadesExtras,
-    FINNGEN/FinnGenUtilsR,
     javier-gracia-tabuenca-tuni/DatabaseConnector@bigquery-DBI-2 
 Suggests: 
     devtools,

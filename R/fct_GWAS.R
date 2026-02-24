@@ -77,7 +77,7 @@ execute_GWAS <- function(
                           "\nanalysisType: ", analysisType,
                           "\nrelease: ", release)
 
-  result <- FinnGenUtilsR::runGWASAnalysis(
+  result <- runGWASAnalysis(
     connection_sandboxAPI = connectionSandboxAPI,
     cases_finngenids = casesFinngenids,
     controls_finngenids = controlsFinngenids,
