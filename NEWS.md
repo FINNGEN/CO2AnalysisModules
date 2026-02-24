@@ -5,7 +5,7 @@
 
 # CO2AnalysisModules 3.1.0
 - Added upset plot to PhenotypeScoring module
-- 
+ 
 # CO2AnalysisModules 
 - Updated to use DatabaseConnector v7
 - Label both cases and controls in CodeWAS results visualization

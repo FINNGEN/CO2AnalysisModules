@@ -444,7 +444,7 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
           html = TRUE
         ),
         editButton = reactable::colDef(
-          name = "",
+          name = "match",
           sortable = FALSE,
           cell = function(value, index) {
             htmltools::tags$button(
@@ -459,7 +459,7 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
           maxWidth = 50
         ),
         deleteButton = reactable::colDef(
-          name = "",
+          name = "match",
           sortable = FALSE,
           cell = function(value, index) {
             htmltools::tags$button(

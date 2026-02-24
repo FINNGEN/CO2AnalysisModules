@@ -90,7 +90,7 @@ execute_timeCodeWAS <- function(
     ParallelLogger::logInfo("Creating match control cohort")
     # Match to sex and bday, match ratio 10
     subsetDef <- CohortGenerator::createCohortSubsetDefinition(
-      name = "",
+      name = "match",
       definitionId = cohortIdCases,
       subsetOperators = list(
         HadesExtras::createMatchingSubset(
