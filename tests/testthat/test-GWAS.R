@@ -35,6 +35,6 @@ test_that("executeGWAS error if no token", {
         analysisSettings = analysisSettings
       )
     },
-    "GWAS run failedConnection in connection_sandboxAPI"
+    "Could not detect RED sandbox bucket from shell output"
   )
 })

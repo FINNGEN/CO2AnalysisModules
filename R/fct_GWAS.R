@@ -1,5 +1,5 @@
 
-#' @title execute_CodeWAS
+#' @title execute_GWAS
 #' @description This function calculates cohort overlaps based on the provided cohort table and analysis settings, and exports the results to a DuckDB database.
 #'
 #' @param exportFolder A string representing the path to the folder where the results will be exported.
@@ -68,7 +68,7 @@ execute_GWAS <- function(
   ] |> unique()
 
   ParallelLogger::logInfo("Running GWAS using:",
-                          "\nnotification_email: ", connectionSandboxAPI$notification_email,
+                          #"\nnotification_email: ", connectionSandboxAPI$notification_email,
                           "\nname: ", connectionSandboxAPI$name,
                           "\nsubmitted cases: ", length(casesFinngenids),
                           "\nsubmitted controls: ", length(controlsFinngenids),
@@ -77,22 +77,46 @@ execute_GWAS <- function(
                           "\nanalysisType: ", analysisType,
                           "\nrelease: ", release)
 
-  result <- runGWASAnalysis(
+  # This was using the custom gwas api, which is being fazed out in favor of the standard pipeline to enable additional features such as
+  # finemapping and association anaysis for HLA alleles
+
+  # result <- FinnGenUtilsR::runGWASAnalysis(
+  #   connection_sandboxAPI = connectionSandboxAPI,
+  #   cases_finngenids = casesFinngenids,
+  #   controls_finngenids = controlsFinngenids,
+  #   phenotype_name = phenotype,
+  #   title = phenotype,
+  #   description = description,
+  #   notification_email = connectionSandboxAPI$notification_email,
+  #   analysis_type = analysisType,
+  #   release = release
+  # )
+  #
+
+  # the release is not needed now, we will need to change this based on the release and pipeline name to find the right
+  # pipeline id
+
+  # also later allow usesrs to add additional covariates via extra_covariates_df, and selection of finngen standard covariates from the covariates argument
+
+  result <- runRegenieStandardPipeline(
     connection_sandboxAPI = connectionSandboxAPI,
     cases_finngenids = casesFinngenids,
     controls_finngenids = controlsFinngenids,
     phenotype_name = phenotype,
-    title = phenotype,
-    description = description,
-    notification_email = connectionSandboxAPI$notification_email,
-    analysis_type = analysisType,
-    release = release
+    phenotype_description = description,
+    test = analysisType
   )
 
-  ParallelLogger::logInfo("GWAS run completed: ", result)
 
   if (result$status == FALSE){
+    ParallelLogger::logInfo("GWAS run completed: ", result)
     stop("GWAS run failed", result$message)
+
+  }else{
+
+    # the result contains more detail information, we can record and display that if the result is succesful
+    ParallelLogger::logInfo("GWAS run completed: ", result)
+
   }
 
   # there is not database to share
