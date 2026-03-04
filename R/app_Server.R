@@ -60,8 +60,18 @@ app_server <- function(input, output, session) {
       ParallelLogger::logInfo("[Start] analysisTypeFromOptions: ", analysisTypeFromOptions, ", pathToResultsDatabaseFromOptions: ", pathToResultsDatabaseFromOptions)
       # if up to date call module server
       if (file.exists(pathToResultsDatabaseFromOptions) == TRUE) {
+
         # read database
-        analysisResults <- duckdb::dbConnect(duckdb::duckdb(), pathToResultsDatabaseFromOptions)
+        # Try loading as Andromeda first
+        analysisResults <- tryCatch(
+          Andromeda::loadAndromeda(pathToResultsDatabaseFromOptions),
+          error = function(e) NULL
+        )
+
+        # If not Andromeda, open as DuckDB
+        if (is.null(analysisResults)) {
+          analysisResults <- duckdb::dbConnect(duckdb::duckdb(), pathToResultsDatabaseFromOptions)
+        }
 
         # load module server based on analysisType
         if (analysisTypeFromOptions == "cohortOverlaps") {

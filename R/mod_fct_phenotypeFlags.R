@@ -46,7 +46,7 @@ mod_fct_phenotypeFlags_ui <- function(id) {
     )
 }
 
-mod_fct_phenotypeFlags_server <- function(id, r_groupedCovariates) {
+mod_fct_phenotypeFlags_server <- function(id, r_groupedCovariates,r_formula_items) {
     shiny::moduleServer(id, function(input, output, session) {
         ns <- session$ns
 
@@ -153,7 +153,8 @@ mod_fct_phenotypeFlags_server <- function(id, r_groupedCovariates) {
             r_groupedCovariates = r_groupedCovariates,
             operatorItems = operators_flag,
             titleText = "Expression that evaluates to true or false:",
-            placeholder = "Drag and Drop to create rule"
+            placeholder = "Drag and Drop to create rule",
+            variableItems = r_formula_items
         )
         rf_formula = rf_formula_res$get_formula
 
@@ -209,12 +210,15 @@ mod_fct_phenotypeFlags_server <- function(id, r_groupedCovariates) {
             flagRuleFormula <- rf_formula()
             flagRule <- flagRuleFormula$formula
 
+
+
             # Check if formula is potentially incomplete (e.g., ends with operator or is empty)
             if (is_flagformula_incomplete(flagRule, operators_flag)) {
               r$flagBuildMessage <- NULL
               r$flagToBeAdded <- NULL
               return()
             }
+
 
             errorMessage <- NULL
             tryCatch(
