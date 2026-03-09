@@ -57,6 +57,7 @@ Imports:
     htmlwidgets,
     jsonlite,
     rlang,
+    Andromeda,
     httr
 Remotes: 
     FINNGEN/HadesExtras,
