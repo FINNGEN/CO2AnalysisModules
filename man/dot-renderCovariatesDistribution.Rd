@@ -4,7 +4,7 @@
 \alias{.renderCovariatesDistribution}
 \title{Render Covariates Distribution}
 \usage{
-.renderCovariatesDistribution(covariatesDistribution)
+.renderCovariatesDistribution(covariatesDistribution, metric = "count")
 }
 \arguments{
 \item{covariatesDistribution}{A tibble containing the covariates distribution}
