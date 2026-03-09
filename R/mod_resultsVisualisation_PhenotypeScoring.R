@@ -1414,7 +1414,7 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
       rng <- as.numeric(rng)
       if (!is.finite(rng) || rng <= 0) return(1)
 
-      # target about ~100 steps across the slider (feel free: 50–200)
+      # target about 100 steps across the slider
       raw <- rng / 100
 
       # nice step = 1, 0.5, 0.2, 0.1 * 10^k
@@ -2336,18 +2336,18 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
       x <- x[!is.na(x)]
       if (length(x) == 0) return(tibble::tibble(value = character(), n = integer()))
 
-      # Age bins (years): 0–9, 10–17, 18–29, 30–39, 40–49, 50–59, 60–69, 70–79, 80+
+      # Age bins (years): 0-9, 10-17, 18-29, 30-39, 40-49, 50-59, 60-69, 70-79, 80
       breaks <- c(-Inf, 0, 9, 17, 29, 39, 49, 59, 69, 79, Inf)
       labels <- c(
         "<=0",
-        "0–9",
-        "10–17",
-        "18–29",
-        "30–39",
-        "40–49",
-        "50–59",
-        "60–69",
-        "70–79",
+        "0-9",
+        "10-17",
+        "18-29",
+        "30-39",
+        "40-49",
+        "50-59",
+        "60-69",
+        "70-79",
         "80+"
       )
 
