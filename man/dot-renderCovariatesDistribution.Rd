@@ -8,6 +8,8 @@
 }
 \arguments{
 \item{covariatesDistribution}{A tibble containing the covariates distribution}
+
+\item{metric}{A string indicating the type of data distribution, default is count(number clinical events), and can be AgeFirstEvent, daysToFirstEvent, daysToLastEvent}
 }
 \value{
 A plot of the covariates distribution
