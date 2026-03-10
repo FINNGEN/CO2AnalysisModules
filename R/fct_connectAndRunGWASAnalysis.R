@@ -73,7 +73,7 @@ createSandboxAPIConnection <- function(base_url, token) {
 #' @param analysis_type Specifies type of the analysis to perform (additive, recessive, dominant), Default: 'additive'
 #' @param release PARAM_DESCRIPTION, Default: 'Regenie12'
 #' @export
-#' @importFrom stringr str_detect
+#' @importFrom stringr str_detect str_c
 #' @importFrom dplyr bind_rows
 #' @importFrom tibble tibble
 #' @importFrom readr write_tsv
@@ -98,10 +98,15 @@ runGWASAnalysis <- function(
   # create phenofile
   tmp_path_phenofile = file.path(tempdir(), "phenofile.tsv")
 
-  dplyr::bind_rows(
-    tibble::tibble( FID = cases_finngenids, {{phenotype_name}}:=1),
-    tibble::tibble( FID = controls_finngenids, {{phenotype_name}}:=0)
-  ) |> readr::write_tsv(tmp_path_phenofile)
+  phenofile <- dplyr::bind_rows(
+    tibble::tibble(FID = cases_finngenids, phenotype_value = 1),
+    tibble::tibble(FID = controls_finngenids, phenotype_value = 0)
+  )
+
+  colnames(phenofile)[colnames(phenofile) == "phenotype_value"] <- phenotype_name
+
+  readr::write_tsv(phenofile, tmp_path_phenofile)
+
 
   # prepare api params
   authorization = paste("Bearer", connection_sandboxAPI$token)
@@ -167,7 +172,7 @@ runGWASAnalysis <- function(
 #' @param controls_finngenids Character vector of FINNGENIDs for controls
 #' @param phenotype_name Phenotype column name (must start with a letter; letters/numbers/_)
 #' @param phenotype_description Single string description written to phenodescription file (1 line)
-#' @param covariates Optional comma-separated covariate string of the standard FinnGen covariates
+#' @param covariates Optional comma-separated covariate string of the standard FinnGen covariates will be used by default
 #' @param extra_covariates_df data.frame with FID/IID + extra covariate columns
 #' @param test Genetic model test string, Default: "additive"
 #' @param is_binary String "true"/"false" to specify binary or quantitative GWAS analysis type, Default: "true"
@@ -190,13 +195,17 @@ runRegenieStandardPipeline <- function(
     controls_finngenids,
     phenotype_name,
     phenotype_description,
-    covariates = "SEX_IMPUTED,AGE_AT_DEATH_OR_END_OF_FOLLOWUP,PC{1:10},IS_FINNGEN2_CHIP,BATCH_DS1_BOTNIA_Dgi_norm,BATCH_DS10_FINRISK_Palotie_norm,BATCH_DS11_FINRISK_PredictCVD_COROGENE_Tarto_norm,BATCH_DS12_FINRISK_Summit_norm,BATCH_DS13_FINRISK_Bf_norm,BATCH_DS14_GENERISK_norm,BATCH_DS15_H2000_Broad_norm,BATCH_DS16_H2000_Fimm_norm,BATCH_DS17_H2000_Genmets_norm_relift,BATCH_DS18_MIGRAINE_1_norm_relift,BATCH_DS19_MIGRAINE_2_norm,BATCH_DS2_BOTNIA_T2dgo_norm,BATCH_DS20_SUPER_1_norm_relift,BATCH_DS21_SUPER_2_norm_relift,BATCH_DS22_TWINS_1_norm,BATCH_DS23_TWINS_2_norm_nosymmetric,BATCH_DS24_SUPER_3_norm,BATCH_DS25_BOTNIA_Regeneron_norm,BATCH_DS26_DIREVA_norm,BATCH_DS27_NFBC66_norm,BATCH_DS28_NFBC86_norm,BATCH_DS3_COROGENE_Sanger_norm,BATCH_DS4_FINRISK_Corogene_norm,BATCH_DS5_FINRISK_Engage_norm,BATCH_DS6_FINRISK_FR02_Broad_norm_relift,BATCH_DS7_FINRISK_FR12_norm,BATCH_DS8_FINRISK_Finpcga_norm,BATCH_DS9_FINRISK_Mrpred_norm",
+    covariates = NULL,
     extra_covariates_df = NULL,
     test = "additive",
     is_binary = "true",
     endpoint_path = "v2/standard-pipelines",
     timeout_sec = 300
 ) {
+
+  if (is.null(covariates)) {
+    covariates = "SEX_IMPUTED,AGE_AT_DEATH_OR_END_OF_FOLLOWUP,PC{1:10},IS_FINNGEN2_CHIP,BATCH_DS1_BOTNIA_Dgi_norm,BATCH_DS10_FINRISK_Palotie_norm,BATCH_DS11_FINRISK_PredictCVD_COROGENE_Tarto_norm,BATCH_DS12_FINRISK_Summit_norm,BATCH_DS13_FINRISK_Bf_norm,BATCH_DS14_GENERISK_norm,BATCH_DS15_H2000_Broad_norm,BATCH_DS16_H2000_Fimm_norm,BATCH_DS17_H2000_Genmets_norm_relift,BATCH_DS18_MIGRAINE_1_norm_relift,BATCH_DS19_MIGRAINE_2_norm,BATCH_DS2_BOTNIA_T2dgo_norm,BATCH_DS20_SUPER_1_norm_relift,BATCH_DS21_SUPER_2_norm_relift,BATCH_DS22_TWINS_1_norm,BATCH_DS23_TWINS_2_norm_nosymmetric,BATCH_DS24_SUPER_3_norm,BATCH_DS25_BOTNIA_Regeneron_norm,BATCH_DS26_DIREVA_norm,BATCH_DS27_NFBC66_norm,BATCH_DS28_NFBC86_norm,BATCH_DS3_COROGENE_Sanger_norm,BATCH_DS4_FINRISK_Corogene_norm,BATCH_DS5_FINRISK_Engage_norm,BATCH_DS6_FINRISK_FR02_Broad_norm_relift,BATCH_DS7_FINRISK_FR12_norm,BATCH_DS8_FINRISK_Finpcga_norm,BATCH_DS9_FINRISK_Mrpred_norm"
+  }
 
   .extract_uuid <- function(x) {
     m <- regmatches(
