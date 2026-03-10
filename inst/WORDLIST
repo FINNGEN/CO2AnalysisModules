@@ -1,4 +1,5 @@
 ATC
+AgeFirstEvent
 AnalysisModules
 Appender
 CDM
@@ -45,6 +46,8 @@ continuousPValue
 continuousTest
 covariateIds
 datetime
+daysToFirstEvent
+daysToLastEvent
 duckdb
 groupOfCovariatesObject
 gsutil

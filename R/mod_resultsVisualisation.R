@@ -118,7 +118,7 @@ mod_resultsVisualisation_server <- function(id, resultsVisualisationModuleServer
 
     output$cohortsInfo <- reactable::renderReactable({
         cohortsInfo <- analysisResults |> dplyr::tbl('cohortsInfo') |>
-          dplyr::select(-sql, -json) |>
+          dplyr::select(-.data$sql, -.data$json) |>
           dplyr::collect()
         reactable::reactable(cohortsInfo)
     })
