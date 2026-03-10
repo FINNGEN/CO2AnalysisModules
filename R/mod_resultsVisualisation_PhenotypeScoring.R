@@ -2585,7 +2585,7 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
 #' Render Covariates Distribution
 #' @description Renders a plot of the covariates distribution
 #' @param covariatesDistribution A tibble containing the covariates distribution
-#' @metric metric A string indicating the type of data distribution, default is count(number clinical events), and can be AgeFirstEvent, daysToFirstEvent, daysToLastEvent
+#' @param metric A string indicating the type of data distribution, default is count(number clinical events), and can be AgeFirstEvent, daysToFirstEvent, daysToLastEvent
 #' @return A plot of the covariates distribution
 #' @importFrom apexcharter apex ax_chart ax_legend
 .renderCovariatesDistribution <- function(covariatesDistribution, metric = "count") {
