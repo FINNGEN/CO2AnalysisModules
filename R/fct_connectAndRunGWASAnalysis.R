@@ -73,7 +73,7 @@ createSandboxAPIConnection <- function(base_url, token) {
 #' @param analysis_type Specifies type of the analysis to perform (additive, recessive, dominant), Default: 'additive'
 #' @param release PARAM_DESCRIPTION, Default: 'Regenie12'
 #' @export
-#' @importFrom stringr str_detect
+#' @importFrom stringr str_detect str_c
 #' @importFrom dplyr bind_rows
 #' @importFrom tibble tibble
 #' @importFrom readr write_tsv
@@ -98,10 +98,15 @@ runGWASAnalysis <- function(
   # create phenofile
   tmp_path_phenofile = file.path(tempdir(), "phenofile.tsv")
 
-  dplyr::bind_rows(
-    tibble::tibble( FID = cases_finngenids, {{phenotype_name}}:=1),
-    tibble::tibble( FID = controls_finngenids, {{phenotype_name}}:=0)
-  ) |> readr::write_tsv(tmp_path_phenofile)
+  phenofile <- dplyr::bind_rows(
+    tibble::tibble(FID = cases_finngenids, phenotype_value = 1),
+    tibble::tibble(FID = controls_finngenids, phenotype_value = 0)
+  )
+
+  colnames(phenofile)[colnames(phenofile) == "phenotype_value"] <- phenotype_name
+
+  readr::write_tsv(phenofile, tmp_path_phenofile)
+
 
   # prepare api params
   authorization = paste("Bearer", connection_sandboxAPI$token)
