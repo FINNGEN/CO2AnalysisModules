@@ -121,7 +121,6 @@ execute_GWAS <- function(
 
   }
 
-  # there is not database to share
   return(resultToReturn)
 
 }
