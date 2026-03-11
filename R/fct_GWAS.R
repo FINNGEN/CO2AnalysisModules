@@ -107,6 +107,7 @@ execute_GWAS <- function(
     test = analysisType
   )
 
+  resultToReturn = NULL
 
   if (result$status == FALSE){
     ParallelLogger::logInfo("GWAS run completed: ", result)
@@ -116,11 +117,12 @@ execute_GWAS <- function(
 
     # the result contains more detail information, we can record and display that if the result is succesful
     ParallelLogger::logInfo("GWAS run completed: ", result)
+    resultToReturn = result
 
   }
 
   # there is not database to share
-  return(NULL)
+  return(resultToReturn)
 
 }
 
