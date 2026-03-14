@@ -1536,10 +1536,12 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
 
       # testing version. For now no selection by score
       shiny::req(r_groupedCovariates$groupedCovariatesPerPersonTibble)
-      shiny::req(nrow(groupedCovariatesPerPersonTibble) > 0)
 
       groupedCovariatesPerPersonTibble <- .counts_only_per_person()
       setids <- .group_count_cols(groupedCovariatesPerPersonTibble)
+
+      shiny::req(nrow(groupedCovariatesPerPersonTibble) > 0)
+
 
 
       # use the group names
