@@ -125,7 +125,7 @@ mod_resultsVisualisation_PhenotypeScoring_ui <- function(id) {
       # =========================
       shiny::fluidRow(
         shiny::column(
-          width = 8,
+          width = 10,
           tabsetPanel(
             id = ns("scorePlotTabs"),
             tabPanel("Total Score Bar Plot",
@@ -157,7 +157,7 @@ mod_resultsVisualisation_PhenotypeScoring_ui <- function(id) {
         ),
 
         shiny::column(
-          width = 4,
+          width = 2,
           shiny::wellPanel(
             style = "padding: 15px; background-color: #f8f9fa;",
             shiny::h4("Download"),
