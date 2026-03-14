@@ -125,7 +125,7 @@ mod_resultsVisualisation_PhenotypeScoring_ui <- function(id) {
       # =========================
       shiny::fluidRow(
         shiny::column(
-          width = 10,
+          width = 8,
           tabsetPanel(
             id = ns("scorePlotTabs"),
             tabPanel("Total Score Bar Plot",
@@ -138,7 +138,11 @@ mod_resultsVisualisation_PhenotypeScoring_ui <- function(id) {
                        shiny::uiOutput(ns("upsetFlagButtonUI"))
                      )),
             tabPanel("Score Table",
-                     DT::dataTableOutput(ns("totalScoreTable")))
+                     shiny::div(
+                       style = "width: 100%; overflow-x: auto;",
+                       DT::dataTableOutput(ns("totalScoreTable"))
+                      )
+                    )
           ),
 
           shiny::br(),
@@ -157,7 +161,7 @@ mod_resultsVisualisation_PhenotypeScoring_ui <- function(id) {
         ),
 
         shiny::column(
-          width = 2,
+          width = 4,
           shiny::wellPanel(
             style = "padding: 15px; background-color: #f8f9fa;",
             shiny::h4("Download"),
@@ -1732,7 +1736,14 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
           dplyr::rename(Flag = flag)
       }
 
-      DT::datatable(df)
+      DT::datatable(
+        df,
+        options = list(
+          scrollX = TRUE,
+          autoWidth = TRUE,
+          pageLength = 10
+        )
+      )
     })
 
     #
