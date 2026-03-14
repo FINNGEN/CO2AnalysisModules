@@ -1227,6 +1227,15 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
           if (!right$ok) return(right)
 
           if (op %in% c("+", "-")) {
+
+            # allow adding/subtracting numeric constants to/from any unit
+            if (left$unit == "unitless" && right$unit != "unitless") {
+              return(list(ok = TRUE, unit = right$unit))
+            }
+            if (right$unit == "unitless" && left$unit != "unitless") {
+              return(list(ok = TRUE, unit = left$unit))
+            }
+
             # must match units (unitless can only add/sub with unitless)
             if (left$unit != right$unit) {
               return(list(
@@ -1237,6 +1246,7 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
                 )
               ))
             }
+
             return(list(ok = TRUE, unit = left$unit))
           }
 
