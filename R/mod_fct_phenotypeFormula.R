@@ -5,8 +5,12 @@ mod_fct_dragAndDropFormula_ui <- function(id) {
 
     shiny::checkboxInput(
       inputId = ns("showAdvancedVars"),
-      label = "Show advanced metrics (days/age)",
+      label = "Show advanced metrics (days/age/span)",
       value = FALSE
+    ),
+    shiny::tags$div(
+      class = "formula-tip",
+      "Tip: for rate-like scores, use count / spanYearsSafe, e.g. fractureCodes / fractureCodes (spanYearsSafe)."
     ),
 
     shiny::uiOutput(ns("operation_expression")),
@@ -17,6 +21,12 @@ mod_fct_dragAndDropFormula_ui <- function(id) {
         border-radius: 8px;
         padding: 12px;
         background: #fff;
+      }
+
+      #%s .formula-tip {
+        font-size: 12px;
+        color: #6b7280;
+        margin: 2px 0 10px 0;
       }
 
       #%s .formula-drop-hint {
@@ -60,6 +70,7 @@ mod_fct_dragAndDropFormula_ui <- function(id) {
         text-transform: uppercase;
         letter-spacing: .02em;
       }",  ns("operation_expression"),
+          ns("operation_expression"),
           ns("operation_expression"),
           ns("operation_expression"),
           ns("operation_expression"),
@@ -114,7 +125,7 @@ mod_fct_dragAndDropFormula_server <- function(id, r_groupedCovariates, operatorI
     # advanced-only group ids (gX_daysToFirst etc)
     r_groupItems_advanced <- shiny::reactive({
       gi <- r_groupItems_all()
-      gi[grepl("^g\\d+_(daysToFirst|daysToLast|ageFirst)$", gi)]
+      gi[grepl("^g\\d+_(daysToFirst|daysToLast|ageFirst|spanDaysRaw|spanDaysSafe|spanYearsSafe)$", gi)]
     })
 
     output$operation_expression <- shiny::renderUI({
@@ -143,7 +154,12 @@ mod_fct_dragAndDropFormula_server <- function(id, r_groupedCovariates, operatorI
           label = NULL,
           items = {
             gi_all <- r_groupItems_all()
-            toks <- destBoxes() %||% input$dest_boxes
+
+            toks <- destBoxes()
+            if (is.null(toks)) {
+              toks <- input$dest_boxes
+            }
+
             if (is.null(toks) || length(toks) == 0) {
               NULL
             } else {
@@ -157,6 +173,12 @@ mod_fct_dragAndDropFormula_server <- function(id, r_groupedCovariates, operatorI
           placeholder = placeholder
         ),
 
+        htmltools::tags$div(
+          style = "display:flex; gap:8px; margin-bottom:8px;",
+          shiny::actionButton(ns("clearFormula"), "Clear formula", class = "btn btn-outline-secondary btn-sm")
+        ),
+
+
         htmltools::tags$div(class = "palette-title", "Code groups (counts)"),
         shinyjqui::orderInput(
           inputId = ns("source_boxes_counts"),
@@ -169,7 +191,7 @@ mod_fct_dragAndDropFormula_server <- function(id, r_groupedCovariates, operatorI
 
         shiny::conditionalPanel(
           condition = sprintf("input['%s'] === true", ns("showAdvancedVars")),
-          htmltools::tags$div(class = "palette-title", "Advanced metrics (days/age)"),
+          htmltools::tags$div(class = "palette-title", "Advanced metrics (days/age/span)"),
           shinyjqui::orderInput(
             inputId = ns("source_boxes_advanced"),
             width = "100%",
@@ -205,22 +227,28 @@ mod_fct_dragAndDropFormula_server <- function(id, r_groupedCovariates, operatorI
     # Keep destBoxes always in sync with what user has dragged
     shiny::observeEvent(input$dest_boxes, {
       if (is.null(input$dest_boxes) || length(input$dest_boxes) == 0) {
-        destBoxes(NULL)
+        destBoxes(character(0))
       } else if (identical(input$dest_boxes, placeholder)) {
-        destBoxes(NULL)
+        destBoxes(character(0))
       } else {
         destBoxes(input$dest_boxes)
       }
     }, ignoreInit = TRUE)
 
+    # clean formula at once
+    shiny::observeEvent(input$clearFormula, {
+      destBoxes(character(0))
+    })
+
 
     rf_formula <- shiny::reactive({
       shiny::req(r_groupedCovariates$groupedCovariatesTibble)
-      shiny::req(input$dest_boxes)
-      shiny::req(input$dest_boxes != placeholder)
 
-      gi_all <- r_groupItems_all() # full mapping (for pretty labels)
-      expr <- input$dest_boxes
+      expr <- destBoxes()
+      shiny::req(!is.null(expr), length(expr) > 0)
+      shiny::req(!identical(expr, placeholder))
+
+      gi_all <- r_groupItems_all()
 
       expressionNames <- vapply(expr, function(tok) {
         idx <- match(tok, unname(gi_all))
@@ -233,13 +261,14 @@ mod_fct_dragAndDropFormula_server <- function(id, r_groupedCovariates, operatorI
       )
     })
 
+
     set_formula <- function(formula_string = NULL) {
       if (is.null(formula_string)) {
         parsed <- NULL
       } else {
         parsed <- stringr::str_extract_all(
           formula_string,
-          "g\\d+_(?:daysToFirst|daysToLast|ageFirst)|g\\d+|[><=()!&|+\\-*/]+|\\d+\\.?\\d*"
+          "g\\d+_(?:daysToFirst|daysToLast|ageFirst|spanDaysRaw|spanDaysSafe|spanYearsSafe)|g\\d+|[><=()!&|+\\-*/]+|\\d+\\.?\\d*"
         )[[1]]
       }
       destBoxes(parsed)
