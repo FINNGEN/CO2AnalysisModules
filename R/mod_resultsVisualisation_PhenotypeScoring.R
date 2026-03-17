@@ -2542,7 +2542,8 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
 
     # per-person wide table for group
     # make sure counts of 0 which always means that days and spans are NA, are returned as 0 instead of resulting in NA scores
-    # for this _spanDaysSafe to 1 in all cases where count is 0
+    # for this _spanDaysSafe to 1 in all cases where count is 0 or raw span in days is 0 (even if count is 1 for example)
+    # this ensures that the per year normalization reflects the actual count
 
     scoreWide <- countsByPerson |>
       dplyr::rename(!!newGroupId := .data$value) |>
@@ -2563,20 +2564,25 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
       ) |>
       dplyr::mutate(
         !!paste0(newGroupId, "_spanDaysRaw") :=
-          .data[[paste0(newGroupId, "_daysToLast")]] - .data[[paste0(newGroupId, "_daysToFirst")]],
+          .data[[paste0(newGroupId, "_daysToLast")]] -
+          .data[[paste0(newGroupId, "_daysToFirst")]],
 
         !!paste0(newGroupId, "_spanDaysSafe") :=
-          dplyr::if_else(
-            .data[[newGroupId]] == 0,
-            1,
-            pmax(
-              .data[[paste0(newGroupId, "_daysToLast")]] - .data[[paste0(newGroupId, "_daysToFirst")]],
-              1
-            )
+          dplyr::case_when(
+            .data[[newGroupId]] <= 0 ~ 1,
+            is.na(.data[[paste0(newGroupId, "_spanDaysRaw")]]) ~ 1,
+            .data[[paste0(newGroupId, "_spanDaysRaw")]] <= 0 ~ 1,
+            TRUE ~ .data[[paste0(newGroupId, "_spanDaysRaw")]]
           ),
 
         !!paste0(newGroupId, "_spanYearsSafe") :=
-          .data[[paste0(newGroupId, "_spanDaysSafe")]] / 365.25
+          dplyr::case_when(
+            .data[[newGroupId]] <= 0 ~ 1,
+            is.na(.data[[paste0(newGroupId, "_spanDaysRaw")]]) ~ 1,
+            .data[[paste0(newGroupId, "_spanDaysRaw")]] <= 0 ~ 1,
+            TRUE ~ .data[[paste0(newGroupId, "_spanDaysRaw")]] / 365.25
+          )
+
       )
 
     # distributions for span variables
