@@ -1,3 +1,6 @@
+# CO2AnalysisModules 3.2.2
+- Updates for PS
+
 # CO2AnalysisModules 3.2.1
 - Updated to work with CohortGenerator v1
 - Copied gwas functions from FinnGenUtilsR and removed as dependency
