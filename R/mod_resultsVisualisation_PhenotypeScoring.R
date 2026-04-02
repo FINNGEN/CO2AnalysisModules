@@ -32,7 +32,7 @@ mod_resultsVisualisation_PhenotypeScoring_ui <- function(id) {
             shiny::h4("Code Groups Table"),
             shiny::checkboxInput(
               ns("showAdvancedDistributions"),
-              "Show advanced distributions (days/age)",
+              "Show advanced distributions (days/age/span)",
               value = FALSE
             )
           ),
@@ -128,7 +128,10 @@ mod_resultsVisualisation_PhenotypeScoring_ui <- function(id) {
           width = 8,
           tabsetPanel(
             id = ns("scorePlotTabs"),
-            tabPanel("Total Score Bar Plot",
+            tabPanel(
+              "Score Dist Plot",
+              plotly::plotlyOutput(ns("totalScoreRatePlot"), height = "450px")),
+            tabPanel("Score Bin Plot",
                      plotly::plotlyOutput(ns("totalScoreDistributionPlot"), height = "450px")),
             tabPanel("Density Plot",
                      plotly::plotlyOutput(ns("totalScoreDensityPlot"), height = "450px")),
@@ -460,9 +463,10 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
       if (isTRUE(input$showAdvancedDistributions)) {
         toPlot <- toPlot |>
           dplyr::mutate(
-            dist_daysToFirst = covariatesDistribution,
-            dist_daysToLast  = covariatesDistribution,
-            dist_ageFirst    = covariatesDistribution
+            dist_daysToFirst   = covariatesDistribution,
+            dist_daysToLast    = covariatesDistribution,
+            dist_ageFirst      = covariatesDistribution,
+            dist_spanYearsSafe = covariatesDistribution
           )
       }
 
@@ -561,7 +565,9 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
           list(
             dist_daysToFirst = .makeDistCol("daysToFirst", "Days to First Event", width = 300),
             dist_daysToLast  = .makeDistCol("daysToLast",  "Days to Last Event",  width = 300),
-            dist_ageFirst    = .makeDistCol("ageFirst",    "Age First Event",     width = 300)
+            dist_ageFirst    = .makeDistCol("ageFirst",    "Age First Event",     width = 300),
+            dist_spanYearsSafe = .makeDistCol("spanYearsSafe", "Span Years Safe", width = 300)
+
           ),
           after = insert_after
         )
@@ -600,7 +606,7 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
       if (is.null(dist_data) || nrow(dist_data) == 0) return(NULL)
 
       x_title <- .metric_x_title(metric)
-      is_days_metric <- metric %in% c("daysToFirst", "daysToLast")
+      is_days_metric <- metric %in% c("daysToFirst", "daysToLast", "spanDaysRaw", "spanDaysSafe")
 
       # order binned days properly (same as mini plot)
       if (is_days_metric) {
@@ -618,10 +624,13 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
 
       metric_col <- switch(
         metric,
-        count       = group_id,
-        daysToFirst = paste0(group_id, "_daysToFirst"),
-        daysToLast  = paste0(group_id, "_daysToLast"),
-        ageFirst    = paste0(group_id, "_ageFirst"),
+        count         = group_id,
+        daysToFirst   = paste0(group_id, "_daysToFirst"),
+        daysToLast    = paste0(group_id, "_daysToLast"),
+        ageFirst      = paste0(group_id, "_ageFirst"),
+        spanDaysRaw   = paste0(group_id, "_spanDaysRaw"),
+        spanDaysSafe  = paste0(group_id, "_spanDaysSafe"),
+        spanYearsSafe = paste0(group_id, "_spanYearsSafe"),
         group_id
       )
 
@@ -1141,6 +1150,9 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
           add_if_exists(paste0(ids[i], "_daysToFirst"), paste0(names[i], " (daysToFirst)"))
           add_if_exists(paste0(ids[i], "_daysToLast"),  paste0(names[i], " (daysToLast)"))
           add_if_exists(paste0(ids[i], "_ageFirst"),    paste0(names[i], " (ageFirst)"))
+          #add_if_exists(paste0(ids[i], "_spanDaysRaw"),   paste0(names[i], " (spanDaysRaw)"))
+          #add_if_exists(paste0(ids[i], "_spanDaysSafe"),  paste0(names[i], " (spanDaysSafe)"))
+          add_if_exists(paste0(ids[i], "_spanYearsSafe"), paste0(names[i], " (spanYearsSafe)"))
         }
       }
 
@@ -1177,7 +1189,8 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
     # determine the unit of the variable (token)
     .get_token_unit <- function(token) {
       if (grepl("^g\\d+_daysTo(First|Last)$", token)) return("days")
-      if (grepl("^g\\d+_ageFirst$", token)) return("years")
+      if (grepl("^g\\d+_spanDays(Raw|Safe)$", token)) return("days")
+      if (grepl("^g\\d+_(ageFirst|spanYearsSafe)$", token)) return("years")
       if (grepl("^g\\d+$", token)) return("count")
       "unknown"
     }
@@ -1456,6 +1469,7 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
       shiny::req(r_groupedCovariates$groupedCovariatesPerPersonTibble |> nrow() > 0)
       shiny::req(r_groupedCovariates$groupedCovariatesPerPersonTibble_totalScore)
 
+
       groupedCovariatesPerPersonTibble <- r_groupedCovariates$groupedCovariatesPerPersonTibble |>
         dplyr::left_join(r_groupedCovariates$groupedCovariatesPerPersonTibble_totalScore, by = "personSourceValue")
 
@@ -1485,6 +1499,41 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
     # When r_groupedCovariates is ready or slider is changed, plot the total score distribution, if flag is available, add flag to the plot
     #
 
+    output$totalScoreRatePlot <- plotly::renderPlotly({
+      shiny::req(r_groupedCovariates$groupedCovariatesPerPersonTibble_totalScore)
+      shiny::req(input$scoreRange)
+
+      df <- r_groupedCovariates$groupedCovariatesPerPersonTibble_totalScore |>
+        dplyr::filter(
+          is.finite(totalScore),
+          totalScore >= input$scoreRange[1],
+          totalScore <= input$scoreRange[2]
+        ) |>
+        dplyr::mutate(
+          flag = r_groupedCovariates$groupedCovariatesPerPersonTibble_flag$flag[
+            match(
+              personSourceValue,
+              r_groupedCovariates$groupedCovariatesPerPersonTibble_flag$personSourceValue
+            )
+          ] %||% "no-flag"
+        )
+
+      flagsTable <- rf_flagsTable() |>
+        dplyr::bind_rows(tibble::tibble(flagName = "no-flag", flagColor = "grey"))
+
+      p <- ggplot2::ggplot(df, ggplot2::aes(x = totalScore, fill = flag)) +
+        ggplot2::geom_histogram(position = "stack", bins = 30, color = "white") +
+        ggplot2::scale_fill_manual(values = stats::setNames(flagsTable$flagColor, flagsTable$flagName)) +
+        ggplot2::theme_minimal() +
+        ggplot2::labs(
+          x = "Total Score",
+          y = "Number of Patients",
+          title = "Score distribution"
+        )
+
+      plotly::ggplotly(p)
+    })
+
     output$totalScoreDistributionPlot <- plotly::renderPlotly({
       shiny::req(r_groupedCovariates$groupedCovariatesPerPersonTibble |> nrow() > 0)
       shiny::req(input$scoreRange)
@@ -1513,7 +1562,7 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
         ggplot2::scale_fill_manual(values = setNames(flagsTable$flagColor, flagsTable$flagName)) +
         #ggplot2::scale_alpha_identity(guide = "none") +
         ggplot2::theme_minimal() +
-        ggplot2::labs(x = "Total Score", y = "Number of Patients") +
+        ggplot2::labs(x = "Total Score (binned)", y = "Number of Patients") +
         ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45, hjust = 1))
 
       plotly::ggplotly(p) |> plotly::layout(legend = list(title = list(text = "Flag and score")))
@@ -1754,42 +1803,84 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
       shiny::req(r_groupedCovariates$groupedCovariatesPerPersonTibble_totalScore)
 
       groupedCovariatesPerPersonTibble <- r_groupedCovariates$groupedCovariatesPerPersonTibble |>
-        dplyr::left_join(r_groupedCovariates$groupedCovariatesPerPersonTibble_totalScore, by = "personSourceValue")
+        dplyr::left_join(
+          r_groupedCovariates$groupedCovariatesPerPersonTibble_totalScore,
+          by = "personSourceValue"
+        )
+
+      # Total patients
+      nTotal <- nrow(groupedCovariatesPerPersonTibble)
+
+      # Selected patients
+      df_selected <- groupedCovariatesPerPersonTibble |>
+        dplyr::filter(
+          totalScore >= input$scoreRange[1],
+          totalScore <= input$scoreRange[2]
+        )
+
+      nSelected <- nrow(df_selected)
+
+      # Percentage
+      pct <- if (nTotal > 0) round(100 * nSelected / nTotal, 1) else 0
+
+      if (nrow(rf_flagsTable()) > 0) {
+
+        groupedCovariatesPerPersonTibble <- groupedCovariatesPerPersonTibble |>
+          dplyr::left_join(
+            r_groupedCovariates$groupedCovariatesPerPersonTibble_flag,
+            by = "personSourceValue"
+          )
+
+        df_selected <- groupedCovariatesPerPersonTibble |>
+          dplyr::filter(
+            totalScore >= input$scoreRange[1],
+            totalScore <= input$scoreRange[2]
+          )
+
+        countsByFlag <- df_selected |>
+          dplyr::group_by(flag) |>
+          dplyr::summarise(n = dplyr::n(), .groups = "drop")
+
+        flag_text <- if (nrow(countsByFlag) > 0) {
+          paste0(
+            apply(countsByFlag, 1, function(x) paste0(x["flag"], ": ", x["n"])),
+            collapse = "; "
+          )
+        } else {
+          ""
+        }
 
 
-      # Count subjects in the selected range
-      nSelected <- groupedCovariatesPerPersonTibble |>
-        dplyr::filter(totalScore >= input$scoreRange[1], totalScore <= input$scoreRange[2]) |>
-        nrow()
+        if (nSelected == nTotal) {
+          dispText <- paste0(
+            "All patients selected: ", nTotal,
+            "<br>",
+            "[ Counts by flag: ", flag_text, " ]",
+            "<br>"
+          )
+        } else {
+          dispText <- paste0(
+            "Selected patients: ", nSelected, " of ", nTotal, " (", pct, "%)",
+            "<br>",
+            "[ Counts by flag: ", flag_text, " ]",
+            "<br>"
+          )
+        }
 
-     if(nrow(rf_flagsTable()) > 0){
+      } else {
 
-       groupedCovariatesPerPersonTibble <-  groupedCovariatesPerPersonTibble |>
-         dplyr::left_join(r_groupedCovariates$groupedCovariatesPerPersonTibble_flag, by = "personSourceValue")
-
-       df_selected <- groupedCovariatesPerPersonTibble |>
-         dplyr::filter(totalScore >= input$scoreRange[1], totalScore <= input$scoreRange[2])
-
-       # Counts by flag
-       countsByFlag <- df_selected |>
-         dplyr::group_by(flag) |>
-         dplyr::summarise(n = dplyr::n(), .groups = "drop")
-
-
-       flag_text <- if(nrow(countsByFlag) > 0){
-         paste0(apply(countsByFlag, 1, function(x) paste0(x["flag"], ": ", x["n"])), collapse = "; ")
-       } else {
-         ""
-       }
-       dispText = paste0("Number of patients selected: ", nSelected, "<br>", "[ Counts by flag: ",flag_text," ]","<br>")
-
-     }else{
-
-       dispText = paste0("Number of patients selected: ", nSelected)
-     }
+        if (nSelected == nTotal) {
+          dispText <- paste0("All patients selected: ", nTotal)
+        } else {
+          dispText <- paste0(
+            "Selected patients: ", nSelected, " of ", nTotal, " (", pct, "%)"
+          )
+        }
+      }
 
       htmltools::HTML(dispText)
     })
+
 
     #
     # Populate the download choices with the added flags
@@ -2300,6 +2391,26 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
       dplyr::select(.data$analysisId) |>
       dplyr::distinct()
 
+    cohortEntryDateAnalysisIds <- analysisRef |>
+      dplyr::filter(.data$analysisType == "CohortEntryDate") |>
+      dplyr::select(.data$analysisId) |>
+      dplyr::distinct()
+
+    firstEventDateAnalysisIds <- analysisRef |>
+      dplyr::filter(.data$analysisType == "FirstEventDate") |>
+      dplyr::select(.data$analysisId) |>
+      dplyr::distinct()
+
+    lastEventDateAnalysisIds <- analysisRef |>
+      dplyr::filter(.data$analysisType == "LastEventDate") |>
+      dplyr::select(.data$analysisId) |>
+      dplyr::distinct()
+
+    endOfFollowUpAnalysisIds <- analysisRef |>
+      dplyr::filter(.data$analysisType == "EndOfFollowUp") |>
+      dplyr::select(.data$analysisId) |>
+      dplyr::distinct()
+
     # all persons in CASE cohort
     allPersons <- personLevelData |>
       dplyr::filter(.data$cohortDefinitionId == !!caseCohortId) |>
@@ -2380,13 +2491,21 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
     }
 
 
-    # Event COUNTS per person
+    # Event COUNTS per person, but deduplicate if the same count comes from multiple sources
     countsByPerson <- personLevelData |>
       dplyr::filter(.data$cohortDefinitionId == !!caseCohortId) |>
       dplyr::inner_join(countsAnalysisIds, by = "analysisId") |>
       dplyr::filter(.data$conceptId %in% !!conceptIds) |>
+      dplyr::group_by(.data$personSourceValue, .data$conceptId) |>
+      dplyr::summarise(
+        value = max(.data$value, na.rm = TRUE),
+        .groups = "drop"
+      ) |>
       dplyr::group_by(.data$personSourceValue) |>
-      dplyr::summarise(value = sum(.data$value, na.rm = TRUE), .groups = "drop")
+      dplyr::summarise(
+        value = sum(.data$value, na.rm = TRUE),
+        .groups = "drop"
+      )
 
     countsByPerson <- allPersons |>
       dplyr::left_join(countsByPerson, by = "personSourceValue") |>
@@ -2448,16 +2567,145 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
     dist_ageFirst <- ageFirstByPerson  |>
       dplyr::count(.data$value, sort = TRUE)
 
+    # CohortEntryDate: one value per person, conceptId is expected to be 0 since the cohort entry date
+    # is the same for all concepts for each individual (it does not vary according to concept ids). So we don't filter
+    # the concept ids to be only those in the group and take the minimum cohort entry per person (for all concepts)
+
+    cohortEntryDateByPerson <- personLevelData |>
+      dplyr::filter(.data$cohortDefinitionId == !!caseCohortId) |>
+      dplyr::inner_join(cohortEntryDateAnalysisIds, by = "analysisId") |>
+      dplyr::group_by(.data$personSourceValue) |>
+      dplyr::summarise(
+        value = min(.data$dateValue, na.rm = TRUE),
+        .groups = "drop"
+      )
+
+    cohortEntryDateByPerson <- allPersons |>
+      dplyr::left_join(cohortEntryDateByPerson, by = "personSourceValue") |>
+      dplyr::collect() |>
+      dplyr::mutate(value = as.Date(.data$value))
+
+    # FirstEventDate: earliest event date among selected concepts
+    firstEventDateByPerson <- personLevelData |>
+      dplyr::filter(.data$cohortDefinitionId == !!caseCohortId) |>
+      dplyr::inner_join(firstEventDateAnalysisIds, by = "analysisId") |>
+      dplyr::filter(.data$conceptId %in% !!conceptIds) |>
+      dplyr::group_by(.data$personSourceValue) |>
+      dplyr::summarise(
+        value = min(.data$dateValue, na.rm = TRUE),
+        .groups = "drop"
+      )
+
+    firstEventDateByPerson <- allPersons |>
+      dplyr::left_join(firstEventDateByPerson, by = "personSourceValue") |>
+      dplyr::collect() |>
+      dplyr::mutate(value = as.Date(.data$value))
+
+    # LastEventDate: latest event date among selected concepts
+    lastEventDateByPerson <- personLevelData |>
+      dplyr::filter(.data$cohortDefinitionId == !!caseCohortId) |>
+      dplyr::inner_join(lastEventDateAnalysisIds, by = "analysisId") |>
+      dplyr::filter(.data$conceptId %in% !!conceptIds) |>
+      dplyr::group_by(.data$personSourceValue) |>
+      dplyr::summarise(
+        value = max(.data$dateValue, na.rm = TRUE),
+        .groups = "drop"
+      )
+
+    lastEventDateByPerson <- allPersons |>
+      dplyr::left_join(lastEventDateByPerson, by = "personSourceValue") |>
+      dplyr::collect() |>
+      dplyr::mutate(value = as.Date(.data$value))
+
+    # EndOfFollowUp: one value per person, not concept-specific like cohort entry date
+    endOfFollowUpByPerson <- personLevelData |>
+      dplyr::filter(.data$cohortDefinitionId == !!caseCohortId) |>
+      dplyr::inner_join(endOfFollowUpAnalysisIds, by = "analysisId") |>
+      dplyr::group_by(.data$personSourceValue) |>
+      dplyr::summarise(
+        value = max(.data$dateValue, na.rm = TRUE),
+        .groups = "drop"
+      )
+
+    endOfFollowUpByPerson <- allPersons |>
+      dplyr::left_join(endOfFollowUpByPerson, by = "personSourceValue") |>
+      dplyr::collect() |>
+      dplyr::mutate(value = as.Date(.data$value))
+
 
     # per-person wide table for group
+    # make sure counts of 0 which always means that days and spans are NA, are returned as 0 instead of resulting in NA scores
+    # for this _spanDaysSafe to 1 in all cases where count is 0 or raw span in days is 0 (even if count is 1 for example)
+    # this ensures that the per year normalization reflects the actual count
+
     scoreWide <- countsByPerson |>
       dplyr::rename(!!newGroupId := .data$value) |>
-      dplyr::left_join(daysFirstByPerson |> dplyr::rename(!!paste0(newGroupId, "_daysToFirst") := .data$value),
-                       by = "personSourceValue") |>
-      dplyr::left_join(daysLastByPerson  |> dplyr::rename(!!paste0(newGroupId, "_daysToLast") := .data$value),
-                       by = "personSourceValue") |>
-      dplyr::left_join(ageFirstByPerson  |> dplyr::rename(!!paste0(newGroupId, "_ageFirst") := .data$value),
-                       by = "personSourceValue")
+      dplyr::left_join(
+        daysFirstByPerson |>
+          dplyr::rename(!!paste0(newGroupId, "_daysToFirst") := .data$value),
+        by = "personSourceValue"
+      ) |>
+      dplyr::left_join(
+        daysLastByPerson |>
+          dplyr::rename(!!paste0(newGroupId, "_daysToLast") := .data$value),
+        by = "personSourceValue"
+      ) |>
+      dplyr::left_join(
+        ageFirstByPerson |>
+          dplyr::rename(!!paste0(newGroupId, "_ageFirst") := .data$value),
+        by = "personSourceValue"
+      ) |>
+      dplyr::left_join(
+        cohortEntryDateByPerson |>
+          dplyr::rename(!!paste0(newGroupId, "_cohortEntryDate") := .data$value),
+        by = "personSourceValue"
+      ) |>
+      dplyr::left_join(
+        firstEventDateByPerson |>
+          dplyr::rename(!!paste0(newGroupId, "_firstEventDate") := .data$value),
+        by = "personSourceValue"
+      ) |>
+      dplyr::left_join(
+        lastEventDateByPerson |>
+          dplyr::rename(!!paste0(newGroupId, "_lastEventDate") := .data$value),
+        by = "personSourceValue"
+      ) |>
+      dplyr::left_join(
+        endOfFollowUpByPerson |>
+          dplyr::rename(!!paste0(newGroupId, "_endOfFollowUp") := .data$value),
+        by = "personSourceValue"
+      ) |>
+      dplyr::mutate(
+        !!paste0(newGroupId, "_spanDaysRaw") :=
+          .data[[paste0(newGroupId, "_daysToLast")]] -
+          .data[[paste0(newGroupId, "_daysToFirst")]],
+
+        !!paste0(newGroupId, "_spanDaysSafe") :=
+          dplyr::case_when(
+            .data[[newGroupId]] <= 0 ~ 1,
+            is.na(.data[[paste0(newGroupId, "_spanDaysRaw")]]) ~ 1,
+            .data[[paste0(newGroupId, "_spanDaysRaw")]] <= 0 ~ 1,
+            TRUE ~ .data[[paste0(newGroupId, "_spanDaysRaw")]]
+          ),
+
+        !!paste0(newGroupId, "_spanYearsSafe") :=
+          dplyr::case_when(
+            .data[[newGroupId]] <= 0 ~ 1,
+            is.na(.data[[paste0(newGroupId, "_spanDaysRaw")]]) ~ 1,
+            .data[[paste0(newGroupId, "_spanDaysRaw")]] <= 0 ~ 1,
+            TRUE ~ .data[[paste0(newGroupId, "_spanDaysRaw")]] / 365.25
+          )
+
+      )
+
+    # distributions for span variables
+    dist_spanDaysRaw <- .bin_days_human(scoreWide[[paste0(newGroupId, "_spanDaysRaw")]])
+    dist_spanDaysSafe <- .bin_days_human(scoreWide[[paste0(newGroupId, "_spanDaysSafe")]])
+
+    dist_spanYearsSafe <- scoreWide |>
+      dplyr::transmute(value = .data[[paste0(newGroupId, "_spanYearsSafe")]]) |>
+      dplyr::filter(!is.na(.data$value)) |>
+      dplyr::count(.data$value, sort = TRUE)
 
 
     # store all distributions in one list
@@ -2465,7 +2713,10 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
       count = dist_counts,
       daysToFirst = dist_daysFirst,
       daysToLast = dist_daysLast,
-      ageFirst = dist_ageFirst
+      ageFirst = dist_ageFirst,
+      spanDaysRaw = dist_spanDaysRaw,
+      spanDaysSafe = dist_spanDaysSafe,
+      spanYearsSafe = dist_spanYearsSafe
     )
 
     # group metadata
@@ -2486,6 +2737,7 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
 
 
     groupedCovariatesTibble <- dplyr::bind_rows(groupedCovariatesTibble, groupTibble)
+
 
     if (is.null(groupedCovariatesPerPersonTibble)) {
       groupedCovariatesPerPersonTibble <- scoreWide
@@ -2537,7 +2789,14 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
       groupIdToDelete,
       paste0(groupIdToDelete, "_daysToFirst"),
       paste0(groupIdToDelete, "_daysToLast"),
-      paste0(groupIdToDelete, "_ageFirst")
+      paste0(groupIdToDelete, "_ageFirst"),
+      paste0(groupIdToDelete, "_cohortEntryDate"),
+      paste0(groupIdToDelete, "_firstEventDate"),
+      paste0(groupIdToDelete, "_lastEventDate"),
+      paste0(groupIdToDelete, "_endOfFollowUp"),
+      paste0(groupIdToDelete, "_spanDaysRaw"),
+      paste0(groupIdToDelete, "_spanDaysSafe"),
+      paste0(groupIdToDelete, "_spanYearsSafe")
     )
     groupedCovariatesPerPersonTibble <- groupedCovariatesPerPersonTibble |>
       dplyr::select(-dplyr::any_of(cols_to_drop))
@@ -2597,9 +2856,28 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
     breaks <- c(b - 0.5, b + 0.5)
   }
 
-  # Bin scores
+  # Create explicit bin labels to avoid Range_1 / Range_2 style labels
+  breaks_label <- round(breaks, 2)
+
+  lefts <- head(breaks_label, -1)
+  rights <- tail(breaks_label, -1)
+
+  bin_labels <- paste0("(", lefts, ", ", rights, "]")
+  if (length(bin_labels) > 0) {
+    bin_labels[1] <- paste0("[", lefts[1], ", ", rights[1], "]")
+  }
+
+
+  # Bin scores with explicit labels
   groupedCovariatesPerPersonTibble_totalScore <- groupedCovariatesPerPersonTibble_totalScore |>
-    dplyr::mutate(totalScoreBin = cut(totalScore, breaks = breaks, include.lowest = TRUE)) |>
+    dplyr::mutate(
+      totalScoreBin = base::cut(
+        totalScore,
+        breaks = breaks,
+        include.lowest = TRUE,
+        labels = bin_labels
+        )
+      ) |>
     dplyr::select(personSourceValue, totalScore, totalScoreBin)
 
   return(groupedCovariatesPerPersonTibble_totalScore)
@@ -2623,7 +2901,7 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
   if (!all(c("value", "n") %in% colnames(dist))) return(NULL)
 
   x_title <- .metric_x_title(metric)
-  is_days_metric <- metric %in% c("daysToFirst", "daysToLast")
+  is_days_metric <- metric %in% c("daysToFirst", "daysToLast", "spanDaysRaw", "spanDaysSafe")
 
   val_num <- suppressWarnings(as.numeric(dist$value))
   has_numeric <- all(!is.na(val_num))
@@ -2716,6 +2994,7 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
     daysToFirst = "Days to First (binned)",
     daysToLast  = "Days to Last (binned)",
     ageFirst    = "Age at First (years)",
+    spanYearsSafe = "Span Years Safe (from minimum days span set to 1)",
     "Value"
   )
 }
@@ -2734,11 +3013,19 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
 }
 
 .group_all_cols_for_id <- function(groupId) {
-  # includes gX and all gX_* suffix columns
-  c(groupId,
+  c(
+    groupId,
     paste0(groupId, "_daysToFirst"),
     paste0(groupId, "_daysToLast"),
-    paste0(groupId, "_ageFirst"))
+    paste0(groupId, "_ageFirst"),
+    paste0(groupId, "_cohortEntryDate"),
+    paste0(groupId, "_firstEventDate"),
+    paste0(groupId, "_lastEventDate"),
+    paste0(groupId, "_endOfFollowUp"),
+    paste0(groupId, "_spanDaysRaw"),
+    paste0(groupId, "_spanDaysSafe"),
+    paste0(groupId, "_spanYearsSafe")
+  )
 }
 
 .rename_group_count_cols_to_names <- function(df, groups_tbl) {
@@ -2756,31 +3043,29 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
 
   cn <- names(df)
 
-  # Columns that are group metrics:
-  # gX, gX_daysToFirst, gX_daysToLast, gX_ageFirst
-  is_group_col <- grepl("^g\\d+(?:_(?:daysToFirst|daysToLast|ageFirst))?$", cn)
+  is_group_col <- grepl(
+    "^g\\d+(?:_(?:daysToFirst|daysToLast|ageFirst|cohortEntryDate|firstEventDate|lastEventDate|endOfFollowUp|spanDaysRaw|spanDaysSafe|spanYearsSafe))?$",
+    cn
+  )
   if (!any(is_group_col)) return(df)
 
   group_cols <- cn[is_group_col]
 
-  # Extract base id (gX) and suffix (_daysToFirst etc)
-  base_id <- sub("_(?:daysToFirst|daysToLast|ageFirst)$", "", group_cols)
-  suffix  <- sub("^g\\d+", "", group_cols)
+  base_id <- sub(
+    "_(?:daysToFirst|daysToLast|ageFirst|cohortEntryDate|firstEventDate|lastEventDate|endOfFollowUp|spanDaysRaw|spanDaysSafe|spanYearsSafe)$",
+    "",
+    group_cols
+  )
+  suffix <- sub("^g\\d+", "", group_cols)
 
-  # Map base id -> groupName
   map <- setNames(groups_tbl$groupName, groups_tbl$groupId)
   new_base <- unname(map[base_id])
 
-  # If missing mapping, keep original base id
   new_base[is.na(new_base) | !nzchar(new_base)] <- base_id[is.na(new_base) | !nzchar(new_base)]
 
-  # Build new names
   new_names <- paste0(new_base, suffix)
-
-  # Avoid duplicates (can happen if two groups share same name)
   new_names <- make.unique(new_names, sep = "__")
 
   names(df)[match(group_cols, cn)] <- new_names
   df
 }
-
