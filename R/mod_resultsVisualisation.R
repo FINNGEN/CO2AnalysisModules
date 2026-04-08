@@ -27,15 +27,19 @@ mod_resultsVisualisation_ui <- function(id, resultsVisualisationModuleUi, pathTo
   header <-
     shinydashboard::dashboardHeader(title = title, headerContent)
 
-  sidebarMenu <-
-    shinydashboard::sidebarMenu(
-      id = ns("tabs"),
-      shinydashboard::menuItem(text = title, tabName = "module", icon = shiny::icon("table")),
-      shinydashboard::menuItem(text = "About", tabName = "about"),
-      shinydashboard::menuItem(text = "Study details", tabName = "cohortsInfo"),
-      shinydashboard::menuItem("App Logs", icon = shiny::icon("info-circle"), href = logshref),
-      selected = "module"
-    )
+  # sidebarMenu <-
+  #   shinydashboard::sidebarMenu(
+  #     id = ns("tabs"),
+  #     shinydashboard::menuItem(text = title, tabName = "module", icon = shiny::icon("table")),
+  #     shinydashboard::menuItem(text = "About", tabName = "about"),
+  #     shinydashboard::menuItem(text = "Study details", tabName = "cohortsInfo"),
+  #     shiny::uiOutput(ns("download_results_menu_ui")),
+  #     shinydashboard::menuItem("App Logs", icon = shiny::icon("info-circle"), href = logshref),
+  #     selected = "module"
+  #   )
+
+  # make side bar menu dynamic
+  sidebarMenu <- shinydashboard::sidebarMenuOutput(ns("sidebarMenu"))
 
   # Side bar code
   sidebar <-
@@ -71,6 +75,7 @@ mod_resultsVisualisation_ui <- function(id, resultsVisualisationModuleUi, pathTo
 
   # body
   body <- shinydashboard::dashboardBody(
+    shinyjs::useShinyjs(),
     bodyTabItems
   )
 
@@ -104,10 +109,67 @@ mod_resultsVisualisation_ui <- function(id, resultsVisualisationModuleUi, pathTo
 #'
 #' @export
 #'
-mod_resultsVisualisation_server <- function(id, resultsVisualisationModuleServer, analysisResults) {
+mod_resultsVisualisation_server <- function(id, resultsVisualisationModuleServer, analysisResults, title, logshref) {
 
 
   shiny::moduleServer(id, function(input, output, session) {
+
+    # add duckdb resource for downloading from menu
+    db_path <- getOption("CO2AnalysisModules.pathToResultsDatabase", default = "")
+    shiny::req(nzchar(db_path), file.exists(db_path))
+
+    analysisType <- getOption("CO2AnalysisModules.analysisType", default = "analysis")
+    sanitized <- gsub("[^[:alnum:]]+", "_", analysisType)
+    sanitized <- gsub("^_+|_+$", "", sanitized)
+    download_name <- paste0(sanitized, "_analysisResults.duckdb")
+
+    download_dir <- file.path(tempdir(), paste0("viewer_download_", session$token))
+    dir.create(download_dir, recursive = TRUE, showWarnings = FALSE)
+
+    served_file <- file.path(download_dir, download_name)
+    ok <- file.copy(db_path, served_file, overwrite = TRUE)
+    if (!isTRUE(ok) || !file.exists(served_file) || file.info(served_file)$size == 0) {
+      stop("Failed to prepare downloadable DuckDB file.")
+    }
+
+    resource_prefix <- paste0("duckdbdownload_", session$token)
+    shiny::addResourcePath(resource_prefix, download_dir)
+
+    # TODO: Sidebar download link causes brief visual tab blink before returning to module, it should be improved another time.
+    # Downloading works from both the menu (now made dynamic) and inside study details
+
+    output$sidebarMenu <- shinydashboard::renderMenu({
+      shinydashboard::sidebarMenu(
+        id = session$ns("tabs"),
+        shinydashboard::menuItem(
+          text = title,
+          tabName = "module",
+          icon = shiny::icon("table")
+        ),
+        shinydashboard::menuItem(
+          text = "About",
+          tabName = "about"
+        ),
+        shinydashboard::menuItem(
+          text = "Study details",
+          tabName = "cohortsInfo"
+        ),
+        shinydashboard::menuItem(
+          text = "Download results",
+          icon = shiny::icon("download"),
+          href = paste0("/", resource_prefix, "/", download_name)
+        ),
+        shinydashboard::menuItem(
+          text = "App Logs",
+          icon = shiny::icon("info-circle"),
+          href = logshref
+        ),
+        selected = "module"
+      )
+    })
+
+
+
 
     output$analysisInfo <- reactable::renderReactable({
       analysisInfoTable <- analysisResults |> dplyr::tbl('analysisInfo') |> dplyr::collect()
@@ -220,7 +282,6 @@ mod_resultsVisualisation_server <- function(id, resultsVisualisationModuleServer
         ParallelLogger::logInfo("[viewer] Download duckdb: ", db_path)
       }
     )
-
 
 
     resultsVisualisationModuleServer(id, analysisResults)

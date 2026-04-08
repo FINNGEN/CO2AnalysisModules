@@ -35,6 +35,7 @@ app_server <- function(input, output, session) {
     # get parameters from options
     analysisTypeFromOptions <- getOption("CO2AnalysisModules.analysisType")
     pathToResultsDatabaseFromOptions <- getOption("CO2AnalysisModules.pathToResultsDatabase")
+    pathToLogsFromOptions <- getOption("CO2AnalysisModules.pathToLogs")
 
     # if parameters empty or have change, the update and reload
     if (
@@ -75,19 +76,19 @@ app_server <- function(input, output, session) {
 
         # load module server based on analysisType
         if (analysisTypeFromOptions == "cohortOverlaps") {
-          mod_resultsVisualisation_server("cohortOverlaps", mod_resultsVisualisation_CohortsOverlaps_server, analysisResults)
+          mod_resultsVisualisation_server("cohortOverlaps", mod_resultsVisualisation_CohortsOverlaps_server, analysisResults, "Cohort Overlaps", pathToLogsFromOptions)
         }
         if (analysisTypeFromOptions == "cohortDemographics") {
-          mod_resultsVisualisation_server("cohortDemographics", mod_resultsVisualisation_CohortsDemographics_server, analysisResults)
+          mod_resultsVisualisation_server("cohortDemographics", mod_resultsVisualisation_CohortsDemographics_server, analysisResults,"Cohort Demographics", pathToLogsFromOptions)
         }
         if (analysisTypeFromOptions == "codeWAS") {
-          mod_resultsVisualisation_server("codeWAS", mod_resultsVisualisation_CodeWAS_server, analysisResults)
+          mod_resultsVisualisation_server("codeWAS", mod_resultsVisualisation_CodeWAS_server, analysisResults, "CodeWAS", pathToLogsFromOptions)
         }
         if (analysisTypeFromOptions == "timeCodeWAS") {
-          mod_resultsVisualisation_server("timeCodeWAS", mod_resultsVisualisation_TimeCodeWAS_server, analysisResults)
+          mod_resultsVisualisation_server("timeCodeWAS", mod_resultsVisualisation_TimeCodeWAS_server, analysisResults, "TimeCodeWAS", pathToLogsFromOptions)
         }
         if (analysisTypeFromOptions == "phenotypeScoring") {
-          mod_resultsVisualisation_server("phenotypeScoring", mod_resultsVisualisation_PhenotypeScoring_server, analysisResults)
+          mod_resultsVisualisation_server("phenotypeScoring", mod_resultsVisualisation_PhenotypeScoring_server, analysisResults, "Phenotype Scoring", pathToLogsFromOptions)
         }
       }
     }
