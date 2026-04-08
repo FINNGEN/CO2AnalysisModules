@@ -100,6 +100,7 @@ mod_resultsVisualisation_ui <- function(id, resultsVisualisationModuleUi, pathTo
 #' @importFrom shiny moduleServer
 #' @importFrom dplyr tbl select collect
 #' @importFrom reactable renderReactable
+#' @importFrom rlang .data
 #'
 #' @export
 #'
@@ -120,15 +121,15 @@ mod_resultsVisualisation_server <- function(id, resultsVisualisationModuleServer
 
     output$cohortsInfo <- reactable::renderReactable({
         cohortsInfo <- analysisResults |> dplyr::tbl('cohortsInfo') |>
-          dplyr::select(-sql, -json) |>
+          dplyr::select(-.data$sql, -.data$json) |>
           dplyr::collect()
         reactable::reactable(cohortsInfo)
     })
 
     output$usedCohortsInfo <- shiny::renderUI({
       countsTable <- analysisResults |> dplyr::tbl('cohortsInfo') |>
-        dplyr::filter(!is.na(use) & use != "") |>
-        dplyr::select(use, shortName, cohortName, cohortSubjects, cohortEntries) |>
+        dplyr::filter(!is.na(.data$use) & .data$use != "") |>
+        dplyr::select(.data$use, .data$shortName,  .data$cohortName,  .data$cohortSubjects,  .data$cohortEntries) |>
         dplyr::collect()
 
       shiny::tagList(

@@ -2,7 +2,7 @@
 % Please edit documentation in R/fct_GWAS.R
 \name{execute_GWAS}
 \alias{execute_GWAS}
-\title{execute_CodeWAS}
+\title{execute_GWAS}
 \usage{
 execute_GWAS(exportFolder, cohortTableHandler, analysisSettings)
 }

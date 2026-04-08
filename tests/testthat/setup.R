@@ -103,3 +103,15 @@ message("************* Testing on: ")
 message("Database: ", testingDatabase)
 message("CO2 Analysis Modules Configuration: ", testingCO2AnalysisModulesConfig)
 
+
+
+if (interactive()) {
+  options(
+    "hadesextras.cohortTableHandlerConfig" = test_cohortTableHandlerConfig
+  )
+} else {
+  withr::local_options(
+    "hadesextras.cohortTableHandlerConfig" = test_cohortTableHandlerConfig,
+    .local_envir = teardown_env()
+  )
+}

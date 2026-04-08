@@ -20,7 +20,7 @@ test_that("executeGWAS error if no token", {
     description = "Cases-cohort: fracture; Controls-cohort: fracture-controls (db: Eunomia GiBleed)",
     analysisType = "additive",
     release = "Regenie12",
-    connectionSandboxAPI = FinnGenUtilsR::createSandboxAPIConnection(
+    connectionSandboxAPI = createSandboxAPIConnection(
       base_url = "https://sandbox-api.finngen.fi/api/v1/",
       token = "1234567890"
     )
@@ -35,6 +35,6 @@ test_that("executeGWAS error if no token", {
         analysisSettings = analysisSettings
       )
     },
-    "GWAS run failedConnection in connection_sandboxAPI"
+    "Could not detect RED sandbox bucket from shell output"
   )
 })

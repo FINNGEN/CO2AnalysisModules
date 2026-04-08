@@ -402,7 +402,7 @@ test_that("executeCodeWAS works when n multiple events per subject", {
 
   # Match to sex and bday, match ratio 10
   subsetDef <- CohortGenerator::createCohortSubsetDefinition(
-    name = "",
+    name = "match",
     definitionId = 1,
     subsetOperators = list(
       HadesExtras::createMatchingSubset(

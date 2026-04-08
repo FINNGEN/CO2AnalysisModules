@@ -7,11 +7,21 @@
 .getcodeWasCovariatesTibble(analysisResults)
 }
 \arguments{
-\item{analysisResults}{A database connection containing analysis results tables}
+\item{analysisResults}{An Andromeda object (DuckDB-backed) containing the FeatureExtraction
+result tables: \code{analysisRef}, \code{conceptRef}, \code{covariates}, \code{cohortCounts},
+\code{personLevelData}, and \code{statisticalTests}.}
 }
 \value{
 A tibble containing all covariates data with reference information
+
+A tibble of binary association results including concept metadata, case/control
+counts (\code{nCasesYes}, \code{nControlsYes}), prevalence (\code{meanCases}, \code{meanControls}), and
+\code{isDataAvailable}. For legacy compatibility it also includes \code{covariateId} (=\code{conceptId})
+and \code{covariateName} (=\code{conceptName}).
 }
 \description{
 Retrieves all covariates data from analysis results and joins with reference tables
+
+Builds the CodeWAS results table for binary feature analysis used to discover and group codes for phenotype
+scoring.
 }

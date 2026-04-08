@@ -108,7 +108,7 @@ execute_CodeWAS <- function(
 
     # Match to sex and bday, with default match ratio 10 or user selected matched ratio
     subsetDef <- CohortGenerator::createCohortSubsetDefinition(
-      name = "",
+      name = "match",
       definitionId = cohortIdCases,
       subsetOperators = list(
         HadesExtras::createMatchingSubset(
