@@ -99,6 +99,8 @@ mod_resultsVisualisation_ui <- function(id, resultsVisualisationModuleUi, pathTo
 #' @param id A string representing the module's namespace.
 #' @param resultsVisualisationModuleServer A server function representing the specific visualization module's server logic.
 #' @param analysisResults Pooled connection to the analysis results duckdb.
+#' @param title A string representing the title of the main tab in the sidebar.
+#' @param logshref A string representing the URL to the logs page.
 #'
 #' @return The module returns server-side logic to manage the results visualization dashboard.
 #'
