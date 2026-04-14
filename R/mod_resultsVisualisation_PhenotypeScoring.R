@@ -1977,31 +1977,6 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
 }
 
 
-
-#' Get All Covariates Tibble
-#' @description Retrieves all covariates data from analysis results and joins with reference tables
-#' @param analysisResults A database connection containing analysis results tables
-#' @return A tibble containing all covariates data with reference information
-#' @importFrom dplyr tbl left_join filter distinct mutate collect
-#' @importFrom stats na.omit
-# .getcodeWasCovariatesTibble <- function(analysisResults) {
-#   analysisResults |>
-#     dplyr::tbl("codewasResults") |>
-#     dplyr::left_join(analysisResults |> dplyr::tbl("covariateRef"), by = c("covariateId" = "covariateId")) |>
-#     dplyr::left_join(analysisResults |> dplyr::tbl("analysisRef"), by = c("analysisId" = "analysisId")) |>
-#     # TEMP
-#     dplyr::filter(!(vocabularyId == "ATC" & nchar(conceptCode) < 7)) |>
-#     # END TEMP
-#     dplyr::left_join(
-#       analysisResults |> dplyr::tbl("covariatesPerPerson") |>
-#         dplyr::distinct(covariateId) |>
-#         dplyr::mutate(isDataAvailable = 1),
-#       by = c("covariateId" = "covariateId")
-#     ) |>
-#     dplyr::collect() |>
-#     dplyr::mutate(isDataAvailable = ifelse(is.na(isDataAvailable), FALSE, TRUE))
-# }
-
 #' Get CodeWAS covariates tibble for Phenotype Scoring
 #'
 #' @description
@@ -2146,92 +2121,6 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
   return(covTibToRet)
 
 }
-
-
-#' Append Covariate Group
-#' @description Appends a new group of covariates to the groupOfCovariatesObject
-#' @param analysisResults A database connection containing analysis results tables
-#' @param covariateIds A vector of covariate ids
-#' @param groupedCovariatesTibble A tibble containing the grouped covariates
-#' @param newGroupName Character string giving the name for the new covariate group.
-#' @param groupedCovariatesPerPersonTibble A tibble containing the grouped covariates per person
-#' @return A list containing the updated group of covariates object
-#' @importFrom dplyr tbl left_join filter distinct mutate collect
-# .appendCovariateGroup <- function(
-#     analysisResults,
-#     covariateIds,newGroupName,
-#     groupedCovariatesTibble,
-#     groupedCovariatesPerPersonTibble) {
-#
-#   if (nrow(groupedCovariatesTibble) == 0) {
-#     newGroupId <- 1
-#   } else {
-#     existingIds <- groupedCovariatesTibble$groupId
-#     existingNums <- as.integer(sub("g", "", existingIds))
-#     newGroupId <- max(existingNums, na.rm = TRUE) + 1
-#   }
-#
-#   sumAllCovariatesPerPerson <- analysisResults |>
-#     dplyr::tbl("covariatesPerPerson") |>
-#     dplyr::distinct(personSourceValue) |>
-#     dplyr::left_join(
-#       analysisResults |>
-#         dplyr::tbl("covariatesPerPerson") |>
-#         dplyr::filter(covariateId %in% covariateIds) |>
-#         dplyr::group_by(personSourceValue) |>
-#         dplyr::summarise(value = sum(value, na.rm = TRUE), .groups = "drop"),
-#       by = "personSourceValue"
-#     ) |>
-#     dplyr::mutate(value = ifelse(is.na(value), 0, value)) |>
-#     dplyr::collect()
-#
-#   covariatesDistribution <- sumAllCovariatesPerPerson |>
-#     dplyr::count(value, sort = TRUE)
-#
-#   # create a new group
-#   conceptCodes <- analysisResults |>
-#     dplyr::tbl("covariateRef") |>
-#     dplyr::filter(covariateId %in% covariateIds) |>
-#     dplyr::pull(conceptCode)
-#
-#   # bring the concept ids (omop ids)
-#   conceptIds <- analysisResults |>
-#     dplyr::tbl("covariateRef") |>
-#     dplyr::filter(covariateId %in% covariateIds) |>
-#     dplyr::pull(conceptId)
-#
-#
-#   covariateNames <- analysisResults |>
-#     dplyr::tbl("covariateRef") |>
-#     dplyr::filter(covariateId %in% covariateIds) |>
-#     dplyr::pull(covariateName)
-#
-#   groupTibble <- tibble::tibble(
-#     groupId = paste0("g", newGroupId),
-#     groupName = newGroupName,
-#     covariateIds = list(covariateIds),
-#     conceptIds = list(conceptIds),
-#     conceptCodes = list(conceptCodes),
-#     covariateNames = list(covariateNames),
-#     covariatesDistribution = list(covariatesDistribution)
-#   )
-#
-#   sumAllCovariatesPerPerson <- sumAllCovariatesPerPerson |>
-#     dplyr::rename(!!paste0("g", newGroupId) := value)
-#
-#   # append
-#   groupedCovariatesTibble <- dplyr::bind_rows(groupedCovariatesTibble, groupTibble)
-#   if (is.null(groupedCovariatesPerPersonTibble)) {
-#     groupedCovariatesPerPersonTibble <- sumAllCovariatesPerPerson
-#   } else {
-#     groupedCovariatesPerPersonTibble <- dplyr::left_join(groupedCovariatesPerPersonTibble, sumAllCovariatesPerPerson, by = "personSourceValue")
-#   }
-#
-#   return(list(
-#     groupedCovariatesTibble = groupedCovariatesTibble,
-#     groupedCovariatesPerPersonTibble = groupedCovariatesPerPersonTibble
-#   ))
-# }
 
 
 #' Append Code Group (Phenotype Scoring)

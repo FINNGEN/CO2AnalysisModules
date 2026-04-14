@@ -2,7 +2,7 @@
 % Please edit documentation in R/mod_resultsVisualisation_PhenotypeScoring.R
 \name{.appendCovariateGroup}
 \alias{.appendCovariateGroup}
-\title{Append Covariate Group}
+\title{Append Code Group (Phenotype Scoring)}
 \usage{
 .appendCovariateGroup(
   analysisResults,
@@ -27,8 +27,6 @@
 one column per existing group (can be NULL).}
 }
 \value{
-A list containing the updated group of covariates object
-
 A list with:
 \itemize{
 \item \code{groupedCovariatesTibble}
@@ -36,8 +34,6 @@ A list with:
 }
 }
 \description{
-Appends a new group of covariates to the groupOfCovariatesObject
-
 Creates a new code group from selected \code{conceptId}s and appends it to:
 \enumerate{
 \item \code{groupedCovariatesTibble} (group metadata + score distribution)
