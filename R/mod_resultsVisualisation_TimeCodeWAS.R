@@ -328,12 +328,15 @@ mod_resultsVisualisation_TimeCodeWAS_ui <- function(id) {
 #'
 #' @return The module returns server-side logic to generate and manage the cohort overlaps UpSet plot.
 #'
-#' @importFrom shiny moduleServer reactive req renderUI observeEvent downloadHandler
+#' @importFrom shiny moduleServer reactive req renderUI observeEvent observe downloadHandler
+#' @importFrom shiny fluidPage fluidRow column div checkboxInput sliderInput
+#' @importFrom shiny actionButton textInput selectInput showModal modalDialog modalButton
+#' @importFrom shiny tabsetPanel tabPanel
 #' @importFrom shinyFeedback showFeedbackWarning hideFeedback
 #' @importFrom shinyWidgets pickerInput pickerOptions chooseSliderSkin
 #' @importFrom ggiraph renderGirafe girafe opts_sizing opts_hover opts_selection opts_toolbar geom_point_interactive
 #' @importFrom ggrepel geom_text_repel
-#' @importFrom dplyr filter mutate select arrange transmute left_join pull case_when if_else inner_join row_number
+#' @importFrom dplyr filter mutate select arrange transmute left_join pull case_when if_else inner_join row_number across all_of desc
 #' @importFrom tidyr separate
 #' @importFrom stringr str_remove_all str_remove str_c str_wrap str_trunc str_split str_extract_all str_sub
 #' @importFrom scales percent number rescale
@@ -347,6 +350,8 @@ mod_resultsVisualisation_TimeCodeWAS_ui <- function(id) {
 #' @importFrom grDevices cairo_pdf dev.off
 #' @importFrom shinyjs toggle
 #' @importFrom htmlwidgets onRender
+#' @importFrom rlang .data
+#' @importFrom utils head tail
 #'
 #' @export
 #'
@@ -1414,7 +1419,7 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
 
     .vectorized_convert_days <- Vectorize(function(days) {
       if (is.na(days)) return(NA_character_)
-      months <- round(lubridate::days(days)/months(1), 0)
+      months <- round(lubridate::days(days)/lubridate::months(1), 0)
       months_remaining <- sign(months) * (abs(months) %% 12)
 
       if(months_remaining != 0) {
@@ -1434,14 +1439,14 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
 
     .get_time_periods <- function(studyResults){
       timeRange <- studyResults |>
-        dplyr::select(startDay, endDay) |>
+        dplyr::select(.data$startDay, .data$endDay) |>
         dplyr::distinct() |>
         dplyr::collect() |>
         na.omit() |>
-        dplyr::arrange(startDay, endDay) |>
-        dplyr::mutate(startDayText = .vectorized_convert_days(as.integer(startDay))) |>
-        dplyr::mutate(endDayText = .vectorized_convert_days(as.integer(endDay))) |>
-        dplyr::mutate(timeRange = paste0(startDayText, " / ", endDayText))
+        dplyr::arrange(.data$startDay, .data$endDay) |>
+        dplyr::mutate(startDayText = .vectorized_convert_days(as.integer(.data$startDay))) |>
+        dplyr::mutate(endDayText = .vectorized_convert_days(as.integer(.data$endDay))) |>
+        dplyr::mutate(timeRange = paste0(.data$startDayText, " / ", .data$endDayText))
 
       return(timeRange)
     }
