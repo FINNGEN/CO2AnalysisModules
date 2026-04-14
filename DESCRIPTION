@@ -13,7 +13,7 @@ RoxygenNote: 7.3.3
 Imports: 
     checkmate,
     dplyr,
-    HadesExtras (>= 2.0.0),
+    HadesExtras,
     ParallelLogger,
     shinydashboard,
     shinycssloaders,
