@@ -1419,15 +1419,15 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
 
     .vectorized_convert_days <- Vectorize(function(days) {
       if (is.na(days)) return(NA_character_)
-      months <- round(lubridate::days(days)/lubridate::months(1), 0)
+      months <- round(lubridate::time_length(lubridate::days(days), "month"), 0)
       months_remaining <- sign(months) * (abs(months) %% 12)
 
       if(months_remaining != 0) {
         window_type <- "m"
-        years <- floor(lubridate::days(abs(days))/lubridate::years(1))
+        years <- floor(lubridate::time_length(lubridate::days(abs(days)), "year"))
       } else {
         window_type <- "y"
-        years <- round(lubridate::days(abs(days))/lubridate::years(1))
+        years <- round(lubridate::time_length(lubridate::days(abs(days)), "year"))
       }
       dplyr::case_when(
         years == 0 & months == 0 ~ paste0("0", window_type),
