@@ -101,6 +101,8 @@ mod_resultsVisualisation_ui <- function(id, resultsVisualisationModuleUi, pathTo
 #' @param analysisResults Pooled connection to the analysis results duckdb.
 #' @param title A string representing the title of the main tab in the sidebar.
 #' @param logshref A string representing the URL to the logs page.
+#' @param download_href Optional character string. A URL to a downloadable DuckDB file
+#' generated in the app server. If NULL, the "Download results" menu item is not shown.
 #'
 #' @return The module returns server-side logic to manage the results visualization dashboard.
 #'
@@ -111,38 +113,16 @@ mod_resultsVisualisation_ui <- function(id, resultsVisualisationModuleUi, pathTo
 #'
 #' @export
 #'
-mod_resultsVisualisation_server <- function(id, resultsVisualisationModuleServer, analysisResults, title, logshref) {
+mod_resultsVisualisation_server <- function(id, resultsVisualisationModuleServer, analysisResults, title, logshref, download_href = NULL) {
 
 
   shiny::moduleServer(id, function(input, output, session) {
-
-    # add duckdb resource for downloading from menu
-    db_path <- getOption("CO2AnalysisModules.pathToResultsDatabase", default = "")
-    shiny::req(nzchar(db_path), file.exists(db_path))
-
-    analysisType <- getOption("CO2AnalysisModules.analysisType", default = "analysis")
-    sanitized <- gsub("[^[:alnum:]]+", "_", analysisType)
-    sanitized <- gsub("^_+|_+$", "", sanitized)
-    download_name <- paste0(sanitized, "_analysisResults.duckdb")
-
-    download_dir <- file.path(tempdir(), paste0("viewer_download_", session$token))
-    dir.create(download_dir, recursive = TRUE, showWarnings = FALSE)
-
-    served_file <- file.path(download_dir, download_name)
-    ok <- file.copy(db_path, served_file, overwrite = TRUE)
-    if (!isTRUE(ok) || !file.exists(served_file) || file.info(served_file)$size == 0) {
-      stop("Failed to prepare downloadable DuckDB file.")
-    }
-
-    resource_prefix <- paste0("duckdbdownload_", session$token)
-    shiny::addResourcePath(resource_prefix, download_dir)
 
     # TODO: Sidebar download link causes brief visual tab blink before returning to module, it should be improved another time.
     # Downloading works from both the menu (now made dynamic) and inside study details
 
     output$sidebarMenu <- shinydashboard::renderMenu({
-      shinydashboard::sidebarMenu(
-        id = session$ns("tabs"),
+      menu_items <- list(
         shinydashboard::menuItem(
           text = title,
           tabName = "module",
@@ -155,18 +135,37 @@ mod_resultsVisualisation_server <- function(id, resultsVisualisationModuleServer
         shinydashboard::menuItem(
           text = "Study details",
           tabName = "cohortsInfo"
-        ),
-        shinydashboard::menuItem(
-          text = "Download results",
-          icon = shiny::icon("download"),
-          href = paste0("/", resource_prefix, "/", download_name)
-        ),
+        )
+      )
+
+      # show download button only if download href has been prepared and is available
+      if (!is.null(download_href) && nzchar(download_href)) {
+        menu_items <- c(menu_items, list(
+          shinydashboard::menuItem(
+            text = "Download results",
+            icon = shiny::icon("download"),
+            href = download_href
+          )
+        ))
+      }
+
+      menu_items <- c(menu_items, list(
         shinydashboard::menuItem(
           text = "App Logs",
           icon = shiny::icon("info-circle"),
           href = logshref
-        ),
-        selected = "module"
+        )
+      ))
+
+      do.call(
+        shinydashboard::sidebarMenu,
+        c(
+          list(
+            id = session$ns("tabs"),
+            selected = "module"
+          ),
+          menu_items
+        )
       )
     })
 
