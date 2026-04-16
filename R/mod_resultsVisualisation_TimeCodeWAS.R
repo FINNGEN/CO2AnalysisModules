@@ -171,6 +171,52 @@ mod_resultsVisualisation_TimeCodeWAS_ui <- function(id) {
       shiny::tabsetPanel(
         id = ns("tabset"),
         shiny::tabPanel(
+          "Table",
+          shiny::div(
+            fluidRow(
+              column(10,
+                     tags$div(style = "display: flex; align-items: center; gap: 15px;",
+                              tags$label("Sort by:", style = "width: 50px; margin-bottom: 0;"),
+                              tags$div(style = "margin-top: 15px;",
+                                       selectInput(ns("sortFirst"), label = NULL, choices = tableColumns, width = "150px", selected = "mlogp"),
+                              ),
+                              tags$div(style = "width: 50px;",
+                                       checkboxInput(ns("sortFirstDesc"), "descending", value = TRUE)
+                              ),
+                              tags$label("", style = "width: 20px; margin-bottom: 0; margin-left: 10px;"),
+                              tags$div(style = "margin-top: 15px;",
+                                       selectInput(ns("sortSecond"), label = NULL, choices = tableColumns, width = "150px", selected = "OR"),
+                              ),
+                              tags$div(style = "width: 50px;",
+                                       checkboxInput(ns("sortSecondDesc"), "descending", value = TRUE)
+                              )
+                     )
+              ),
+            ) # fluidRow
+          ), # div
+          shiny::div(
+            style = "margin-top: 5px; margin-bottom: 10px;",
+            shinycssloaders::withSpinner(
+              reactable::reactableOutput(ns("reactableData")),
+              proxy.height = "400px"
+            )
+          ),
+          shiny::div(
+            style = "margin-top: 10px; margin-bottom: 10px;",
+            shiny::downloadButton(ns("downloadDataFiltered"), "Download filtered"),
+            # tags$button(
+            #   shiny::icon("download"),
+            #   "Download filtered",
+            #   class = "btn btn-default",
+            #   onclick = sprintf(
+            #     "Reactable.downloadDataCSV('%s', 'timecodewas_filtered_' + new Date().toISOString().slice(0,16).replace(/[-:T]/g,'_') + '.csv')",
+            #     ns("reactableData")
+            #     )
+            # ),
+            shiny::downloadButton(ns("downloadDataAll"), "Download all"),
+          )
+        ),
+        shiny::tabPanel(
           "Proportions View",
           shiny::div(style = "margin-top: 0px; ",
                      shiny::fluidRow(
@@ -266,53 +312,7 @@ mod_resultsVisualisation_TimeCodeWAS_ui <- function(id) {
             style = "margin-top: 10px; margin-bottom: 10px;",
             shiny::downloadButton(ns("downloadProgressView"), "Download")
           ),
-        ),
-        shiny::tabPanel(
-          "Table",
-          shiny::div(
-            fluidRow(
-              column(10,
-                     tags$div(style = "display: flex; align-items: center; gap: 15px;",
-                              tags$label("Sort by:", style = "width: 50px; margin-bottom: 0;"),
-                              tags$div(style = "margin-top: 15px;",
-                                       selectInput(ns("sortFirst"), label = NULL, choices = tableColumns, width = "150px", selected = "mlogp"),
-                              ),
-                              tags$div(style = "width: 50px;",
-                                       checkboxInput(ns("sortFirstDesc"), "descending", value = TRUE)
-                              ),
-                              tags$label("", style = "width: 20px; margin-bottom: 0; margin-left: 10px;"),
-                              tags$div(style = "margin-top: 15px;",
-                                       selectInput(ns("sortSecond"), label = NULL, choices = tableColumns, width = "150px", selected = "OR"),
-                              ),
-                              tags$div(style = "width: 50px;",
-                                       checkboxInput(ns("sortSecondDesc"), "descending", value = TRUE)
-                              )
-                     )
-              ),
-            ) # fluidRow
-          ), # div
-          shiny::div(
-            style = "margin-top: 5px; margin-bottom: 10px;",
-            shinycssloaders::withSpinner(
-              reactable::reactableOutput(ns("reactableData")),
-              proxy.height = "400px"
-            )
-          ),
-          shiny::div(
-            style = "margin-top: 10px; margin-bottom: 10px;",
-            shiny::downloadButton(ns("downloadDataFiltered"), "Download filtered"),
-            # tags$button(
-            #   shiny::icon("download"),
-            #   "Download filtered",
-            #   class = "btn btn-default",
-            #   onclick = sprintf(
-            #     "Reactable.downloadDataCSV('%s', 'timecodewas_filtered_' + new Date().toISOString().slice(0,16).replace(/[-:T]/g,'_') + '.csv')",
-            #     ns("reactableData")
-            #     )
-            # ),
-            shiny::downloadButton(ns("downloadDataAll"), "Download all"),
-          )
-        ) # tabPanel
+        )# tabPanel
       ) # tabsetPanel
     ) # tagList
     ) # div

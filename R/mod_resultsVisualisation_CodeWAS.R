@@ -182,42 +182,7 @@ mod_resultsVisualisation_CodeWAS_ui <- function(id) {
                  htmltools::hr(style = "margin-top: 10px; margin-bottom: 10px;"),
                  shiny::tabsetPanel(
                    id = ns("tabset"),
-                   shiny::tabPanel(
-                     "Plot",
-                     # shiny::div(style = "height: 20px;"),
-                     tags$style(HTML("
-                         .slider-animate-container,
-                          .irs-min, .irs-max, .irs-single {
-                              display: none !important;
-                          }
-                      ")),
-                     shiny::column(
-                       width = 2, align = "left",
-                       shiny::div(style = "margin-top: 30px; ",
-                                  shiny::checkboxInput(ns("top_10"), "Show labels", value = TRUE),
-                       ),
-                     ), # column
-                     shiny::column(
-                       width = 2,
-                       div(style = "margin-top: 10px;",
-                           div(style = "margin-top: 2px; margin-right: 5px;", "Label top n"),
-                           div(style = "margin-top: -20px;",
-                               shiny::sliderInput(
-                                 ns("label_top_n"), label = NULL, ticks = FALSE, min = 1, max = 20, value = 10, step = 1)
-                           )
-                       )
-                     ), # column
-                     shiny::div(style = "height: 100%; width: 100%; ",
-                                shinycssloaders::withSpinner(
-                                  ggiraph::girafeOutput(ns("codeWASplot")),
-                                  proxy.height = "400px"
-                                )
-                     ),
-                     shiny::div(
-                       style = "margin-top: 10px; margin-bottom: 10px;",
-                       shiny::downloadButton(ns("downloadPlot"), "Download")
-                     )
-                   ),
+                   selected = "Table",
                    shiny::tabPanel(
                      "Table",
                      shiny::div(
@@ -253,6 +218,42 @@ mod_resultsVisualisation_CodeWAS_ui <- function(id) {
                        style = "margin-top: 10px; margin-bottom: 10px;",
                        shiny::downloadButton(ns("downloadCodeWASFiltered"), "Download filtered", icon = shiny::icon("download")),
                        shiny::downloadButton(ns("downloadCodeWASAll"), "Download all", icon = shiny::icon("download"))
+                     )
+                   ),
+                   shiny::tabPanel(
+                     "Plot",
+                     # shiny::div(style = "height: 20px;"),
+                     tags$style(HTML("
+                         .slider-animate-container,
+                          .irs-min, .irs-max, .irs-single {
+                              display: none !important;
+                          }
+                      ")),
+                     shiny::column(
+                       width = 2, align = "left",
+                       shiny::div(style = "margin-top: 30px; ",
+                                  shiny::checkboxInput(ns("top_10"), "Show labels", value = TRUE),
+                       ),
+                     ), # column
+                     shiny::column(
+                       width = 2,
+                       div(style = "margin-top: 10px;",
+                           div(style = "margin-top: 2px; margin-right: 5px;", "Label top n"),
+                           div(style = "margin-top: -20px;",
+                               shiny::sliderInput(
+                                 ns("label_top_n"), label = NULL, ticks = FALSE, min = 1, max = 20, value = 10, step = 1)
+                           )
+                       )
+                     ), # column
+                     shiny::div(style = "height: 100%; width: 100%; ",
+                                shinycssloaders::withSpinner(
+                                  ggiraph::girafeOutput(ns("codeWASplot")),
+                                  proxy.height = "400px"
+                                )
+                     ),
+                     shiny::div(
+                       style = "margin-top: 10px; margin-bottom: 10px;",
+                       shiny::downloadButton(ns("downloadPlot"), "Download")
                      )
                    )# tabPanel
                  ), # tabsetPanel
