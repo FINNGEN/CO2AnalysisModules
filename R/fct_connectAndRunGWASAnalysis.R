@@ -167,7 +167,6 @@ runGWASAnalysis <- function(
 #'   Users are allowed to add additional covariates using a dataframe of columns for each additional covariate.
 #'
 #' @param connection_sandboxAPI List-like object containing base_url, token, conn_status_tibble
-#' @param standard_pipeline_id Standard pipeline id of the pipeline to be used
 #' @param cases_finngenids Character vector of FINNGENIDs for cases
 #' @param controls_finngenids Character vector of FINNGENIDs for controls
 #' @param phenotype_name Phenotype column name (must start with a letter; letters/numbers/_)
@@ -176,6 +175,7 @@ runGWASAnalysis <- function(
 #' @param extra_covariates_df data.frame with FID/IID + extra covariate columns
 #' @param test Genetic model test string, Default: "additive"
 #' @param is_binary String "true"/"false" to specify binary or quantitative GWAS analysis type, Default: "true"
+#' @param release Finngen data release version, Default: "Regenie13"
 #' @param endpoint_path internal API path, Default: "v2/standard-pipelines"
 #' @param timeout_sec httr timeout seconds, Default: 300
 #'
@@ -190,7 +190,6 @@ runGWASAnalysis <- function(
 #' @importFrom stringr str_detect str_c
 runRegenieStandardPipeline <- function(
     connection_sandboxAPI,
-    standard_pipeline_id = "5718330904150016",
     cases_finngenids,
     controls_finngenids,
     phenotype_name,
@@ -199,12 +198,13 @@ runRegenieStandardPipeline <- function(
     extra_covariates_df = NULL,
     test = "additive",
     is_binary = "true",
+    release = "Regenie13",
     endpoint_path = "v2/standard-pipelines",
     timeout_sec = 300
 ) {
 
   if (is.null(covariates)) {
-    covariates = "SEX_IMPUTED,AGE_AT_DEATH_OR_END_OF_FOLLOWUP,PC{1:10},IS_FINNGEN2_CHIP,BATCH_DS1_BOTNIA_Dgi_norm,BATCH_DS10_FINRISK_Palotie_norm,BATCH_DS11_FINRISK_PredictCVD_COROGENE_Tarto_norm,BATCH_DS12_FINRISK_Summit_norm,BATCH_DS13_FINRISK_Bf_norm,BATCH_DS14_GENERISK_norm,BATCH_DS15_H2000_Broad_norm,BATCH_DS16_H2000_Fimm_norm,BATCH_DS17_H2000_Genmets_norm_relift,BATCH_DS18_MIGRAINE_1_norm_relift,BATCH_DS19_MIGRAINE_2_norm,BATCH_DS2_BOTNIA_T2dgo_norm,BATCH_DS20_SUPER_1_norm_relift,BATCH_DS21_SUPER_2_norm_relift,BATCH_DS22_TWINS_1_norm,BATCH_DS23_TWINS_2_norm_nosymmetric,BATCH_DS24_SUPER_3_norm,BATCH_DS25_BOTNIA_Regeneron_norm,BATCH_DS26_DIREVA_norm,BATCH_DS27_NFBC66_norm,BATCH_DS28_NFBC86_norm,BATCH_DS3_COROGENE_Sanger_norm,BATCH_DS4_FINRISK_Corogene_norm,BATCH_DS5_FINRISK_Engage_norm,BATCH_DS6_FINRISK_FR02_Broad_norm_relift,BATCH_DS7_FINRISK_FR12_norm,BATCH_DS8_FINRISK_Finpcga_norm,BATCH_DS9_FINRISK_Mrpred_norm"
+    covariates <- "SEX_IMPUTED,AGE_AT_DEATH_OR_END_OF_FOLLOWUP,PC{1:10},IS_FINNGEN2_CHIP,BATCH_DS1_BOTNIA_Dgi_norm,BATCH_DS10_FINRISK_Palotie_norm,BATCH_DS11_FINRISK_PredictCVD_COROGENE_Tarto_norm,BATCH_DS12_FINRISK_Summit_norm,BATCH_DS13_FINRISK_Bf_norm,BATCH_DS14_GENERISK_norm,BATCH_DS15_H2000_Broad_norm,BATCH_DS16_H2000_Fimm_norm,BATCH_DS17_H2000_Genmets_norm_relift,BATCH_DS18_MIGRAINE_1_norm_relift,BATCH_DS19_MIGRAINE_2_norm,BATCH_DS2_BOTNIA_T2dgo_norm,BATCH_DS20_SUPER_1_norm_relift,BATCH_DS21_SUPER_2_norm_relift,BATCH_DS22_TWINS_1_norm,BATCH_DS23_TWINS_2_norm_nosymmetric,BATCH_DS24_SUPER_3_norm,BATCH_DS25_BOTNIA_Regeneron_norm,BATCH_DS26_DIREVA_norm,BATCH_DS27_NFBC66_norm,BATCH_DS28_NFBC86_norm,BATCH_DS3_COROGENE_Sanger_norm,BATCH_DS4_FINRISK_Corogene_norm,BATCH_DS5_FINRISK_Engage_norm,BATCH_DS6_FINRISK_FR02_Broad_norm_relift,BATCH_DS7_FINRISK_FR12_norm,BATCH_DS8_FINRISK_Finpcga_norm,BATCH_DS9_FINRISK_Mrpred_norm"
   }
 
   .extract_uuid <- function(x) {
@@ -271,6 +271,21 @@ runRegenieStandardPipeline <- function(
   if (!stringr::str_detect(phenotype_name, "^[A-Za-z][A-Za-z0-9_]*$")) {
     stop("phenotype_name must start with a letter and contain only letters, numbers, or underscores")
   }
+
+  # for now hard code the pipeline ids depending on the data freeze version. This needs to be updated to get the id automatically
+  # using the api standard-pipelines with get and using the pipeline names
+  # For now only these releases can be used for gwas
+  standard_pipeline_id <- switch(
+    release,
+    "Regenie13" = "5718330904150016",
+    "Regenie14" = "5766468427841536",
+    stop(
+      "Unsupported release: ", release, ". ",
+      "Supported releases are: Regenie13, Regenie14"
+    )
+  )
+
+
   if (is.null(standard_pipeline_id) || standard_pipeline_id == "") {
     stop("standard_pipeline_id is required and must be a non-empty string")
   }

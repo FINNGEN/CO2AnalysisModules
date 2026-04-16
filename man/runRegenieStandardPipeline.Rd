@@ -6,7 +6,6 @@
 \usage{
 runRegenieStandardPipeline(
   connection_sandboxAPI,
-  standard_pipeline_id = "5718330904150016",
   cases_finngenids,
   controls_finngenids,
   phenotype_name,
@@ -15,14 +14,13 @@ runRegenieStandardPipeline(
   extra_covariates_df = NULL,
   test = "additive",
   is_binary = "true",
+  release = "Regenie13",
   endpoint_path = "v2/standard-pipelines",
   timeout_sec = 300
 )
 }
 \arguments{
 \item{connection_sandboxAPI}{List-like object containing base_url, token, conn_status_tibble}
-
-\item{standard_pipeline_id}{Standard pipeline id of the pipeline to be used}
 
 \item{cases_finngenids}{Character vector of FINNGENIDs for cases}
 
@@ -39,6 +37,8 @@ runRegenieStandardPipeline(
 \item{test}{Genetic model test string, Default: "additive"}
 
 \item{is_binary}{String "true"/"false" to specify binary or quantitative GWAS analysis type, Default: "true"}
+
+\item{release}{Finngen data release version, Default: "Regenie13"}
 
 \item{endpoint_path}{internal API path, Default: "v2/standard-pipelines"}
 

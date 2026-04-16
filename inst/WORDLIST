@@ -19,6 +19,7 @@ FINNGENIDs
 FeatureExtraction
 FinnGen
 FinnGenUtilsR
+Finngen
 GWAS
 JS
 JSON
@@ -49,7 +50,6 @@ datetime
 daysToFirstEvent
 daysToLastEvent
 duckdb
-groupOfCovariatesObject
 gsutil
 gwas
 http
