@@ -307,7 +307,7 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
           domainId = domainId,
           vocabularyId = vocabularyId,
           conceptCode = conceptCode,
-          covariateName = stringr::str_remove(covariateName, ".*:"),
+          covariateName = covariateName,
           nCasesYes = nCasesYes,
           mplog = -log10(pValue),
           beta = log(oddsRatio),
