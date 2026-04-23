@@ -207,6 +207,19 @@ mod_fct_phenotypeFlags_server <- function(id, r_groupedCovariates,r_formula_item
             shiny::req(r_groupedCovariates$groupedCovariatesPerPersonTibble |> nrow() > 0)
             shiny::req(rf_formula())
 
+            groupedCovariatesPerPersonTibble <- r_groupedCovariates$groupedCovariatesPerPersonTibble
+
+            # Add totalScore if available so it can be used in flag formulas
+            if (!is.null(r_groupedCovariates$groupedCovariatesPerPersonTibble_totalScore) &&
+                nrow(r_groupedCovariates$groupedCovariatesPerPersonTibble_totalScore) > 0) {
+              groupedCovariatesPerPersonTibble <- groupedCovariatesPerPersonTibble |>
+                dplyr::left_join(
+                  r_groupedCovariates$groupedCovariatesPerPersonTibble_totalScore,
+                  by = "personSourceValue"
+                )
+            }
+
+
             flagRuleFormula <- rf_formula()
             flagRule <- flagRuleFormula$formula
 
@@ -224,7 +237,7 @@ mod_fct_phenotypeFlags_server <- function(id, r_groupedCovariates,r_formula_item
             tryCatch(
                 {
                     numberOfPersonsInFlag <- eval(parse(text = paste(
-                        "r_groupedCovariates$groupedCovariatesPerPersonTibble |>",
+                        "groupedCovariatesPerPersonTibble |>",
                         "dplyr::filter(", flagRule, ") |>",
                         "nrow()"
                     )))

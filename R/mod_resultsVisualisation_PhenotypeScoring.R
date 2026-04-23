@@ -1364,7 +1364,20 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
     #
     # render the flag formula builder
     #
-    rf_flagsTable_list <- mod_fct_phenotypeFlags_server("phenotypeFlags_flags", r_groupedCovariates,r_formula_items)
+
+    # add totalScore as an available variable for flag rules
+    r_flag_formula_items <- shiny::reactive({
+      items <- r_formula_items()
+
+      items <- c(
+        items,
+        stats::setNames("totalScore", "Total Score")
+      )
+
+      items
+    })
+
+    rf_flagsTable_list <- mod_fct_phenotypeFlags_server("phenotypeFlags_flags", r_groupedCovariates,r_flag_formula_items)
     rf_flagsTable <- rf_flagsTable_list[["r_flagstable"]]
     rf_flagsTableOrder <- rf_flagsTable_list[["r_roworder"]]
 
@@ -1395,6 +1408,17 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
       flagCaseWhenRules <- paste(flagsTable$flagCaseWhenRule, collapse = ", \n")
 
       groupedCovariatesPerPersonTibble <- r_groupedCovariates$groupedCovariatesPerPersonTibble
+
+      # Add totalScore if available so it can be used in flag formulas
+      if (!is.null(r_groupedCovariates$groupedCovariatesPerPersonTibble_totalScore) &&
+          nrow(r_groupedCovariates$groupedCovariatesPerPersonTibble_totalScore) > 0) {
+        groupedCovariatesPerPersonTibble <- groupedCovariatesPerPersonTibble |>
+          dplyr::left_join(
+            r_groupedCovariates$groupedCovariatesPerPersonTibble_totalScore,
+            by = "personSourceValue"
+          )
+      }
+
 
       errorMessage <- NULL
       groupedCovariatesPerPersonTibble_flag <- NULL
