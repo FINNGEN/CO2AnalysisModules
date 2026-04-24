@@ -174,6 +174,15 @@ mod_resultsVisualisation_PhenotypeScoring_ui <- function(id) {
               choices = c("All Data"),
               selected = "All Data"
             ),
+            shiny::selectInput(
+              ns("downloadTableFormat"),
+              "Download format:",
+              choices = c(
+                "Wide score table" = "wide",
+                "Stage / age / date (long)" = "stage_long"
+              ),
+              selected = "wide"
+            ),
             shiny::downloadButton(
               ns("exportSelectedSubjects"),
               "Export Selected Subjects"
@@ -1920,7 +1929,13 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
           "all_data"
         }
 
-        paste0("subjects_withflag_", flag_label, "_", range_label, ".tsv")
+        fmt_label <- if (!is.null(input$downloadTableFormat) && input$downloadTableFormat == "stage_long") {
+          "long"
+        } else {
+          "wide"
+        }
+
+        paste0("subjects_", fmt_label, "_", flag_label, "_", range_label, ".tsv")
       },
       content = function(file) {
         shiny::req(r_groupedCovariates$groupedCovariatesPerPersonTibble |> nrow() > 0)
@@ -1931,8 +1946,6 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
 
           df <- groupedCovariatesPerPers |>
             dplyr::left_join(r_groupedCovariates$groupedCovariatesPerPersonTibble_totalScore, by = "personSourceValue")
-
-          df <- .rename_group_cols_to_names(df, r_groupedCovariates$groupedCovariatesTibble)
 
 
           if (is.null(r_groupedCovariates$groupedCovariatesPerPersonTibble_flag)) {
@@ -1967,7 +1980,21 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
           }
         }
 
-        write.table(df, file, sep = "\t", row.names = FALSE, na = "", quote = FALSE)
+        # change download format
+        if (!is.null(input$downloadTableFormat) && input$downloadTableFormat == "stage_long") {
+          df_out <- .build_stage_age_date_download(
+            df = df,
+            groups_tbl = r_groupedCovariates$groupedCovariatesTibble
+          )
+        } else {
+          df_out <- .rename_group_cols_to_names(
+            df,
+            r_groupedCovariates$groupedCovariatesTibble
+          )
+        }
+
+
+        write.table(df_out, file, sep = "\t", row.names = FALSE, na = "", quote = FALSE)
       }
     )
 
@@ -2957,4 +2984,37 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
 
   names(df)[match(group_cols, cn)] <- new_names
   df
+}
+
+# build download data formatted for eras tool
+.build_stage_age_date_download <- function(df, groups_tbl) {
+  stopifnot(all(c("groupId", "groupName") %in% names(groups_tbl)))
+
+  out <- purrr::map_dfr(seq_len(nrow(groups_tbl)), function(i) {
+    gid <- groups_tbl$groupId[i]
+    gname <- groups_tbl$groupName[i]
+
+    age_col  <- paste0(gid, "_ageFirst")
+    date_col <- paste0(gid, "_firstEventDate")
+
+    tibble::tibble(
+      personSourceValue = df$personSourceValue,
+      stage = gname,
+      age   = if (age_col %in% names(df)) df[[age_col]] else NA_real_,
+      date  = if (date_col %in% names(df)) as.Date(df[[date_col]]) else as.Date(NA),
+      count = if (gid %in% names(df)) df[[gid]] else 0,
+      totalScore = if ("totalScore" %in% names(df)) df$totalScore else NA_real_,
+      totalScoreBin = if ("totalScoreBin" %in% names(df)) as.character(df$totalScoreBin) else NA_character_,
+      flag = if ("flag" %in% names(df)) df$flag else NA_character_
+    )
+  })
+
+  out |>
+    dplyr::filter(.data$count > 0 | !is.na(.data$age) | !is.na(.data$date)) |>
+    dplyr::select(
+      personSourceValue,
+      stage,
+      age,
+      date
+    )
 }
