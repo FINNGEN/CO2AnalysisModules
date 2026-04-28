@@ -1162,6 +1162,8 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
           #add_if_exists(paste0(ids[i], "_spanDaysRaw"),   paste0(names[i], " (spanDaysRaw)"))
           #add_if_exists(paste0(ids[i], "_spanDaysSafe"),  paste0(names[i], " (spanDaysSafe)"))
           add_if_exists(paste0(ids[i], "_spanYearsSafe"), paste0(names[i], " (spanYearsSafe)"))
+          add_if_exists(paste0(ids[i], "_followUpDays"),  paste0(names[i], " (followUpDays)"))
+          add_if_exists(paste0(ids[i], "_followUpYears"), paste0(names[i], " (followUpYears)"))
         }
       }
 
@@ -1200,6 +1202,8 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
       if (grepl("^g\\d+_daysTo(First|Last)$", token)) return("days")
       if (grepl("^g\\d+_spanDays(Raw|Safe)$", token)) return("days")
       if (grepl("^g\\d+_(ageFirst|spanYearsSafe)$", token)) return("years")
+      if (grepl("^g\\d+_followUpDays$", token)) return("days")
+      if (grepl("^g\\d+_followUpYears$", token)) return("years")
       if (grepl("^g\\d+$", token)) return("count")
       "unknown"
     }
@@ -2634,6 +2638,19 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
             is.na(.data[[paste0(newGroupId, "_spanDaysRaw")]]) ~ 1,
             .data[[paste0(newGroupId, "_spanDaysRaw")]] <= 0 ~ 1,
             TRUE ~ .data[[paste0(newGroupId, "_spanDaysRaw")]] / 365.25
+          ),
+
+        !!paste0(newGroupId, "_followUpDays") :=
+          as.numeric(
+            .data[[paste0(newGroupId, "_endOfFollowUp")]] -
+              .data[[paste0(newGroupId, "_cohortEntryDate")]]
+          ),
+
+        !!paste0(newGroupId, "_followUpYears") :=
+          dplyr::case_when(
+            is.na(.data[[paste0(newGroupId, "_followUpDays")]]) ~ NA_real_,
+            .data[[paste0(newGroupId, "_followUpDays")]] <= 0 ~ 1,
+            TRUE ~ .data[[paste0(newGroupId, "_followUpDays")]] / 365.25
           )
 
       )
@@ -2736,7 +2753,9 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
       paste0(groupIdToDelete, "_endOfFollowUp"),
       paste0(groupIdToDelete, "_spanDaysRaw"),
       paste0(groupIdToDelete, "_spanDaysSafe"),
-      paste0(groupIdToDelete, "_spanYearsSafe")
+      paste0(groupIdToDelete, "_spanYearsSafe"),
+      paste0(groupIdToDelete, "_followUpDays"),
+      paste0(groupIdToDelete, "_followUpYears")
     )
     groupedCovariatesPerPersonTibble <- groupedCovariatesPerPersonTibble |>
       dplyr::select(-dplyr::any_of(cols_to_drop))
@@ -2964,7 +2983,9 @@ mod_resultsVisualisation_PhenotypeScoring_server <- function(id, analysisResults
     paste0(groupId, "_endOfFollowUp"),
     paste0(groupId, "_spanDaysRaw"),
     paste0(groupId, "_spanDaysSafe"),
-    paste0(groupId, "_spanYearsSafe")
+    paste0(groupId, "_spanYearsSafe"),
+    paste0(groupId, "_followUpDays"),
+    paste0(groupId, "_followUpYears")
   )
 }
 

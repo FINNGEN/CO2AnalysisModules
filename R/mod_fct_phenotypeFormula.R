@@ -125,7 +125,7 @@ mod_fct_dragAndDropFormula_server <- function(id, r_groupedCovariates, operatorI
     # advanced-only group ids (gX_daysToFirst etc)
     r_groupItems_advanced <- shiny::reactive({
       gi <- r_groupItems_all()
-      gi[grepl("^g\\d+_(daysToFirst|daysToLast|ageFirst|spanDaysRaw|spanDaysSafe|spanYearsSafe)$", gi) | gi == "totalScore"]
+      gi[grepl("^g\\d+_(daysToFirst|daysToLast|ageFirst|spanDaysRaw|spanDaysSafe|spanYearsSafe|followUpDays|followUpYears)$", gi) | gi == "totalScore"]
     })
 
     output$operation_expression <- shiny::renderUI({
@@ -268,7 +268,7 @@ mod_fct_dragAndDropFormula_server <- function(id, r_groupedCovariates, operatorI
       } else {
         parsed <- stringr::str_extract_all(
           formula_string,
-          "g\\d+_(?:daysToFirst|daysToLast|ageFirst|spanDaysRaw|spanDaysSafe|spanYearsSafe)|g\\d+|[><=()!&|+\\-*/]+|\\d+\\.?\\d*"
+          "g\\d+_(?:daysToFirst|daysToLast|ageFirst|spanDaysRaw|spanDaysSafe|spanYearsSafe|followUpDays|followUpYears)|g\\d+|[><=()!&|+\\-*/]+|\\d+\\.?\\d*"
         )[[1]]
       }
       destBoxes(parsed)
