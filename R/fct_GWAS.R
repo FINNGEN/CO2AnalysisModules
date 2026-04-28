@@ -104,9 +104,11 @@ execute_GWAS <- function(
     controls_finngenids = controlsFinngenids,
     phenotype_name = phenotype,
     phenotype_description = description,
-    test = analysisType
+    test = analysisType,
+    release = release
   )
 
+  resultToReturn = NULL
 
   if (result$status == FALSE){
     ParallelLogger::logInfo("GWAS run completed: ", result)
@@ -116,11 +118,11 @@ execute_GWAS <- function(
 
     # the result contains more detail information, we can record and display that if the result is succesful
     ParallelLogger::logInfo("GWAS run completed: ", result)
+    resultToReturn = result
 
   }
 
-  # there is not database to share
-  return(NULL)
+  return(resultToReturn)
 
 }
 
@@ -151,7 +153,7 @@ assertAnalysisSettings_GWAS <- function(analysisSettings) {
   analysisSettings$phenotype |> checkmate::assertString(min.chars = 1, pattern = "^[A-Za-z][A-Za-z0-9_]*$")
   analysisSettings$description |> checkmate::assertString(min.chars = 1)
   analysisSettings$analysisType |> checkmate::assertChoice(choices = c("additive", "recessive", "dominant"))
-  analysisSettings$release |> checkmate::assertChoice(choices = c("Regenie13", "Regenie12"))
+  analysisSettings$release |> checkmate::assertChoice(choices = c("Regenie13", "Regenie14"))
   analysisSettings$connectionSandboxAPI  |> checkmate::assertList()
   return(analysisSettings)
 }

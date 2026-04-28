@@ -35,6 +35,7 @@ app_server <- function(input, output, session) {
     # get parameters from options
     analysisTypeFromOptions <- getOption("CO2AnalysisModules.analysisType")
     pathToResultsDatabaseFromOptions <- getOption("CO2AnalysisModules.pathToResultsDatabase")
+    pathToLogsFromOptions <- getOption("CO2AnalysisModules.pathToLogs")
 
     # if parameters empty or have change, the update and reload
     if (
@@ -60,24 +61,63 @@ app_server <- function(input, output, session) {
       ParallelLogger::logInfo("[Start] analysisTypeFromOptions: ", analysisTypeFromOptions, ", pathToResultsDatabaseFromOptions: ", pathToResultsDatabaseFromOptions)
       # if up to date call module server
       if (file.exists(pathToResultsDatabaseFromOptions) == TRUE) {
+
+
+        # copy the data for download
+        download_href <- NULL
+
+        if (grepl("\\.duckdb$", pathToResultsDatabaseFromOptions, ignore.case = TRUE)) {
+          analysisType <- getOption("CO2AnalysisModules.analysisType")
+          sanitized <- gsub("[^[:alnum:]]+", "_", analysisType)
+          sanitized <- gsub("^_+|_+$", "", sanitized)
+          download_name <- paste0(sanitized, "_analysisResults.duckdb")
+
+          download_dir <- file.path(tempdir(), paste0("viewer_download_", session$token))
+          dir.create(download_dir, recursive = TRUE, showWarnings = FALSE)
+
+          served_file <- file.path(download_dir, download_name)
+
+          ok <- tryCatch(
+            file.copy(pathToResultsDatabaseFromOptions, served_file, overwrite = TRUE),
+            error = function(e) FALSE
+          )
+
+          if (isTRUE(ok) && file.exists(served_file) && file.info(served_file)$size > 0) {
+            resource_prefix <- paste0("duckdbdownload_", session$token)
+            shiny::addResourcePath(resource_prefix, download_dir)
+            download_href <- paste0("/", resource_prefix, "/", download_name)
+          } else {
+            ParallelLogger::logWarn("[Start] Could not prepare DuckDB download file: ", pathToResultsDatabaseFromOptions)
+          }
+        }
+
         # read database
-        analysisResults <- duckdb::dbConnect(duckdb::duckdb(), pathToResultsDatabaseFromOptions)
+        # Try loading as Andromeda first
+        analysisResults <- tryCatch(
+          Andromeda::loadAndromeda(pathToResultsDatabaseFromOptions),
+          error = function(e) NULL
+        )
+
+        # If not Andromeda, open as DuckDB
+        if (is.null(analysisResults)) {
+          analysisResults <- duckdb::dbConnect(duckdb::duckdb(), pathToResultsDatabaseFromOptions)
+        }
 
         # load module server based on analysisType
         if (analysisTypeFromOptions == "cohortOverlaps") {
-          mod_resultsVisualisation_server("cohortOverlaps", mod_resultsVisualisation_CohortsOverlaps_server, analysisResults)
+          mod_resultsVisualisation_server("cohortOverlaps", mod_resultsVisualisation_CohortsOverlaps_server, analysisResults, "Cohort Overlaps", pathToLogsFromOptions, download_href)
         }
         if (analysisTypeFromOptions == "cohortDemographics") {
-          mod_resultsVisualisation_server("cohortDemographics", mod_resultsVisualisation_CohortsDemographics_server, analysisResults)
+          mod_resultsVisualisation_server("cohortDemographics", mod_resultsVisualisation_CohortsDemographics_server, analysisResults,"Cohort Demographics", pathToLogsFromOptions, download_href)
         }
         if (analysisTypeFromOptions == "codeWAS") {
-          mod_resultsVisualisation_server("codeWAS", mod_resultsVisualisation_CodeWAS_server, analysisResults)
+          mod_resultsVisualisation_server("codeWAS", mod_resultsVisualisation_CodeWAS_server, analysisResults, "CodeWAS", pathToLogsFromOptions, download_href)
         }
         if (analysisTypeFromOptions == "timeCodeWAS") {
-          mod_resultsVisualisation_server("timeCodeWAS", mod_resultsVisualisation_TimeCodeWAS_server, analysisResults)
+          mod_resultsVisualisation_server("timeCodeWAS", mod_resultsVisualisation_TimeCodeWAS_server, analysisResults, "TimeCodeWAS", pathToLogsFromOptions, download_href)
         }
         if (analysisTypeFromOptions == "phenotypeScoring") {
-          mod_resultsVisualisation_server("phenotypeScoring", mod_resultsVisualisation_PhenotypeScoring_server, analysisResults)
+          mod_resultsVisualisation_server("phenotypeScoring", mod_resultsVisualisation_PhenotypeScoring_server, analysisResults, "Phenotype Scoring", pathToLogsFromOptions, download_href)
         }
       }
     }

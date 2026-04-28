@@ -46,7 +46,7 @@ mod_fct_phenotypeFlags_ui <- function(id) {
     )
 }
 
-mod_fct_phenotypeFlags_server <- function(id, r_groupedCovariates) {
+mod_fct_phenotypeFlags_server <- function(id, r_groupedCovariates,r_formula_items) {
     shiny::moduleServer(id, function(input, output, session) {
         ns <- session$ns
 
@@ -153,7 +153,8 @@ mod_fct_phenotypeFlags_server <- function(id, r_groupedCovariates) {
             r_groupedCovariates = r_groupedCovariates,
             operatorItems = operators_flag,
             titleText = "Expression that evaluates to true or false:",
-            placeholder = "Drag and Drop to create rule"
+            placeholder = "Drag and Drop to create rule",
+            variableItems = r_formula_items
         )
         rf_formula = rf_formula_res$get_formula
 
@@ -206,8 +207,23 @@ mod_fct_phenotypeFlags_server <- function(id, r_groupedCovariates) {
             shiny::req(r_groupedCovariates$groupedCovariatesPerPersonTibble |> nrow() > 0)
             shiny::req(rf_formula())
 
+            groupedCovariatesPerPersonTibble <- r_groupedCovariates$groupedCovariatesPerPersonTibble
+
+            # Add totalScore if available so it can be used in flag formulas
+            if (!is.null(r_groupedCovariates$groupedCovariatesPerPersonTibble_totalScore) &&
+                nrow(r_groupedCovariates$groupedCovariatesPerPersonTibble_totalScore) > 0) {
+              groupedCovariatesPerPersonTibble <- groupedCovariatesPerPersonTibble |>
+                dplyr::left_join(
+                  r_groupedCovariates$groupedCovariatesPerPersonTibble_totalScore,
+                  by = "personSourceValue"
+                )
+            }
+
+
             flagRuleFormula <- rf_formula()
             flagRule <- flagRuleFormula$formula
+
+
 
             # Check if formula is potentially incomplete (e.g., ends with operator or is empty)
             if (is_flagformula_incomplete(flagRule, operators_flag)) {
@@ -216,11 +232,12 @@ mod_fct_phenotypeFlags_server <- function(id, r_groupedCovariates) {
               return()
             }
 
+
             errorMessage <- NULL
             tryCatch(
                 {
                     numberOfPersonsInFlag <- eval(parse(text = paste(
-                        "r_groupedCovariates$groupedCovariatesPerPersonTibble |>",
+                        "groupedCovariatesPerPersonTibble |>",
                         "dplyr::filter(", flagRule, ") |>",
                         "nrow()"
                     )))

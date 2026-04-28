@@ -171,6 +171,52 @@ mod_resultsVisualisation_TimeCodeWAS_ui <- function(id) {
       shiny::tabsetPanel(
         id = ns("tabset"),
         shiny::tabPanel(
+          "Table",
+          shiny::div(
+            fluidRow(
+              column(10,
+                     tags$div(style = "display: flex; align-items: center; gap: 15px;",
+                              tags$label("Sort by:", style = "width: 50px; margin-bottom: 0;"),
+                              tags$div(style = "margin-top: 15px;",
+                                       selectInput(ns("sortFirst"), label = NULL, choices = tableColumns, width = "150px", selected = "mlogp"),
+                              ),
+                              tags$div(style = "width: 50px;",
+                                       checkboxInput(ns("sortFirstDesc"), "descending", value = TRUE)
+                              ),
+                              tags$label("", style = "width: 20px; margin-bottom: 0; margin-left: 10px;"),
+                              tags$div(style = "margin-top: 15px;",
+                                       selectInput(ns("sortSecond"), label = NULL, choices = tableColumns, width = "150px", selected = "OR"),
+                              ),
+                              tags$div(style = "width: 50px;",
+                                       checkboxInput(ns("sortSecondDesc"), "descending", value = TRUE)
+                              )
+                     )
+              ),
+            ) # fluidRow
+          ), # div
+          shiny::div(
+            style = "margin-top: 5px; margin-bottom: 10px;",
+            shinycssloaders::withSpinner(
+              reactable::reactableOutput(ns("reactableData")),
+              proxy.height = "400px"
+            )
+          ),
+          shiny::div(
+            style = "margin-top: 10px; margin-bottom: 10px;",
+            shiny::downloadButton(ns("downloadDataFiltered"), "Download filtered"),
+            # tags$button(
+            #   shiny::icon("download"),
+            #   "Download filtered",
+            #   class = "btn btn-default",
+            #   onclick = sprintf(
+            #     "Reactable.downloadDataCSV('%s', 'timecodewas_filtered_' + new Date().toISOString().slice(0,16).replace(/[-:T]/g,'_') + '.csv')",
+            #     ns("reactableData")
+            #     )
+            # ),
+            shiny::downloadButton(ns("downloadDataAll"), "Download all"),
+          )
+        ),
+        shiny::tabPanel(
           "Proportions View",
           shiny::div(style = "margin-top: 0px; ",
                      shiny::fluidRow(
@@ -266,53 +312,7 @@ mod_resultsVisualisation_TimeCodeWAS_ui <- function(id) {
             style = "margin-top: 10px; margin-bottom: 10px;",
             shiny::downloadButton(ns("downloadProgressView"), "Download")
           ),
-        ),
-        shiny::tabPanel(
-          "Table",
-          shiny::div(
-            fluidRow(
-              column(10,
-                     tags$div(style = "display: flex; align-items: center; gap: 15px;",
-                              tags$label("Sort by:", style = "width: 50px; margin-bottom: 0;"),
-                              tags$div(style = "margin-top: 15px;",
-                                       selectInput(ns("sortFirst"), label = NULL, choices = tableColumns, width = "150px", selected = "mlogp"),
-                              ),
-                              tags$div(style = "width: 50px;",
-                                       checkboxInput(ns("sortFirstDesc"), "descending", value = TRUE)
-                              ),
-                              tags$label("", style = "width: 20px; margin-bottom: 0; margin-left: 10px;"),
-                              tags$div(style = "margin-top: 15px;",
-                                       selectInput(ns("sortSecond"), label = NULL, choices = tableColumns, width = "150px", selected = "OR"),
-                              ),
-                              tags$div(style = "width: 50px;",
-                                       checkboxInput(ns("sortSecondDesc"), "descending", value = TRUE)
-                              )
-                     )
-              ),
-            ) # fluidRow
-          ), # div
-          shiny::div(
-            style = "margin-top: 5px; margin-bottom: 10px;",
-            shinycssloaders::withSpinner(
-              reactable::reactableOutput(ns("reactableData")),
-              proxy.height = "400px"
-            )
-          ),
-          shiny::div(
-            style = "margin-top: 10px; margin-bottom: 10px;",
-            shiny::downloadButton(ns("downloadDataFiltered"), "Download filtered"),
-            # tags$button(
-            #   shiny::icon("download"),
-            #   "Download filtered",
-            #   class = "btn btn-default",
-            #   onclick = sprintf(
-            #     "Reactable.downloadDataCSV('%s', 'timecodewas_filtered_' + new Date().toISOString().slice(0,16).replace(/[-:T]/g,'_') + '.csv')",
-            #     ns("reactableData")
-            #     )
-            # ),
-            shiny::downloadButton(ns("downloadDataAll"), "Download all"),
-          )
-        ) # tabPanel
+        )# tabPanel
       ) # tabsetPanel
     ) # tagList
     ) # div
@@ -328,12 +328,15 @@ mod_resultsVisualisation_TimeCodeWAS_ui <- function(id) {
 #'
 #' @return The module returns server-side logic to generate and manage the cohort overlaps UpSet plot.
 #'
-#' @importFrom shiny moduleServer reactive req renderUI observeEvent downloadHandler
+#' @importFrom shiny moduleServer reactive req renderUI observeEvent observe downloadHandler
+#' @importFrom shiny fluidPage fluidRow column div checkboxInput sliderInput
+#' @importFrom shiny actionButton textInput selectInput showModal modalDialog modalButton
+#' @importFrom shiny tabsetPanel tabPanel
 #' @importFrom shinyFeedback showFeedbackWarning hideFeedback
 #' @importFrom shinyWidgets pickerInput pickerOptions chooseSliderSkin
 #' @importFrom ggiraph renderGirafe girafe opts_sizing opts_hover opts_selection opts_toolbar geom_point_interactive
 #' @importFrom ggrepel geom_text_repel
-#' @importFrom dplyr filter mutate select arrange transmute left_join pull case_when if_else inner_join row_number
+#' @importFrom dplyr filter mutate select arrange transmute left_join pull case_when if_else inner_join row_number across all_of desc
 #' @importFrom tidyr separate
 #' @importFrom stringr str_remove_all str_remove str_c str_wrap str_trunc str_split str_extract_all str_sub
 #' @importFrom scales percent number rescale
@@ -347,6 +350,8 @@ mod_resultsVisualisation_TimeCodeWAS_ui <- function(id) {
 #' @importFrom grDevices cairo_pdf dev.off
 #' @importFrom shinyjs toggle
 #' @importFrom htmlwidgets onRender
+#' @importFrom rlang .data
+#' @importFrom utils head tail
 #'
 #' @export
 #'
@@ -1414,15 +1419,15 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
 
     .vectorized_convert_days <- Vectorize(function(days) {
       if (is.na(days)) return(NA_character_)
-      months <- round(lubridate::days(days)/months(1), 0)
+      months <- round(lubridate::time_length(lubridate::days(days), "month"), 0)
       months_remaining <- sign(months) * (abs(months) %% 12)
 
       if(months_remaining != 0) {
         window_type <- "m"
-        years <- floor(lubridate::days(abs(days))/lubridate::years(1))
+        years <- floor(lubridate::time_length(lubridate::days(abs(days)), "year"))
       } else {
         window_type <- "y"
-        years <- round(lubridate::days(abs(days))/lubridate::years(1))
+        years <- round(lubridate::time_length(lubridate::days(abs(days)), "year"))
       }
       dplyr::case_when(
         years == 0 & months == 0 ~ paste0("0", window_type),
@@ -1434,14 +1439,14 @@ mod_resultsVisualisation_TimeCodeWAS_server <- function(id, analysisResults) {
 
     .get_time_periods <- function(studyResults){
       timeRange <- studyResults |>
-        dplyr::select(startDay, endDay) |>
+        dplyr::select(.data$startDay, .data$endDay) |>
         dplyr::distinct() |>
         dplyr::collect() |>
         na.omit() |>
-        dplyr::arrange(startDay, endDay) |>
-        dplyr::mutate(startDayText = .vectorized_convert_days(as.integer(startDay))) |>
-        dplyr::mutate(endDayText = .vectorized_convert_days(as.integer(endDay))) |>
-        dplyr::mutate(timeRange = paste0(startDayText, " / ", endDayText))
+        dplyr::arrange(.data$startDay, .data$endDay) |>
+        dplyr::mutate(startDayText = .vectorized_convert_days(as.integer(.data$startDay))) |>
+        dplyr::mutate(endDayText = .vectorized_convert_days(as.integer(.data$endDay))) |>
+        dplyr::mutate(timeRange = paste0(.data$startDayText, " / ", .data$endDayText))
 
       return(timeRange)
     }

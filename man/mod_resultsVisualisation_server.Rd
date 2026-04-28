@@ -7,7 +7,10 @@
 mod_resultsVisualisation_server(
   id,
   resultsVisualisationModuleServer,
-  analysisResults
+  analysisResults,
+  title,
+  logshref,
+  download_href = NULL
 )
 }
 \arguments{
@@ -16,6 +19,13 @@ mod_resultsVisualisation_server(
 \item{resultsVisualisationModuleServer}{A server function representing the specific visualization module's server logic.}
 
 \item{analysisResults}{Pooled connection to the analysis results duckdb.}
+
+\item{title}{A string representing the title of the main tab in the sidebar.}
+
+\item{logshref}{A string representing the URL to the logs page.}
+
+\item{download_href}{Optional character string. A URL to a downloadable DuckDB file
+generated in the app server. If NULL, the "Download results" menu item is not shown.}
 }
 \value{
 The module returns server-side logic to manage the results visualization dashboard.

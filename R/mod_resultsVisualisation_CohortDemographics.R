@@ -212,7 +212,7 @@ mod_resultsVisualisation_CohortsDemographics_ui <- function(id) {
 #' @importFrom stringr str_extract str_to_lower
 #' @importFrom ggplot2 sym aes geom_col position_dodge2 geom_text facet_grid scale_x_continuous expansion
 #' @importFrom ggplot2 coord_cartesian expand_limits theme_minimal element_text element_rect
-#' @importFrom ggplot2 bs ggplot scale_y_continuous scale_fill_manual labs geom_bar theme_bw
+#' @importFrom ggplot2 ggplot scale_y_continuous scale_fill_manual labs geom_bar theme_bw
 #' @importFrom reactable renderReactable reactable
 #' @importFrom readr write_csv
 #' @importFrom lubridate now

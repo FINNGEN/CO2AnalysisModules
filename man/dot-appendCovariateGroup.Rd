@@ -2,7 +2,7 @@
 % Please edit documentation in R/mod_resultsVisualisation_PhenotypeScoring.R
 \name{.appendCovariateGroup}
 \alias{.appendCovariateGroup}
-\title{Append Covariate Group}
+\title{Append Code Group (Phenotype Scoring)}
 \usage{
 .appendCovariateGroup(
   analysisResults,
@@ -13,19 +13,30 @@
 )
 }
 \arguments{
-\item{analysisResults}{A database connection containing analysis results tables}
+\item{analysisResults}{An Andromeda (DuckDB-backed) object containing at least:
+\code{analysisRef}, \code{conceptRef}, \code{comparisons}, and \code{personLevelData}.}
 
-\item{covariateIds}{A vector of covariate ids}
+\item{covariateIds}{Integer vector of OMOP conceptIds selected into the group.
+(For legacy naming, these are the "covariateIds".)}
 
-\item{newGroupName}{Character string giving the name for the new covariate group.}
+\item{newGroupName}{Character name for the new group.}
 
-\item{groupedCovariatesTibble}{A tibble containing the grouped covariates}
+\item{groupedCovariatesTibble}{Tibble of existing groups (can be empty).}
 
-\item{groupedCovariatesPerPersonTibble}{A tibble containing the grouped covariates per person}
+\item{groupedCovariatesPerPersonTibble}{Tibble with \code{personSourceValue} and
+one column per existing group (can be NULL).}
 }
 \value{
-A list containing the updated group of covariates object
+A list with:
+\itemize{
+\item \code{groupedCovariatesTibble}
+\item \code{groupedCovariatesPerPersonTibble}
+}
 }
 \description{
-Appends a new group of covariates to the groupOfCovariatesObject
+Creates a new code group from selected \code{conceptId}s and appends it to:
+\enumerate{
+\item \code{groupedCovariatesTibble} (group metadata + score distribution)
+\item \code{groupedCovariatesPerPersonTibble} (one numeric column per group)
+}
 }

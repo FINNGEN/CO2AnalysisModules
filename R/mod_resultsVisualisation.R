@@ -27,15 +27,19 @@ mod_resultsVisualisation_ui <- function(id, resultsVisualisationModuleUi, pathTo
   header <-
     shinydashboard::dashboardHeader(title = title, headerContent)
 
-  sidebarMenu <-
-    shinydashboard::sidebarMenu(
-      id = ns("tabs"),
-      shinydashboard::menuItem(text = title, tabName = "module", icon = shiny::icon("table")),
-      shinydashboard::menuItem(text = "About", tabName = "about"),
-      shinydashboard::menuItem(text = "Study details", tabName = "cohortsInfo"),
-      shinydashboard::menuItem("App Logs", icon = shiny::icon("info-circle"), href = logshref),
-      selected = "module"
-    )
+  # sidebarMenu <-
+  #   shinydashboard::sidebarMenu(
+  #     id = ns("tabs"),
+  #     shinydashboard::menuItem(text = title, tabName = "module", icon = shiny::icon("table")),
+  #     shinydashboard::menuItem(text = "About", tabName = "about"),
+  #     shinydashboard::menuItem(text = "Study details", tabName = "cohortsInfo"),
+  #     shiny::uiOutput(ns("download_results_menu_ui")),
+  #     shinydashboard::menuItem("App Logs", icon = shiny::icon("info-circle"), href = logshref),
+  #     selected = "module"
+  #   )
+
+  # make side bar menu dynamic
+  sidebarMenu <- shinydashboard::sidebarMenuOutput(ns("sidebarMenu"))
 
   # Side bar code
   sidebar <-
@@ -56,7 +60,10 @@ mod_resultsVisualisation_ui <- function(id, resultsVisualisationModuleUi, pathTo
       shiny::tags$h4("Analysis Information"),
       reactable::reactableOutput(ns("analysisInfo")),
       shiny::tags$h4("Database Information"),
-      reactable::reactableOutput(ns("databaseInfo"))
+      reactable::reactableOutput(ns("databaseInfo")),
+      shiny::tags$hr(),
+      shiny::tags$h5("Download the entire analysis result (.duckdb)"),
+      shiny::downloadButton(ns("download_results_duckdb"), "Download results")
     ),
     shinydashboard::tabItem(
       tabName = "module",
@@ -68,6 +75,7 @@ mod_resultsVisualisation_ui <- function(id, resultsVisualisationModuleUi, pathTo
 
   # body
   body <- shinydashboard::dashboardBody(
+    shinyjs::useShinyjs(),
     bodyTabItems
   )
 
@@ -91,19 +99,78 @@ mod_resultsVisualisation_ui <- function(id, resultsVisualisationModuleUi, pathTo
 #' @param id A string representing the module's namespace.
 #' @param resultsVisualisationModuleServer A server function representing the specific visualization module's server logic.
 #' @param analysisResults Pooled connection to the analysis results duckdb.
+#' @param title A string representing the title of the main tab in the sidebar.
+#' @param logshref A string representing the URL to the logs page.
+#' @param download_href Optional character string. A URL to a downloadable DuckDB file
+#' generated in the app server. If NULL, the "Download results" menu item is not shown.
 #'
 #' @return The module returns server-side logic to manage the results visualization dashboard.
 #'
 #' @importFrom shiny moduleServer
 #' @importFrom dplyr tbl select collect
 #' @importFrom reactable renderReactable
+#' @importFrom rlang .data
 #'
 #' @export
 #'
-mod_resultsVisualisation_server <- function(id, resultsVisualisationModuleServer, analysisResults) {
+mod_resultsVisualisation_server <- function(id, resultsVisualisationModuleServer, analysisResults, title, logshref, download_href = NULL) {
 
 
   shiny::moduleServer(id, function(input, output, session) {
+
+    # TODO: Sidebar download link causes brief visual tab blink before returning to module, it should be improved another time.
+    # Downloading works from both the menu (now made dynamic) and inside study details
+
+    output$sidebarMenu <- shinydashboard::renderMenu({
+      menu_items <- list(
+        shinydashboard::menuItem(
+          text = title,
+          tabName = "module",
+          icon = shiny::icon("table")
+        ),
+        shinydashboard::menuItem(
+          text = "About",
+          tabName = "about"
+        ),
+        shinydashboard::menuItem(
+          text = "Study details",
+          tabName = "cohortsInfo"
+        )
+      )
+
+      # show download button only if download href has been prepared and is available
+      if (!is.null(download_href) && nzchar(download_href)) {
+        menu_items <- c(menu_items, list(
+          shinydashboard::menuItem(
+            text = "Download results",
+            icon = shiny::icon("download"),
+            href = download_href
+          )
+        ))
+      }
+
+      menu_items <- c(menu_items, list(
+        shinydashboard::menuItem(
+          text = "App Logs",
+          icon = shiny::icon("info-circle"),
+          href = logshref
+        )
+      ))
+
+      do.call(
+        shinydashboard::sidebarMenu,
+        c(
+          list(
+            id = session$ns("tabs"),
+            selected = "module"
+          ),
+          menu_items
+        )
+      )
+    })
+
+
+
 
     output$analysisInfo <- reactable::renderReactable({
       analysisInfoTable <- analysisResults |> dplyr::tbl('analysisInfo') |> dplyr::collect()
@@ -117,15 +184,15 @@ mod_resultsVisualisation_server <- function(id, resultsVisualisationModuleServer
 
     output$cohortsInfo <- reactable::renderReactable({
         cohortsInfo <- analysisResults |> dplyr::tbl('cohortsInfo') |>
-          dplyr::select(-sql, -json) |>
+          dplyr::select(-.data$sql, -.data$json) |>
           dplyr::collect()
         reactable::reactable(cohortsInfo)
     })
 
     output$usedCohortsInfo <- shiny::renderUI({
       countsTable <- analysisResults |> dplyr::tbl('cohortsInfo') |>
-        dplyr::filter(!is.na(use) & use != "") |>
-        dplyr::select(use, shortName, cohortName, cohortSubjects, cohortEntries) |>
+        dplyr::filter(!is.na(.data$use) & .data$use != "") |>
+        dplyr::select(.data$use, .data$shortName,  .data$cohortName,  .data$cohortSubjects,  .data$cohortEntries) |>
         dplyr::collect()
 
       shiny::tagList(
@@ -195,6 +262,28 @@ mod_resultsVisualisation_server <- function(id, resultsVisualisationModuleServer
           )# end of div
       )# end of tagList
     })
+
+    output$download_results_duckdb <- shiny::downloadHandler(
+      filename = function() {
+        analysisType <- getOption("CO2AnalysisModules.analysisType", default = "analysis")
+        sanitized <- gsub("[^[:alnum:]]+", "_", analysisType)
+        sanitized <- gsub("^_+|_+$", "", sanitized)
+        paste0(sanitized, "_analysisResults.duckdb")
+      },
+      content = function(fname) {
+        db_path <- getOption("CO2AnalysisModules.pathToResultsDatabase", default = "")
+        shiny::req(nzchar(db_path))
+        shiny::req(file.exists(db_path))
+
+        ok <- file.copy(db_path, fname, overwrite = TRUE)
+        if (!isTRUE(ok) || file.info(fname)$size == 0) {
+          stop("Download failed: could not copy DuckDB file.")
+        }
+
+        ParallelLogger::logInfo("[viewer] Download duckdb: ", db_path)
+      }
+    )
+
 
     resultsVisualisationModuleServer(id, analysisResults)
   })
