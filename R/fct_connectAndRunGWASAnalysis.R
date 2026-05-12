@@ -174,7 +174,7 @@ runGWASAnalysis <- function(
 #' @param covariates Optional comma-separated covariate string of the standard FinnGen covariates will be used by default
 #' @param extra_covariates_df data.frame with FID/IID + extra covariate columns
 #' @param test Genetic model test string, Default: "additive"
-#' @param is_binary Character string "true"/"false" to specify binary or quantitative GWAS analysis type, Default: "true"
+#' @param is_binary Logical TRUE/FALSE to specify binary or quantitative GWAS analysis type, Default: TRUE
 #' @param continue_with_finemap Logical TRUE/FALSE to specify whether to continue with fine mapping, Default: TRUE
 #' @param pipeline_name Optional pipeline name. If NULL, determined automatically from `release`.
 #' @param release Finngen data release version, Default: "Regenie13"
@@ -199,7 +199,7 @@ runRegenieStandardPipeline <- function(
     covariates = NULL,
     extra_covariates_df = NULL,
     test = "additive",
-    is_binary = "true",
+    is_binary = TRUE,
     continue_with_finemap = TRUE,
     pipeline_name = NULL,
     release = "Regenie13",
@@ -400,8 +400,8 @@ runRegenieStandardPipeline <- function(
     "regenie_unmod.phenolist"  = phenotype_name,
     "regenie_unmod.phenodescriptionlist" = dest_desc_alias,
     "regenie_unmod.test"       = test,
-    "regenie_unmod.is_binary"  = is_binary,
-    "regenie_unmod.continue_with_finemap" = isTRUE(continue_with_finemap)
+    "regenie_unmod.is_binary"  = as.character(is_binary),
+    "regenie_unmod.continue_with_finemap" = as.character(isTRUE(continue_with_finemap))
   )
   if (!is.null(covariates) && nzchar(covariates)) {
     inputs_obj[["regenie_unmod.covariates"]] <- covariates
