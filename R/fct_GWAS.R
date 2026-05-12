@@ -34,6 +34,7 @@ execute_GWAS <- function(
   phenotype <- analysisSettings$phenotype
   description <- analysisSettings$description
   analysisType <- analysisSettings$analysisType
+  continueWithFinemap <- analysisSettings$continueWithFinemap
   release <- analysisSettings$release
   connectionSandboxAPI <- analysisSettings$connectionSandboxAPI
 
@@ -105,6 +106,7 @@ execute_GWAS <- function(
     phenotype_name = phenotype,
     phenotype_description = description,
     test = analysisType,
+    continue_with_finemap = continueWithFinemap,
     release = release
   )
 
