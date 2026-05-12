@@ -51,7 +51,7 @@ mod_analysisSettings_GWAS_ui <- function(id) {
     shiny::checkboxInput(
       inputId = ns("continueWithFinemap_checkboxInput"),
       label = "Continue with fine mapping",
-      value = FALSE
+      value = TRUE
     ),
     shiny::textInput(ns("phenotypeName_textInput"), label = "Phenotype Name:",placeholder = "PHENOTYPE_NAME"),
     shiny::textInput(ns("description_textInput"), label = "Description:",placeholder = "Brief description of the GWAS analysis"),
