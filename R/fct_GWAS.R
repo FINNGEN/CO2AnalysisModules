@@ -76,6 +76,7 @@ execute_GWAS <- function(
                           "\nphenotype: ", phenotype,
                           "\ndescription: ", description,
                           "\nanalysisType: ", analysisType,
+                          "\ncontinueWithFinemap: ", continueWithFinemap,
                           "\nrelease: ", release)
 
   # This was using the custom gwas api, which is being fazed out in favor of the standard pipeline to enable additional features such as
