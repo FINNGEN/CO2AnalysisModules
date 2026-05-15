@@ -19,6 +19,7 @@ test_that("executeGWAS error if no token", {
     phenotype = "FRACTUREFRACTURECONTROLS",
     description = "Cases-cohort: fracture; Controls-cohort: fracture-controls (db: Eunomia GiBleed)",
     analysisType = "additive",
+    continueWithFinemap = FALSE,
     release = "Regenie13",
     connectionSandboxAPI = createSandboxAPIConnection(
       base_url = "https://sandbox-api.finngen.fi/api/v1/",
@@ -35,6 +36,6 @@ test_that("executeGWAS error if no token", {
         analysisSettings = analysisSettings
       )
     },
-    "Could not detect RED sandbox bucket from shell output"
+    "Could not resolve host: sandbox-api.finngen.fi"
   )
 })

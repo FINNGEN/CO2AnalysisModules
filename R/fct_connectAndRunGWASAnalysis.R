@@ -174,7 +174,9 @@ runGWASAnalysis <- function(
 #' @param covariates Optional comma-separated covariate string of the standard FinnGen covariates will be used by default
 #' @param extra_covariates_df data.frame with FID/IID + extra covariate columns
 #' @param test Genetic model test string, Default: "additive"
-#' @param is_binary String "true"/"false" to specify binary or quantitative GWAS analysis type, Default: "true"
+#' @param is_binary Logical TRUE/FALSE to specify binary or quantitative GWAS analysis type, Default: TRUE
+#' @param continue_with_finemap Logical TRUE/FALSE to specify whether to continue with fine mapping, Default: TRUE
+#' @param pipeline_name Optional pipeline name. If NULL, determined automatically from `release`.
 #' @param release Finngen data release version, Default: "Regenie13"
 #' @param endpoint_path internal API path, Default: "v2/standard-pipelines"
 #' @param timeout_sec httr timeout seconds, Default: 300
@@ -182,10 +184,10 @@ runGWASAnalysis <- function(
 #' @return list(status, http_status, workflow_id, content, temp_files, sandbox_paths_used, upload_logs)
 #'
 #' @export
-#' @importFrom httr add_headers upload_file POST status_code content timeout
-#' @importFrom jsonlite toJSON write_json
+#' @importFrom httr add_headers upload_file POST GET status_code content timeout
+#' @importFrom jsonlite toJSON write_json fromJSON
 #' @importFrom readr write_tsv write_lines
-#' @importFrom dplyr bind_rows left_join
+#' @importFrom dplyr bind_rows left_join filter arrange desc slice pull
 #' @importFrom tibble tibble
 #' @importFrom stringr str_detect str_c
 runRegenieStandardPipeline <- function(
@@ -197,7 +199,9 @@ runRegenieStandardPipeline <- function(
     covariates = NULL,
     extra_covariates_df = NULL,
     test = "additive",
-    is_binary = "true",
+    is_binary = TRUE,
+    continue_with_finemap = TRUE,
+    pipeline_name = NULL,
     release = "Regenie13",
     endpoint_path = "v2/standard-pipelines",
     timeout_sec = 300
@@ -272,17 +276,30 @@ runRegenieStandardPipeline <- function(
     stop("phenotype_name must start with a letter and contain only letters, numbers, or underscores")
   }
 
-  # for now hard code the pipeline ids depending on the data freeze version. This needs to be updated to get the id automatically
-  # using the api standard-pipelines with get and using the pipeline names
-  # For now only these releases can be used for gwas
-  standard_pipeline_id <- switch(
-    release,
-    "Regenie13" = "5718330904150016",
-    "Regenie14" = "5766468427841536",
-    stop(
-      "Unsupported release: ", release, ". ",
-      "Supported releases are: Regenie13, Regenie14"
+  # if connection to sandbox returns error, return that before proceeding.
+  if (!is.null(connection_sandboxAPI$conn_status_tibble$logTibble$type) &&
+      identical(connection_sandboxAPI$conn_status_tibble$logTibble$type, "ERROR")) {
+    return(list(status = FALSE, message = "Connection in connection_sandboxAPI not stabilised"))
+  }
+
+  # Resolve pipeline name from release, then fetch latest matching unmodifiable pipeline ID from API
+  if (is.null(pipeline_name)) {
+    pipeline_name <- switch(
+      release,
+      "Regenie13" = "UnmodifiableRegenieDF13",
+      "Regenie14" = "UnmodifiableRegenieDF14",
+      stop(
+        "Unsupported release: ", release, ". ",
+        "Supported releases are: Regenie13, Regenie14, or provide pipeline_name directly."
+      )
     )
+  }
+
+  standard_pipeline_id <- .get_standard_pipeline_id_by_name(
+    connection_sandboxAPI = connection_sandboxAPI,
+    endpoint_path = endpoint_path,
+    pipeline_name = pipeline_name,
+    timeout_sec = timeout_sec
   )
 
 
@@ -291,11 +308,6 @@ runRegenieStandardPipeline <- function(
   }
   if (length(cases_finngenids) == 0 || length(controls_finngenids) == 0) {
     stop("cases_finngenids and controls_finngenids must be non-empty")
-  }
-
-  if (!is.null(connection_sandboxAPI$conn_status_tibble$logTibble$type) &&
-      identical(connection_sandboxAPI$conn_status_tibble$logTibble$type, "ERROR")) {
-    return(list(status = FALSE, message = "Connection in connection_sandboxAPI not stabilised"))
   }
 
   .require_gsutil()
@@ -388,7 +400,8 @@ runRegenieStandardPipeline <- function(
     "regenie_unmod.phenolist"  = phenotype_name,
     "regenie_unmod.phenodescriptionlist" = dest_desc_alias,
     "regenie_unmod.test"       = test,
-    "regenie_unmod.is_binary"  = is_binary
+    "regenie_unmod.is_binary"  = as.character(is_binary),
+    "regenie_unmod.continue_with_finemap" = as.character(isTRUE(continue_with_finemap))
   )
   if (!is.null(covariates) && nzchar(covariates)) {
     inputs_obj[["regenie_unmod.covariates"]] <- covariates
@@ -414,61 +427,104 @@ runRegenieStandardPipeline <- function(
     data  = data_json
   )
 
-  logTibble <- connection_sandboxAPI$conn_status_tibble$logTibble
-
-  if (!is.null(logTibble$type) && identical(logTibble$type, "ERROR")) {
-
-    res <- list(
-      status = FALSE,
-      message = "Connection in connection_sandboxAPI not stabilised"
+  # gwas request with http post and return status
+  res <- tryCatch({
+    r <- httr::POST(
+      url = url,
+      body = body,
+      encode = "multipart",
+      headers,
+      httr::timeout(timeout_sec)
     )
 
-  } else {
+    raw_content <- paste(httr::content(r), collapse = "\n")
 
-    res <- tryCatch({
-      r <- httr::POST(
-        url = url,
-        body = body,
-        encode = "multipart",
-        headers,
-        httr::timeout(timeout_sec)
+    list(
+      status = httr::status_code(r) %in% c(200, 201),
+      http_status = httr::status_code(r),
+      workflow_id = .extract_uuid(raw_content),
+      content = raw_content,
+      temp_files = list(
+        phenofile = tmp_pheno_path,
+        phenodescription = tmp_desc_path,
+        input_json = tmp_input_json_path
+      ),
+      sandbox_paths_used = list(
+        RED_BUCKET = red_bucket_gs,
+        sandbox_dir_alias = sandbox_dir_alias,
+        sandbox_dir_gs = sandbox_dir_gs,
+        regenie_unmod.pheno_file = dest_pheno_alias,
+        regenie_unmod.phenodescriptionlist = dest_desc_alias
       )
-
-      raw_content <- paste(httr::content(r), collapse = "\n")
-
-      list(
-        status = httr::status_code(r) %in% c(200, 201),
-        http_status = httr::status_code(r),
-        workflow_id = .extract_uuid(raw_content),
-        content = raw_content,
-        temp_files = list(
-          phenofile = tmp_pheno_path,
-          phenodescription = tmp_desc_path,
-          input_json = tmp_input_json_path
-        ),
-        sandbox_paths_used = list(
-          RED_BUCKET = red_bucket_gs,
-          sandbox_dir_alias = sandbox_dir_alias,
-          sandbox_dir_gs = sandbox_dir_gs,
-          regenie_unmod.pheno_file = dest_pheno_alias,
-          regenie_unmod.phenodescriptionlist = dest_desc_alias
-        )
+    )
+  }, error = function(cond) {
+    list(
+      status = FALSE,
+      message = stringr::str_c("Unexpected error in runRegenieStandardPipeline: ", cond$message),
+      temp_files = list(
+        phenofile = tmp_pheno_path,
+        phenodescription = tmp_desc_path,
+        input_json = tmp_input_json_path
       )
-    }, error = function(cond) {
-      list(
-        status = FALSE,
-        message = stringr::str_c("Unexpected error in runRegenieStandardPipeline: ", cond$message),
-        temp_files = list(
-          phenofile = tmp_pheno_path,
-          phenodescription = tmp_desc_path,
-          input_json = tmp_input_json_path
-        )
-      )
-    })
-
-  }
+    )
+  })
 
   return(res)
+}
+
+
+.get_standard_pipeline_id_by_name <- function(
+    connection_sandboxAPI,
+    endpoint_path,
+    pipeline_name,
+    timeout_sec = 300
+) {
+
+  authorization <- paste("Bearer", connection_sandboxAPI$token)
+
+  headers <- httr::add_headers(c("Authorization" = authorization))
+
+  url <- paste0(
+    sub("/+$", "", connection_sandboxAPI$base_url),
+    "/",
+    sub("^/+", "", endpoint_path)
+  )
+
+  r <- httr::GET(url = url,headers,httr::timeout(timeout_sec))
+
+  if (!httr::status_code(r) %in% c(200, 201)) {
+    stop("Failed to fetch standard pipelines. HTTP status: ",httr::status_code(r))
+  }
+
+  txt <- httr::content(r,as = "text",encoding = "UTF-8")
+
+  x <- jsonlite::fromJSON(txt,flatten = TRUE)
+
+  pipelines <- x$standard_pipelines
+
+  if (is.null(pipelines) || !is.data.frame(pipelines)) {
+    stop("Could not find `standard_pipelines` in API response.")
+  }
+
+  # avoid scientific notation display issues
+  pipelines$id <- format(pipelines$id,scientific = FALSE,trim = TRUE)
+
+  standard_pipeline_id <- pipelines |>
+    dplyr::filter(
+      .data$name == pipeline_name,
+      .data$unmodifiable == TRUE
+    ) |>
+    dplyr::arrange(
+      dplyr::desc(.data$version)
+    ) |>
+    dplyr::slice(1) |>
+    dplyr::pull(.data$id)
+
+  if (length(standard_pipeline_id) == 0) {
+    stop("No matching unmodifiable standard pipeline found for name: ",pipeline_name)
+  }
+
+  return(standard_pipeline_id)
 }
 
 

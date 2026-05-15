@@ -13,7 +13,9 @@ runRegenieStandardPipeline(
   covariates = NULL,
   extra_covariates_df = NULL,
   test = "additive",
-  is_binary = "true",
+  is_binary = TRUE,
+  continue_with_finemap = TRUE,
+  pipeline_name = NULL,
   release = "Regenie13",
   endpoint_path = "v2/standard-pipelines",
   timeout_sec = 300
@@ -36,7 +38,11 @@ runRegenieStandardPipeline(
 
 \item{test}{Genetic model test string, Default: "additive"}
 
-\item{is_binary}{String "true"/"false" to specify binary or quantitative GWAS analysis type, Default: "true"}
+\item{is_binary}{Logical TRUE/FALSE to specify binary or quantitative GWAS analysis type, Default: TRUE}
+
+\item{continue_with_finemap}{Logical TRUE/FALSE to specify whether to continue with fine mapping, Default: TRUE}
+
+\item{pipeline_name}{Optional pipeline name. If NULL, determined automatically from \code{release}.}
 
 \item{release}{Finngen data release version, Default: "Regenie13"}
 
