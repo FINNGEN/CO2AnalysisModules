@@ -34,6 +34,7 @@ execute_GWAS <- function(
   phenotype <- analysisSettings$phenotype
   description <- analysisSettings$description
   analysisType <- analysisSettings$analysisType
+  continueWithFinemap <- analysisSettings$continueWithFinemap
   release <- analysisSettings$release
   connectionSandboxAPI <- analysisSettings$connectionSandboxAPI
 
@@ -75,6 +76,7 @@ execute_GWAS <- function(
                           "\nphenotype: ", phenotype,
                           "\ndescription: ", description,
                           "\nanalysisType: ", analysisType,
+                          "\ncontinueWithFinemap: ", continueWithFinemap,
                           "\nrelease: ", release)
 
   # This was using the custom gwas api, which is being fazed out in favor of the standard pipeline to enable additional features such as
@@ -105,6 +107,7 @@ execute_GWAS <- function(
     phenotype_name = phenotype,
     phenotype_description = description,
     test = analysisType,
+    continue_with_finemap = continueWithFinemap,
     release = release
   )
 

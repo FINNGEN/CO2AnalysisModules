@@ -1,3 +1,8 @@
+# CO2AnalysisModules 3.3.0
+
+- Updated GWAS submission to use the standard pipeline API with automatic detection of the latest matching unmodifiable Regenie pipeline
+- Added support for running GWAS with finemapping
+
 # CO2AnalysisModules 3.2.4
 - Updates for PS
 

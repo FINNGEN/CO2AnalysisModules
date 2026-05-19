@@ -50,6 +50,7 @@ datetime
 daysToFirstEvent
 daysToLastEvent
 duckdb
+finemapping
 gsutil
 gwas
 http
