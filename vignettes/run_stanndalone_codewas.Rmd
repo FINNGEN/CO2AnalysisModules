@@ -301,7 +301,7 @@ You can validate the integrity of the results database with:
 CO2AnalysisModules::checkResults_CodeWAS(pathToResultsDatabase)
 ```
 
-## 7. Visualise the results
+## 7. Visualize the results
 
 The package ships a Shiny module that renders the results table together with a
 volcano plot (beta coefficient vs. `-log10(p-value)`, with a Bonferroni
@@ -339,7 +339,7 @@ The most significant covariates are the fracture concepts themselves
 (*Pathological fracture*, *Osteoporosis*, *Closed fracture of hip*, *Fracture of
 forearm*), which are present in all 56 cases and in essentially none of the
 controls, yielding an infinite odds ratio and a maximal `mlogp`. This is the
-expected behaviour: these concepts are the entry criteria of the cases cohort,
+expected behavior: these concepts are the entry criteria of the cases cohort,
 so their near-perfect separation from the controls is a sanity check rather than
 a discovery, and confirms that the case/control contrast is correctly specified.
 
@@ -349,7 +349,8 @@ in cases (OR ≈ 35), consistent with treatment of the underlying bone pathology
 and *DXA Radius and Ulna* (a bone-densitometry measurement) is likewise
 case-specific. The demographic covariates are also significant: `age in years`
 is markedly higher in cases (mean 79.4 vs. 0.67, OR ≈ 1268), and, equivalently,
-`Year of birth` is significantly *lower* in cases (β = −2.48, OR = 0.083). Both
+`Year of birth` is significantly *lower* in cases (`Beta` = −2.48, OR = 0.083).
+Both
 reflect the same effect — cases are substantially older than their matched
 controls — which is consistent with the well-established increase in fracture
 risk with advancing age.

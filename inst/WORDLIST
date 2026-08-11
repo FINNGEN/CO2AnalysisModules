@@ -1,6 +1,7 @@
 ATC
 ATLAS
 AgeFirstEvent
+Alendronate
 AnalysisModules
 Appender
 BigQuery
@@ -13,11 +14,13 @@ CohortDemographics
 CohortGenerator
 CohortOperations
 CohortOverlaps
+CohortTableHandler
 CohortsOverlaps
 DBI
 DBMS
 DDD
 DT
+DXA
 DatabaseConnector
 DuckDB
 Eunomia
@@ -30,6 +33,7 @@ Finngen
 GWAS
 GiBleed
 HadesExtras
+JDBC
 JS
 JSON
 Lifecycle
@@ -52,6 +56,7 @@ addTestTotibbleWithValueSummary
 appender
 automatch
 binaryTest
+bisphosphonate
 conceptIds
 conn
 continuousOddsRatio
@@ -61,6 +66,7 @@ covariateIds
 datetime
 daysToFirstEvent
 daysToLastEvent
+densitometry
 duckdb
 finemapping
 gsutil
@@ -82,3 +88,4 @@ tibbles
 timeCodeWAS
 timeCodeWASs
 unmodifiable
+walkthrough
