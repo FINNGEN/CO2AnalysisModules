@@ -1,0 +1,369 @@
+---
+title: "Run a standalone CodeWAS analysis"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Run a standalone CodeWAS analysis}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+## Aim
+
+This tutorial shows how to run the **CodeWAS** analysis of `CO2AnalysisModules`
+directly from R, without launching the full Cohort Operations application.
+
+CodeWAS (a PheWAS-style tool) compares the enrichment of medical codes and
+measurement values between a *cases* cohort and a *controls* cohort, returning
+odds ratios and p-values for each covariate.
+
+The starting point is assumed to be:
+
+- an **OMOP CDM** database that you can connect to, and
+- a **cohort table** already built in that database, holding **at least one
+  cohort** to use as cases.
+
+We use the [Eunomia](https://github.com/OHDSI/Eunomia) `GiBleed` sample database
+as a self-contained example, but the same steps apply to any OMOP CDM (SQLite,
+PostgreSQL, BigQuery, ...) by changing only the connection settings.
+
+For a detailed walkthrough of how to build and populate a cohort table, see the
+HadesExtras article
+[Using CohortTableHandler](https://finngen.github.io/HadesExtras/articles/using_CohortTableHandler.html).
+
+## 1. Imports
+
+Load the packages that expose the objects we call by name. Every other function
+is referenced with the strict `package::function()` notation so it is always
+clear which package a function comes from.
+
+```{r imports}
+library(CO2AnalysisModules)
+library(HadesExtras)
+
+# The remaining packages are used through `package::function()`:
+#   Eunomia            - provides the example OMOP CDM
+#   CohortGenerator    - reads and generates cohort definitions
+#   duckdb / DBI       - read the results database
+#   shiny / ggiraph    - visualise the results
+```
+
+## 2. Configuration
+
+The connection to the database and the location of the cohort table are
+described in a YAML configuration. This keeps the credentials and schema names
+out of the analysis code and lets you point the same script at a different
+database by editing only the configuration.
+
+### 2.1 Point the configuration at your database
+
+The `connection$connectionDetailsSettings` block is passed as-is to
+`DatabaseConnector::createConnectionDetails()`, so it accepts any DBMS that
+DatabaseConnector supports. Its keys must therefore be exactly the arguments of
+that function (`dbms`, `server`, `user`, `password`, `port`, ...); see the
+[`createConnectionDetails()` reference](https://ohdsi.github.io/DatabaseConnector/reference/createConnectionDetails.html)
+for the full list. The `cdm` block tells the analysis where the OMOP CDM and
+vocabulary live, and the `cohortTable` block where the cohort table is (or will
+be) stored.
+
+For this example we first download the Eunomia `GiBleed` SQLite file, then build
+a configuration that points to it.
+
+```{r eunomia-setup}
+# Eunomia needs a folder to cache the sample database
+Sys.setenv(EUNOMIA_DATA_FOLDER = tempdir())
+pathToGiBleedEunomiaSqlite <- Eunomia::getDatabaseFile("GiBleed", overwrite = FALSE)
+```
+
+```{r config}
+# `<pathToGiBleedEunomiaSqlite>` is a placeholder that `readAndParseYaml()`
+# substitutes with the value passed as an argument. For a real database you
+# would instead hard-code the server, and add `user`, `password`, `port`, etc.
+configYaml <- "
+database:
+  databaseId: E1
+  databaseName: GiBleed
+  databaseDescription: Eunomia database GiBleed
+connection:
+  connectionDetailsSettings:
+    dbms: sqlite
+    server: <pathToGiBleedEunomiaSqlite>
+cdm:
+  cdmDatabaseSchema: main
+  vocabularyDatabaseSchema: main
+cohortTable:
+  cohortDatabaseSchema: main
+  cohortTableName: example_cohort_table
+"
+
+pathToConfigYaml <- file.path(tempdir(), "cohortTableHandlerConfig.yml")
+writeLines(configYaml, pathToConfigYaml)
+
+# Parse the YAML, resolving the `<pathToGiBleedEunomiaSqlite>` placeholder
+cohortTableHandlerConfig <- HadesExtras::readAndParseYaml(
+  pathToYalmFile = pathToConfigYaml,
+  pathToGiBleedEunomiaSqlite = pathToGiBleedEunomiaSqlite
+)
+```
+
+> For a BigQuery or PostgreSQL CDM, replace the `connection` and `cdm` blocks
+> with the appropriate `dbms`, `server`/`project`, schemas and credentials. The
+> rest of this tutorial stays identical.
+>
+> Eunomia is a special case because its SQLite driver ships with
+> DatabaseConnector. Most other databases (PostgreSQL, SQL Server, BigQuery, ...)
+> additionally need a JDBC driver, supplied through the `pathToDriver` key of
+> `connectionDetailsSettings`. See
+> [Obtaining drivers](https://ohdsi.github.io/DatabaseConnector/articles/Connecting.html#obtaining-drivers)
+> for how to download them and set `pathToDriver`.
+
+### 2.2 Open the connection
+
+`createCohortTableHandlerFromList()` opens the connection and returns a
+`CohortTableHandler` R6 object. This object is the single handle that
+`execute_CodeWAS()` needs: it knows the connection, the CDM schemas, the cohort
+table.
+
+```{r handler}
+cohortTableHandler <- HadesExtras::createCohortTableHandlerFromList(
+  cohortTableHandlerConfig = cohortTableHandlerConfig,
+  loadConnectionChecksLevel = "basicChecks"
+)
+```
+
+## 3. The example cohorts
+
+CodeWAS needs a **cases** cohort and a **controls** cohort in the cohort table.
+
+There are two common ways to get cohorts into the table:
+
+1. **From a cohort definition** (an ATLAS/Circe JSON plus its rendered SQL). The
+   definition is generated against the CDM and the resulting subjects are
+   written to the cohort table. This is what we do below.
+2. **From cohorts that already exist** in the cohort table. If your cohort table
+   is already populated (for example by ATLAS or a previous run), you can skip
+   this whole section and go straight to
+   [Section 4](#4-configure-the-analysis-settings), passing the relevant
+   `cohort_definition_id`s as `cohortIdCases` / `cohortIdControls`.
+
+For the example we reuse the *fracture* cohort definitions shipped with
+HadesExtras. Cohort `1` is the cases cohort (patients with a fracture). We then
+add a **matched controls** cohort as cohort `2`: for each case we sample up to 10
+subjects matched on sex and birth year, using `HadesExtras::createMatchingSubset()`.
+
+```{r cohort-definitions}
+# 1. Read the fracture cohort definition set from the HadesExtras package
+cohortDefinitionSet <- CohortGenerator::getCohortDefinitionSet(
+  settingsFileName = "testdata/fracture/Cohorts.csv",
+  jsonFolder = "testdata/fracture/cohorts",
+  sqlFolder = "testdata/fracture/sql/sql_server",
+  cohortFileNameFormat = "%s",
+  cohortFileNameValue = c("cohortId"),
+  subsetJsonFolder = "testdata/fracture/cohort_subset_definitions/",
+  packageName = "HadesExtras",
+  verbose = FALSE
+)
+
+# 2. Define a matched-controls cohort derived from the cases cohort (id 1)
+matchedControlsSubset <- CohortGenerator::createCohortSubsetDefinition(
+  name = "match",
+  definitionId = 1,
+  subsetOperators = list(
+    HadesExtras::createMatchingSubset(
+      matchToCohortId = 1,
+      matchRatio = 10,
+      matchSex = TRUE,
+      matchBirthYear = TRUE,
+      matchCohortStartDateWithInDuration = FALSE,
+      newCohortStartDate = "asMatch",
+      newCohortEndDate = "keep"
+    )
+  )
+)
+
+# The matched cohort becomes cohort id 2 (applied to target cohort id 1)
+cohortDefinitionSet <- cohortDefinitionSet |>
+  CohortGenerator::addCohortSubsetDefinition(matchedControlsSubset, targetCohortIds = 2)
+
+# 3. Generate the cohorts and write them to the cohort table
+cohortTableHandler$insertOrUpdateCohorts(cohortDefinitionSet)
+```
+
+You can confirm the cohorts are in the table, and read the ids you will need
+next, with:
+
+```{r cohort-counts}
+cohortTableHandler$getCohortCounts()
+```
+
+## 4. Configure the analysis settings
+
+`analysisSettings` is a plain list that describes *what* to compare and *how*.
+The required fields are `cohortIdCases`, `cohortIdControls` and `analysisIds`;
+the rest have sensible defaults (see `?assertAnalysisSettings_CodeWAS`).
+
+- `cohortIdCases` / `cohortIdControls`: the `cohort_definition_id`s of the cases
+  and controls cohorts. Here `1` (fracture) and `2` (matched controls). Setting
+  `cohortIdControls = 0` tells CodeWAS to build a matched control cohort
+  automatically from everyone not in the cases cohort.
+- `analysisIds`: which groups of covariates to extract and test (see below).
+- `covariatesIds`: covariates to *adjust* the regression for. `NULL` runs a
+  simple per-covariate test (chi-square / Fisher / t-test) with no adjustment,
+  which is the fastest mode.
+- `minCellCount`: covariates with fewer subjects than this in a group are
+  censored from the output.
+
+### Choosing `analysisIds`
+
+Each `analysisId` selects one FeatureExtraction covariate family (a domain such
+as conditions, drugs, measurements or demographics). To see the full list of
+available ids, with their `analysisName` and domain, run
+`HadesExtras::getListOfAnalysis()`.
+
+Pick the `analysisId`s of the covariate families you want to compare between
+cases and controls. For this example we use `ConditionOccurrence` and
+`ConditionOccurrenceSourceConcept`, the demographics `DemographicsGender`,
+`DemographicsAge` and `YearOfBirth`, the drug family `DrugEraOverlap`, and the
+measurements `Measurement` and `MeasurementValue`.
+
+```{r analysis-settings}
+analysisSettings <- list(
+  cohortIdCases = 1,
+  cohortIdControls = 2,
+  analysisIds = c(
+    101, # ConditionOccurrence
+    141, # ConditionOccurrenceSourceConcept
+    1,   # DemographicsGender
+    2,   # DemographicsAge
+    402, # DrugEraOverlap
+    701, # Measurement
+    702, # MeasurementValue
+    41   # YearOfBirth
+  ),
+  covariatesIds = NULL,
+  minCellCount = 1
+)
+```
+
+## 5. Run the analysis
+
+`execute_CodeWAS()` runs the extraction and the statistical tests and writes the
+results to a DuckDB database inside `exportFolder`. It returns the path to that
+database. It also prints a lot of progress logging, which we silence here with
+the chunk options `results = "hide"`, `message = FALSE` and `warning = FALSE`.
+
+```{r execute, results = "hide", message = FALSE, warning = FALSE}
+exportFolder <- file.path(tempdir(), "codeWASResults")
+dir.create(exportFolder, showWarnings = FALSE)
+
+pathToResultsDatabase <- CO2AnalysisModules::execute_CodeWAS(
+  exportFolder = exportFolder,
+  cohortTableHandler = cohortTableHandler,
+  analysisSettings = analysisSettings
+)
+```
+
+## 6. Inspect the output data
+
+The results database is a standard DuckDB file. Connect to it with `duckdb` and
+query the tables directly.
+
+```{r inspect}
+analysisResults <- duckdb::dbConnect(duckdb::duckdb(), pathToResultsDatabase)
+
+# The tables written by execute_CodeWAS()
+DBI::dbListTables(analysisResults)
+
+# The main results: one row per covariate, with OR, p-value and counts
+codewasResults <- DBI::dbGetQuery(analysisResults, "SELECT * FROM codewasResults")
+head(codewasResults)
+
+# Human-readable names / concept codes for each covariate
+covariateRef <- DBI::dbGetQuery(analysisResults, "SELECT * FROM covariateRef")
+head(covariateRef)
+```
+
+The key columns in `codewasResults` are `nCasesYes` / `nControlsYes` (counts),
+`meanCases` / `meanControls` (ratio for binary, mean for continuous),
+`oddsRatio`, `pValue` and `modelType` (the statistical test used). Join against
+`covariateRef` on `covariateId` to attach the covariate names, and against
+`analysisRef` on `analysisId` to attach the analysis (domain) names.
+
+You can validate the integrity of the results database with:
+
+```{r check}
+CO2AnalysisModules::checkResults_CodeWAS(pathToResultsDatabase)
+```
+
+## 7. Visualize the results
+
+The package ships a Shiny module that renders the results table together with a
+volcano plot (beta coefficient vs. `-log10(p-value)`, with a Bonferroni
+reference line). Wrap the module UI and server in a minimal Shiny app, passing
+the open DuckDB connection to the server.
+
+```{r visualise, eval = FALSE}
+app <- shiny::shinyApp(
+  ui = shiny::fluidPage(
+    CO2AnalysisModules::mod_resultsVisualisation_CodeWAS_ui("codewas")
+  ),
+  server = function(input, output, session) {
+    CO2AnalysisModules::mod_resultsVisualisation_CodeWAS_server("codewas", analysisResults)
+  },
+  options = list(launch.browser = TRUE)
+)
+
+app
+```
+
+The application opens with two tabs. The **Table** tab lists every tested
+covariate; the **Plot** tab shows the corresponding volcano plot. The screenshot
+below shows the results table sorted by `mlogp` (the −log10 of the p-value) in
+descending order, so the most strongly associated covariates appear first.
+
+![The CodeWAS results table, sorted by statistical significance (`mlogp`, descending).](figures/codewas_results_table.png)
+
+Each row is one covariate, annotated with its concept name, source vocabulary,
+FeatureExtraction analysis and OMOP domain, followed by the case and control
+counts, the effect size (`OR`), the significance (`mlogp`), the regression
+coefficient (`Beta`) and the statistical test used (`Model`). The table is read
+as follows.
+
+The most significant covariates are the fracture concepts themselves
+(*Pathological fracture*, *Osteoporosis*, *Closed fracture of hip*, *Fracture of
+forearm*), which are present in all 56 cases and in essentially none of the
+controls, yielding an infinite odds ratio and a maximal `mlogp`. This is the
+expected behavior: these concepts are the entry criteria of the cases cohort,
+so their near-perfect separation from the controls is a sanity check rather than
+a discovery, and confirms that the case/control contrast is correctly specified.
+
+The remaining top hits are biologically coherent with a fracture phenotype.
+*Alendronate* (a bisphosphonate used to treat osteoporosis) is strongly enriched
+in cases (OR ≈ 35), consistent with treatment of the underlying bone pathology,
+and *DXA Radius and Ulna* (a bone-densitometry measurement) is likewise
+case-specific. The demographic covariates are also significant: `age in years`
+is markedly higher in cases (mean 79.4 vs. 0.67, OR ≈ 1268), and, equivalently,
+`Year of birth` is significantly *lower* in cases (`Beta` = −2.48, OR = 0.083).
+Both
+reflect the same effect — cases are substantially older than their matched
+controls — which is consistent with the well-established increase in fracture
+risk with advancing age.
+
+When you are finished, close the connection:
+
+```{r cleanup}
+duckdb::dbDisconnect(analysisResults, shutdown = TRUE)
+```
+
+## See also
+
+- `?execute_CodeWAS` — full argument reference.
+- `?assertAnalysisSettings_CodeWAS` — all `analysisSettings` fields and defaults.
+- CodeWAS in the FinnGen Handbook:
+  <https://finngen.gitbook.io/finngen-handbook/working-in-the-sandbox/which-tools-are-available/cohort-operations-tool-co/explore-code-and-endpoint-enrichments-with-co>
