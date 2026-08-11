@@ -62,14 +62,17 @@ Imports:
 Remotes: 
     FINNGEN/HadesExtras,
     javier-gracia-tabuenca-tuni/DatabaseConnector@bigquery-DBI-2 
-Suggests: 
+Suggests:
     devtools,
-    testthat (>= 3.0.0), 
-    Eunomia, 
+    testthat (>= 3.0.0),
+    Eunomia,
     withr,
     spelling,
     covr,
-    bigrquery
+    bigrquery,
+    knitr,
+    rmarkdown
+VignetteBuilder: knitr
 Config/testthat/edition: 3
 URL: https://github.com/javier-gracia-tabuenca-tuni/CO2AnalysisModules
 BugReports: https://github.com/javier-gracia-tabuenca-tuni/CO2AnalysisModules/issues
