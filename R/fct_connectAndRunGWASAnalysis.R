@@ -159,6 +159,34 @@ runGWASAnalysis <- function(
 }
 
 
+.default_regenie_covariates <- function() {
+  "SEX_IMPUTED,AGE_AT_DEATH_OR_END_OF_FOLLOWUP,PC{1:10},IS_FINNGEN2_CHIP,BATCH_DS1_BOTNIA_Dgi_norm,BATCH_DS10_FINRISK_Palotie_norm,BATCH_DS11_FINRISK_PredictCVD_COROGENE_Tarto_norm,BATCH_DS12_FINRISK_Summit_norm,BATCH_DS13_FINRISK_Bf_norm,BATCH_DS14_GENERISK_norm,BATCH_DS15_H2000_Broad_norm,BATCH_DS16_H2000_Fimm_norm,BATCH_DS17_H2000_Genmets_norm_relift,BATCH_DS18_MIGRAINE_1_norm_relift,BATCH_DS19_MIGRAINE_2_norm,BATCH_DS2_BOTNIA_T2dgo_norm,BATCH_DS20_SUPER_1_norm_relift,BATCH_DS21_SUPER_2_norm_relift,BATCH_DS22_TWINS_1_norm,BATCH_DS23_TWINS_2_norm_nosymmetric,BATCH_DS24_SUPER_3_norm,BATCH_DS25_BOTNIA_Regeneron_norm,BATCH_DS26_DIREVA_norm,BATCH_DS27_NFBC66_norm,BATCH_DS28_NFBC86_norm,BATCH_DS3_COROGENE_Sanger_norm,BATCH_DS4_FINRISK_Corogene_norm,BATCH_DS5_FINRISK_Engage_norm,BATCH_DS6_FINRISK_FR02_Broad_norm_relift,BATCH_DS7_FINRISK_FR12_norm,BATCH_DS8_FINRISK_Finpcga_norm,BATCH_DS9_FINRISK_Mrpred_norm"
+}
+
+.build_regenie_standard_pipeline_inputs <- function(
+    pheno_file,
+    phenotype_name,
+    phenodescription_file,
+    test = "additive",
+    is_binary = TRUE,
+    continue_with_finemap = TRUE,
+    minmac = 5,
+    covariates = .default_regenie_covariates()
+) {
+  inputs_obj <- list(
+    "regenie_unmod.pheno_file" = pheno_file,
+    "regenie_unmod.phenolist" = phenotype_name,
+    "regenie_unmod.phenodescriptionlist" = phenodescription_file,
+    "regenie_unmod.test" = test,
+    "regenie_unmod.is_binary" = as.character(is_binary),
+    "regenie_unmod.continue_with_finemap" = as.character(isTRUE(continue_with_finemap)),
+    "regenie_unmod.minmac" = as.character(minmac)
+  )
+  if (!is.null(covariates) && nzchar(covariates)) {
+    inputs_obj[["regenie_unmod.covariates"]] <- covariates
+  }
+  inputs_obj
+}
 #' @title runRegenieStandardPipeline
 #' @description Submit the Regenie unmodifiable standard pipeline via internal standard-pipelines API.
 #'   Creates phenotype + description files locally, uploads them to
@@ -176,6 +204,7 @@ runGWASAnalysis <- function(
 #' @param test Genetic model test string, Default: "additive"
 #' @param is_binary Logical TRUE/FALSE to specify binary or quantitative GWAS analysis type, Default: TRUE
 #' @param continue_with_finemap Logical TRUE/FALSE to specify whether to continue with fine mapping, Default: TRUE
+#' @param minmac Minimum minor allele count for the Regenie workflow, Default: 5
 #' @param pipeline_name Optional pipeline name. If NULL, determined automatically from `release`.
 #' @param release Finngen data release version, Default: "Regenie13"
 #' @param endpoint_path internal API path, Default: "v2/standard-pipelines"
@@ -201,6 +230,7 @@ runRegenieStandardPipeline <- function(
     test = "additive",
     is_binary = TRUE,
     continue_with_finemap = TRUE,
+    minmac = 5,
     pipeline_name = NULL,
     release = "Regenie13",
     endpoint_path = "v2/standard-pipelines",
@@ -208,7 +238,7 @@ runRegenieStandardPipeline <- function(
 ) {
 
   if (is.null(covariates)) {
-    covariates <- "SEX_IMPUTED,AGE_AT_DEATH_OR_END_OF_FOLLOWUP,PC{1:10},IS_FINNGEN2_CHIP,BATCH_DS1_BOTNIA_Dgi_norm,BATCH_DS10_FINRISK_Palotie_norm,BATCH_DS11_FINRISK_PredictCVD_COROGENE_Tarto_norm,BATCH_DS12_FINRISK_Summit_norm,BATCH_DS13_FINRISK_Bf_norm,BATCH_DS14_GENERISK_norm,BATCH_DS15_H2000_Broad_norm,BATCH_DS16_H2000_Fimm_norm,BATCH_DS17_H2000_Genmets_norm_relift,BATCH_DS18_MIGRAINE_1_norm_relift,BATCH_DS19_MIGRAINE_2_norm,BATCH_DS2_BOTNIA_T2dgo_norm,BATCH_DS20_SUPER_1_norm_relift,BATCH_DS21_SUPER_2_norm_relift,BATCH_DS22_TWINS_1_norm,BATCH_DS23_TWINS_2_norm_nosymmetric,BATCH_DS24_SUPER_3_norm,BATCH_DS25_BOTNIA_Regeneron_norm,BATCH_DS26_DIREVA_norm,BATCH_DS27_NFBC66_norm,BATCH_DS28_NFBC86_norm,BATCH_DS3_COROGENE_Sanger_norm,BATCH_DS4_FINRISK_Corogene_norm,BATCH_DS5_FINRISK_Engage_norm,BATCH_DS6_FINRISK_FR02_Broad_norm_relift,BATCH_DS7_FINRISK_FR12_norm,BATCH_DS8_FINRISK_Finpcga_norm,BATCH_DS9_FINRISK_Mrpred_norm"
+    covariates <- .default_regenie_covariates()
   }
 
   .extract_uuid <- function(x) {
@@ -395,17 +425,16 @@ runRegenieStandardPipeline <- function(
   invisible(.gsutil_stat(dest_desc_gs))
 
   # Build WDL-style input JSON
-  inputs_obj <- list(
-    "regenie_unmod.pheno_file" = dest_pheno_alias,
-    "regenie_unmod.phenolist"  = phenotype_name,
-    "regenie_unmod.phenodescriptionlist" = dest_desc_alias,
-    "regenie_unmod.test"       = test,
-    "regenie_unmod.is_binary"  = as.character(is_binary),
-    "regenie_unmod.continue_with_finemap" = as.character(isTRUE(continue_with_finemap))
+  inputs_obj <- .build_regenie_standard_pipeline_inputs(
+    pheno_file = dest_pheno_alias,
+    phenotype_name = phenotype_name,
+    phenodescription_file = dest_desc_alias,
+    test = test,
+    is_binary = is_binary,
+    continue_with_finemap = continue_with_finemap,
+    minmac = minmac,
+    covariates = covariates
   )
-  if (!is.null(covariates) && nzchar(covariates)) {
-    inputs_obj[["regenie_unmod.covariates"]] <- covariates
-  }
 
   jsonlite::write_json(
     x = inputs_obj,

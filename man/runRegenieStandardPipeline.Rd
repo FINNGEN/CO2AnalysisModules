@@ -15,6 +15,7 @@ runRegenieStandardPipeline(
   test = "additive",
   is_binary = TRUE,
   continue_with_finemap = TRUE,
+  minmac = 5,
   pipeline_name = NULL,
   release = "Regenie13",
   endpoint_path = "v2/standard-pipelines",
@@ -41,6 +42,8 @@ runRegenieStandardPipeline(
 \item{is_binary}{Logical TRUE/FALSE to specify binary or quantitative GWAS analysis type, Default: TRUE}
 
 \item{continue_with_finemap}{Logical TRUE/FALSE to specify whether to continue with fine mapping, Default: TRUE}
+
+\item{minmac}{Minimum minor allele count for the Regenie workflow, Default: 5}
 
 \item{pipeline_name}{Optional pipeline name. If NULL, determined automatically from \code{release}.}
 
