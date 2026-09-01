@@ -1,3 +1,7 @@
+# CO2AnalysisModules 3.3.2
+
+- Added the required minmac input, with default value 5, for updated Regenie GWAS workflows
+
 # CO2AnalysisModules 3.3.1
 
 - Added githubpage with standalone codewas tutorial
