@@ -21,7 +21,7 @@ Users are allowed to add additional covariates using a dataframe of columns for 
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">CO2AnalysisModules</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">3.3.1</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">3.3.2</span>
       </span>
     </div>
 
@@ -82,6 +82,7 @@ Users are allowed to add additional covariates using a dataframe of columns for 
 <span>  test <span class="op">=</span> <span class="st">"additive"</span>,</span>
 <span>  is_binary <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  continue_with_finemap <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  minmac <span class="op">=</span> <span class="fl">5</span>,</span>
 <span>  pipeline_name <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  release <span class="op">=</span> <span class="st">"Regenie13"</span>,</span>
 <span>  endpoint_path <span class="op">=</span> <span class="st">"v2/standard-pipelines"</span>,</span>
@@ -131,6 +132,10 @@ Users are allowed to add additional covariates using a dataframe of columns for 
 
 <dt id="arg-continue-with-finemap">continue_with_finemap<a class="anchor" aria-label="anchor" href="#arg-continue-with-finemap"></a></dt>
 <dd><p>Logical TRUE/FALSE to specify whether to continue with fine mapping, Default: TRUE</p></dd>
+
+
+<dt id="arg-minmac">minmac<a class="anchor" aria-label="anchor" href="#arg-minmac"></a></dt>
+<dd><p>Minimum minor allele count for the Regenie workflow, Default: 5</p></dd>
 
 
 <dt id="arg-pipeline-name">pipeline_name<a class="anchor" aria-label="anchor" href="#arg-pipeline-name"></a></dt>
