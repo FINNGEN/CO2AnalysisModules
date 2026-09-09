@@ -60,6 +60,7 @@ list(status, http_status, workflow_id, content, temp_files, sandbox_paths_used, 
 Submit the Regenie unmodifiable standard pipeline via internal standard-pipelines API.
 Creates phenotype + description files locally, uploads them to
 SANDBOX_RED/CO2_temp/\if{html}{\out{<usertemp>}}/<run_tag>/ (using RED_BUCKET for gsutil),
+fetches the selected pipeline's published input template, overrides CO2-controlled values,
 builds WDL-style input JSON referencing SANDBOX_RED paths, and submits the workflow.
 Users are allowed to add additional covariates using a dataframe of columns for each additional covariate.
 }
