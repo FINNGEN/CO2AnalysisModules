@@ -180,8 +180,8 @@ matchedControlsSubset <- CohortGenerator::createCohortSubsetDefinition(
       matchRatio = 10,
       matchSex = TRUE,
       matchBirthYear = TRUE,
-      matchCohortStartDateWithInDuration = FALSE,
-      newCohortStartDate = "asMatch",
+      matchCohortStartDateWithInDuration = TRUE,
+      newCohortStartDate = "keep",
       newCohortEndDate = "keep"
     )
   )
