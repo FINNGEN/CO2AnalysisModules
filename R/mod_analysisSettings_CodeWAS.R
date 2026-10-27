@@ -16,6 +16,12 @@ mod_analysisSettings_codeWAS_ui <- function(id) {
   ns <- shiny::NS(id)
   htmltools::tagList(
     shinyjs::useShinyjs(),
+    .co2_analysis_help(
+      "Help with Code WAS",
+      shiny::p("Code WAS is a binary enrichment analysis. It tests whether selected clinical features are recorded in a greater or lower proportion of cases than controls, such as diagnoses, procedures, measurements, drugs, or other selected features."),
+      shiny::p("Fisher's exact test and Welch's t-test compare grouped counts or averages and do not adjust for other factors. Logistic regression is used for binary features and linear regression for numerical features; both can adjust for sex and year of birth, but take longer to run."),
+      shiny::p("Choose a case cohort and a control cohort, select the feature groups to test, then choose the comparison method.")
+    ),
     #
     shiny::tags$h4("Cohorts"),
     shinyWidgets::pickerInput(
@@ -87,7 +93,7 @@ mod_analysisSettings_codeWAS_ui <- function(id) {
       label = "Select comparison statistics:",
       choices = list(
         `Fisher's exact test and Welch's t-test (fast, no control for confounding)` = "aggregated",
-        `(BETA)Logistic and linear regresions (slow, control for confounding)` = "full"
+        `Logistic and linear regressions (slow, control for confounding)` = "full"
       ),
       direction = "vertical",
       individual = TRUE,

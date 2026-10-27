@@ -16,6 +16,12 @@ mod_analysisSettings_timeCodeWAS_ui <- function(id) {
   ns <- shiny::NS(id)
   htmltools::tagList(
     shinyjs::useShinyjs(),
+    .co2_analysis_help(
+      "Help with TimeCodeWAS",
+      shiny::p("TimeCodeWAS compares when selected clinical features are recorded around cohort entry in cases and controls. It tests each time window separately, rather than only whether a feature was ever recorded."),
+      shiny::p("Set time windows as day ranges relative to cohort start: negative days are before entry and positive days are after entry. Minimum cell count hides sparse results below the number you set."),
+      shiny::p("Choose the case and control cohorts, feature groups, and time windows before running the study.")
+    ),
     #
     shiny::tags$h4("Cohorts"),
     shinyWidgets::pickerInput(

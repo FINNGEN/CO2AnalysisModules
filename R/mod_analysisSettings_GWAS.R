@@ -16,6 +16,12 @@ mod_analysisSettings_GWAS_ui <- function(id) {
   htmltools::tagList(
     shinyFeedback::useShinyFeedback(),
     shinyjs::useShinyjs(),
+    .co2_analysis_help(
+      "Help with GWAS",
+      shiny::p("Use GWAS to run a genome-wide association study for your selected case and control cohorts using FinnGen's internal Regenie-based GWAS pipeline."),
+      shiny::p("Choose the genetic model: additive tests the effect of each additional copy of an allele; dominant compares people with one or two copies against none; recessive compares two copies against fewer than two. Enable fine mapping when you also want follow-up localisation of association signals."),
+      shiny::p("Provide a concise phenotype name and description so the resulting analysis can be identified clearly.")
+    ),
     shiny::tags$h4("Cohorts"),
     shiny::tags$h5("Select case cohort:"),
     shinyWidgets::pickerInput(
