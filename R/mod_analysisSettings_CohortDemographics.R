@@ -16,6 +16,11 @@ mod_analysisSettings_cohortDemographics_ui <- function(id) {
   ns <- shiny::NS(id)
   htmltools::tagList(
     shinyjs::useShinyjs(),
+    .co2_analysis_help(
+      "Help with Cohort Demographics",
+      shiny::p("Use Cohort Demographics to compare the composition of selected cohorts. It summarises cohort entries by calendar year, approximate 10-year age band, and recorded sex."),
+      shiny::p("The analysis produces separate summaries using each participant's cohort start date, cohort end date, and birth date. Minimum cell count hides a demographic group when it contains fewer cohort entries than the number you set.")
+    ),
     #
     shiny::tags$h4("Cohorts"),
     shinyWidgets::pickerInput(

@@ -1,7 +1,5 @@
 ## Phenotype Scoring
 
-Phenotype Scoring is a module that allows you to score phenotypes based on a set of covariates.
+Phenotype Scoring evaluates selected concepts or features against a case/control cohort pair. It is useful for exploring which recorded concepts distinguish the cohorts and for reviewing the behaviour of a phenotype definition.
 
-### Phenotype Scoring in FinnGen Handbook
-
-`https://finngen.gitbook.io/finngen-handbook/background-reading/phenotype-scoring`
+Select the case and control cohorts and the features to score, then review the score distributions and effect summaries in the viewer. A high score or significant association is evidence for discrimination in these cohorts, not proof that a feature is specific to the phenotype or suitable for clinical use.

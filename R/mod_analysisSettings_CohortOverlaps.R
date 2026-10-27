@@ -16,6 +16,11 @@ mod_analysisSettings_cohortOverlaps_ui <- function(id) {
   ns <- shiny::NS(id)
   htmltools::tagList(
     shinyjs::useShinyjs(),
+    .co2_analysis_help(
+      "Help with Cohort Overlaps",
+      shiny::p("Use Cohort Overlaps to see how many people are in each selected cohort and in every combination of those cohorts. It helps check whether cohorts are distinct, nested, or share participants."),
+      shiny::p("Minimum cell count hides an intersection when it contains fewer people than the number you set.")
+    ),
     #
     shiny::tags$h4("Cohorts"),
     shinyWidgets::pickerInput(
