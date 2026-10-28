@@ -19,7 +19,7 @@
 #' @importFrom checkmate assertNumeric assertSubset
 #' @export
 #'
-mod_fct_covariateSelector_ui <- function(inputId, label = NULL, analysisIdsToShow = NULL, analysisRegexToShowTibble = NULL, analysisIdsSelected = NULL) {
+mod_fct_covariateSelector_ui <- function(inputId, label = NULL, analysisIdsToShow = NULL, analysisRegexToShowTibble = NULL, analysisIdsSelected = NULL, helpContent = NULL) {
 
   if(is.null(analysisIdsToShow)) {
     analysisIdsToShow  <- HadesExtras::getListOfAnalysis()$analysisId
