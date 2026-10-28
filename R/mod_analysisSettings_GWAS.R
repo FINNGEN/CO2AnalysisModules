@@ -46,7 +46,12 @@ mod_analysisSettings_GWAS_ui <- function(id) {
       multiple = FALSE
     ),
     htmltools::hr(),
-    shiny::tags$h4("Settings"),
+    .co2_analysis_section_heading(
+      "Settings",
+      "Help with GWAS settings",
+      shiny::p("Choose how the genetic effect is modelled. Additive tests the effect of each additional allele copy. Dominant compares people with one or two copies against none. Recessive compares people with two copies against those with fewer than two."),
+      shiny::p("Select Continue with fine mapping to request follow-up analysis of associated regions. The phenotype name identifies this GWAS run; use the description to record clearly what the case and control cohorts represent.")
+    ),
     shiny::tags$h5("Select analysis type:"),
     shinyWidgets::pickerInput(
       inputId = ns("selectAnalysisType_pickerInput"),

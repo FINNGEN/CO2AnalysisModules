@@ -23,7 +23,12 @@ mod_analysisSettings_codeWAS_ui <- function(id) {
       shiny::p("Choose a case cohort and a control cohort, select the feature groups to test, then choose the comparison method.")
     ),
     #
-    shiny::tags$h4("Cohorts"),
+    .co2_analysis_section_heading(
+      "Cohorts",
+      "Help with case, control, and automatic matching",
+      shiny::p("Choose the cohort you want to study as cases and a comparison cohort as controls. If you choose AUTO-MATCH, CO2 selects controls from people outside the case cohort and matches them to cases by recorded sex and year of birth."),
+      shiny::p("Controls per case is the maximum number of controls requested for each case. CO2 may use fewer controls to keep the analysis within its size limit.")
+    ),
     shinyWidgets::pickerInput(
       inputId = ns("selectCaseCohort_pickerInput"),
       label = "Select case cohort:",
@@ -67,7 +72,12 @@ mod_analysisSettings_codeWAS_ui <- function(id) {
     ),
 
     htmltools::hr(),
-    shiny::tags$h4("Settings"),
+    .co2_analysis_section_heading(
+      "Settings",
+      "Help with Code WAS settings",
+      shiny::p("Choose the kinds of clinical records to test, such as diagnoses, procedures, drugs, measurements, or endpoints. Selecting more groups tests more records, takes longer, and produces more results to review."),
+      shiny::p("Choose Fisher's exact test and Welch's t-test for fast comparisons that do not adjust for other factors. Choose regressions to adjust for sex and year of birth; CO2 uses logistic regression for yes/no features and linear regression for numerical features, so this option takes longer.")
+    ),
     #
     mod_fct_covariateSelector_ui(
       inputId = ns("features_pickerInput"),
