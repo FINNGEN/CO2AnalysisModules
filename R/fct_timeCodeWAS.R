@@ -99,7 +99,7 @@ execute_timeCodeWAS <- function(
           matchRatio = autoMatchRatio,
           matchSex = TRUE,
           matchBirthYear = TRUE,
-          matchCohortStartDateWithInDuration = FALSE,
+          matchCohortStartDateWithInDuration = TRUE,
           newCohortStartDate = "asMatch",
           newCohortEndDate = "keep"
         )
