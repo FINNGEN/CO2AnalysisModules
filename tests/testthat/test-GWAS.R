@@ -75,3 +75,35 @@ test_that("Regenie standard pipeline input includes all defaults", {
   expect_identical(inputs[["regenie_unmod.minmac"]], "5")
   expect_identical(inputs[["regenie_unmod.covariates"]], CO2AnalysisModules:::.default_regenie_covariates())
 })
+
+test_that("standard pipeline input defaults are parsed from API JSON", {
+  defaults <- CO2AnalysisModules:::.parse_standard_pipeline_input_defaults(
+    '{"regenie_unmod.minmac":"5","regenie_unmod.future_setting":"pipeline-default"}'
+  )
+
+  expect_identical(defaults[["regenie_unmod.minmac"]], "5")
+  expect_identical(defaults[["regenie_unmod.future_setting"]], "pipeline-default")
+})
+
+test_that("Regenie input builder preserves pipeline defaults and overrides CO2 inputs", {
+  defaults <- list(
+    "regenie_unmod.pheno_file" = "pipeline-default-file",
+    "regenie_unmod.minmac" = "10",
+    "regenie_unmod.future_setting" = "pipeline-default"
+  )
+
+  inputs <- CO2AnalysisModules:::.build_regenie_standard_pipeline_inputs(
+    pheno_file = "SANDBOX_RED/CO2_temp/test/phenofile.tsv",
+    phenotype_name = "TEST_PHENOTYPE",
+    phenodescription_file = "SANDBOX_RED/CO2_temp/test/phenodescriptionfile.txt",
+    minmac = 5,
+    pipeline_default_inputs = defaults
+  )
+
+  expect_identical(
+    inputs[["regenie_unmod.pheno_file"]],
+    "SANDBOX_RED/CO2_temp/test/phenofile.tsv"
+  )
+  expect_identical(inputs[["regenie_unmod.minmac"]], "5")
+  expect_identical(inputs[["regenie_unmod.future_setting"]], "pipeline-default")
+})
