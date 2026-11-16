@@ -18,6 +18,11 @@ mod_analysisSettings_phenotypeScoring_ui <- function(id) {
   ns <- shiny::NS(id)
   htmltools::tagList(
     shinyjs::useShinyjs(),
+    .co2_analysis_help(
+      "Help with Phenotype Scoring",
+      shiny::p("Use Phenotype Scoring to refine a cohort or explore its subtypes. It identifies clinical features that distinguish a case cohort from controls, then lets you combine selected features into a score for each participant."),
+      shiny::p("Use the score to review cohort heterogeneity, identify people with a feature pattern of interest, or select and exclude participants when refining a phenotype. You can also open a previous Code WAS result instead of running a new comparison.")
+    ),
 
     shiny::fluidRow(
       # Cohorts panel
