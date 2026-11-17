@@ -1,3 +1,9 @@
+# CO2AnalysisModules 3.4.0
+
+- Added contextual help to the analysis settings.
+- Updated GWAS submission to retain the selected pipeline's default inputs while applying the CO2 settings.
+- Updated automatic CodeWAS and Time CodeWAS matching so the case cohort start date must fall within the candidate control cohort period.
+
 # CO2AnalysisModules 3.3.2
 
 - Added the required minmac input, with default value 5, for updated Regenie GWAS workflows
