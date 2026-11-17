@@ -16,8 +16,19 @@ mod_analysisSettings_timeCodeWAS_ui <- function(id) {
   ns <- shiny::NS(id)
   htmltools::tagList(
     shinyjs::useShinyjs(),
+    .co2_analysis_help(
+      "Help with TimeCodeWAS",
+      shiny::p("TimeCodeWAS compares when selected clinical features are recorded around cohort entry in cases and controls. It tests each time window separately, rather than only whether a feature was ever recorded."),
+      shiny::p("Set time windows as day ranges relative to cohort start: negative days are before entry and positive days are after entry. Minimum cell count hides sparse results below the number you set."),
+      shiny::p("Choose the case and control cohorts, feature groups, and time windows before running the study.")
+    ),
     #
-    shiny::tags$h4("Cohorts"),
+    .co2_analysis_section_heading(
+      "Cohorts",
+      "Help with case, control, and automatic matching",
+      shiny::p("Choose the cohort you want to study as cases and a comparison cohort as controls. If you choose AUTO-MATCH, CO2 selects controls from people outside the case cohort and matches them to cases by recorded sex and year of birth."),
+      shiny::p("For automatically matched controls, CO2 uses the cohort start date of the case they are matched to. Controls per case is the maximum number requested for each case; CO2 may use fewer controls to keep the analysis within its size limit.")
+    ),
     shinyWidgets::pickerInput(
       inputId = ns("selectCaseCohort_pickerInput"),
       label = "Select case cohort:",
@@ -61,7 +72,11 @@ mod_analysisSettings_timeCodeWAS_ui <- function(id) {
 
 
     htmltools::hr(),
-    shiny::tags$h4("Settings"),
+    .co2_analysis_section_heading(
+      "Settings",
+      "Help with Time Code WAS settings",
+      shiny::p("Choose the kinds of clinical records whose timing you want to compare, such as diagnoses, procedures, drugs, or measurements. Selecting more groups tests more records in every time window, takes longer, and produces more results to review.")
+    ),
     #
     mod_fct_covariateSelector_ui(
       inputId = ns("features_pickerInput"),
@@ -85,7 +100,12 @@ mod_analysisSettings_timeCodeWAS_ui <- function(id) {
       max = 1000
     ),
     htmltools::hr(),
-    shiny::tags$h4("Time windows"),
+    .co2_analysis_section_heading(
+      "Time windows",
+      "Help with time windows",
+      shiny::p("Enter comma-separated time points relative to cohort entry. Use negative numbers for time before entry and positive numbers for time after entry. Choose whether the numbers are days, months, or years; CO2 converts months and years to approximate days for the analysis."),
+      shiny::p("CO2 uses the intervals between neighbouring time points as the non-overlapping time windows to test. Add [0,0] to test features recorded on the cohort-entry date separately. A preset fills in common time points; use the preview to check the time windows that will be tested.")
+    ),
     mod_fct_formTimeWindows_ui(ns("selectRanges")),
     shiny::tags$br(),
     #

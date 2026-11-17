@@ -171,9 +171,21 @@ runGWASAnalysis <- function(
     is_binary = TRUE,
     continue_with_finemap = TRUE,
     minmac = 5,
-    covariates = .default_regenie_covariates()
+    covariates = .default_regenie_covariates(),
+    pipeline_default_inputs = list()
 ) {
-  inputs_obj <- list(
+  if (is.null(pipeline_default_inputs)) pipeline_default_inputs <- list()
+  if (
+    !is.list(pipeline_default_inputs) ||
+      (length(pipeline_default_inputs) > 0 && is.null(names(pipeline_default_inputs)))
+  ) {
+    stop("pipeline_default_inputs must be a named list (or NULL).")
+  }
+
+  # Preserve the selected pipeline's published default inputs, including
+  # new workflow parameters not yet explicitly known by CO2.
+  inputs_obj <- pipeline_default_inputs
+  co2_inputs <- list(
     "regenie_unmod.pheno_file" = pheno_file,
     "regenie_unmod.phenolist" = phenotype_name,
     "regenie_unmod.phenodescriptionlist" = phenodescription_file,
@@ -182,6 +194,8 @@ runGWASAnalysis <- function(
     "regenie_unmod.continue_with_finemap" = as.character(isTRUE(continue_with_finemap)),
     "regenie_unmod.minmac" = as.character(minmac)
   )
+  inputs_obj[names(co2_inputs)] <- co2_inputs
+
   if (!is.null(covariates) && nzchar(covariates)) {
     inputs_obj[["regenie_unmod.covariates"]] <- covariates
   }
@@ -191,6 +205,7 @@ runGWASAnalysis <- function(
 #' @description Submit the Regenie unmodifiable standard pipeline via internal standard-pipelines API.
 #'   Creates phenotype + description files locally, uploads them to
 #'   SANDBOX_RED/CO2_temp/<usertemp>/<run_tag>/ (using RED_BUCKET for gsutil),
+#'   fetches the selected pipeline's published input template, overrides CO2-controlled values,
 #'   builds WDL-style input JSON referencing SANDBOX_RED paths, and submits the workflow.
 #'   Users are allowed to add additional covariates using a dataframe of columns for each additional covariate.
 #'
@@ -336,6 +351,13 @@ runRegenieStandardPipeline <- function(
   if (is.null(standard_pipeline_id) || standard_pipeline_id == "") {
     stop("standard_pipeline_id is required and must be a non-empty string")
   }
+
+  pipeline_default_inputs <- .get_standard_pipeline_input_defaults(
+    connection_sandboxAPI = connection_sandboxAPI,
+    endpoint_path = endpoint_path,
+    standard_pipeline_id = standard_pipeline_id,
+    timeout_sec = timeout_sec
+  )
   if (length(cases_finngenids) == 0 || length(controls_finngenids) == 0) {
     stop("cases_finngenids and controls_finngenids must be non-empty")
   }
@@ -433,7 +455,8 @@ runRegenieStandardPipeline <- function(
     is_binary = is_binary,
     continue_with_finemap = continue_with_finemap,
     minmac = minmac,
-    covariates = covariates
+    covariates = covariates,
+    pipeline_default_inputs = pipeline_default_inputs
   )
 
   jsonlite::write_json(
@@ -556,10 +579,46 @@ runRegenieStandardPipeline <- function(
   return(standard_pipeline_id)
 }
 
+.parse_standard_pipeline_input_defaults <- function(inputs) {
+  if (is.character(inputs) && length(inputs) == 1) {
+    inputs <- tryCatch(
+      jsonlite::fromJSON(inputs, simplifyVector = FALSE),
+      error = function(e) stop("Could not parse standard pipeline `inputs` JSON: ", e$message)
+    )
+  }
 
+  if (!is.list(inputs) || is.null(names(inputs))) {
+    stop("Standard pipeline response did not contain a named `inputs` object.")
+  }
 
+  inputs
+}
 
+.get_standard_pipeline_input_defaults <- function(
+    connection_sandboxAPI,
+    endpoint_path,
+    standard_pipeline_id,
+    timeout_sec = 300
+) {
+  authorization <- paste("Bearer", connection_sandboxAPI$token)
+  headers <- httr::add_headers(c("Authorization" = authorization))
+  url <- paste0(
+    sub("/+$", "", connection_sandboxAPI$base_url), "/",
+    sub("^/+", "", endpoint_path), "/", standard_pipeline_id
+  )
 
+  r <- httr::GET(url = url, headers, httr::timeout(timeout_sec))
+  if (!httr::status_code(r) %in% c(200, 201)) {
+    stop(
+      "Failed to fetch standard pipeline input defaults. HTTP status: ",
+      httr::status_code(r)
+    )
+  }
 
-
+  pipeline <- jsonlite::fromJSON(
+    httr::content(r, as = "text", encoding = "UTF-8"),
+    simplifyVector = FALSE
+  )
+  .parse_standard_pipeline_input_defaults(pipeline$inputs)
+}
 
